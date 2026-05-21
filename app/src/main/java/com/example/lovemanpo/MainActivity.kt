@@ -414,12 +414,10 @@ fun getHeartPath(size: Size): Path {
 }
 
 class MainActivity : ComponentActivity() {
-    private lateinit var windowInsetsController: WindowInsetsControllerCompat
-
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
 
@@ -436,19 +434,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             ラブ万歩計Theme { PedometerAppWithNavigation(viewModelFactory) }
         }
-    }
-
-    override fun dispatchTouchEvent(ev: android.view.MotionEvent?): Boolean {
-        if (ev?.action == android.view.MotionEvent.ACTION_DOWN) {
-            // BEHAVIOR_DEFAULT に切り替えてトランジェント状態をキャンセルし、即座にhide()を効かせる
-            windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
-            windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
-            // 次フレームでトランジェント動作を復元（次回のスワイプ表示に備える）
-            window.decorView.postOnAnimation {
-                windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            }
-        }
-        return super.dispatchTouchEvent(ev)
     }
 }
 
