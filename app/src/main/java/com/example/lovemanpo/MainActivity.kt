@@ -415,13 +415,28 @@ fun getHeartPath(size: Size): Path {
 
 class MainActivity : ComponentActivity() {
     private lateinit var windowInsetsController: WindowInsetsControllerCompat
+    private val hideNavBarHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val hideNavBarRunnable = Runnable {
+        windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
         windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
+
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
+            if (insets.isVisible(WindowInsetsCompat.Type.navigationBars())) {
+                hideNavBarHandler.removeCallbacks(hideNavBarRunnable)
+                hideNavBarHandler.postDelayed(hideNavBarRunnable, 3000)
+            } else {
+                hideNavBarHandler.removeCallbacks(hideNavBarRunnable)
+            }
+            androidx.core.view.ViewCompat.onApplyWindowInsets(v, insets)
+        }
+
         val database = AppDatabase.getDatabase(this)
         val repository = StepRepository(database.stepDao(), getSharedPreferences("lovemanpo_prefs", MODE_PRIVATE))
         val viewModelFactory = StepViewModelFactory(repository)
@@ -439,9 +454,15 @@ class MainActivity : ComponentActivity() {
 
     override fun dispatchTouchEvent(ev: android.view.MotionEvent?): Boolean {
         if (ev?.action == android.view.MotionEvent.ACTION_DOWN) {
+            hideNavBarHandler.removeCallbacks(hideNavBarRunnable)
             windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
         }
         return super.dispatchTouchEvent(ev)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        hideNavBarHandler.removeCallbacks(hideNavBarRunnable)
     }
 }
 
@@ -897,14 +918,6 @@ fun HomeScreenContent(
     onRecordsClick: () -> Unit,
     onDebugClick: () -> Unit
 ) {
-
-    val context = LocalContext.current // 必要
-    val window = (context as? androidx.activity.ComponentActivity)?.window // 必要
-    val windowInsetsController = remember(window) { // 必要
-        window?.let { androidx.core.view.WindowCompat.getInsetsController(it, it.decorView) } // 必要
-    } // 必要
-
-
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = bgRes),
