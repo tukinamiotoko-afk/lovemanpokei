@@ -107,6 +107,12 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures // 必要
 import androidx.core.view.WindowCompat // 必要
 import androidx.core.view.WindowInsetsCompat // 必要
 import androidx.core.view.WindowInsetsControllerCompat // 必要
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 
 // --- 期間の定義 ---
 enum class DisplayPeriod(val label: String) {
@@ -131,10 +137,6 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getString("PLAYER_NAME", "")!!
         set(value) = prefs.edit { putString("PLAYER_NAME", value) }
         
-    var currentDateSpotId: Int
-        get() = prefs.getInt("CURRENT_DATE_SPOT_ID", 0)
-        set(value) = prefs.edit { putInt("CURRENT_DATE_SPOT_ID", value) }
-        
     var loveCount: Int
         get() = prefs.getInt("LOVE_COUNT_V3", 1)
         set(value) = prefs.edit { putInt("LOVE_COUNT_V3", value) }
@@ -155,14 +157,10 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getInt("TODAY_POINTS_EARNED", 0)
         set(value) = prefs.edit { putInt("TODAY_POINTS_EARNED", value) }
         
-    var storyProgress: Int
-        get() = prefs.getInt("STORY_PROGRESS", -1)
-        set(value) = prefs.edit { putInt("STORY_PROGRESS", value) }
-        
-    var completedEpisodeIds: Set<String>
-        get() = prefs.getStringSet("COMPLETED_EPISODE_IDS", emptySet()) ?: emptySet()
-        set(value) = prefs.edit { putStringSet("COMPLETED_EPISODE_IDS", value) }
-        
+    var openAiApiKey: String
+        get() = prefs.getString("OPENAI_API_KEY", "") ?: ""
+        set(value) = prefs.edit { putString("OPENAI_API_KEY", value) }
+
     var heightCm: Float
         get() = prefs.getFloat("HEIGHT_CM", 170f)
         set(value) = prefs.edit { putFloat("HEIGHT_CM", value) }
@@ -205,12 +203,9 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     val todaySteps = mutableIntStateOf(0)
     val cumulativeSteps = mutableIntStateOf(repository.cumulativeSteps)
     val playerName = mutableStateOf(repository.playerName)
-    val currentDateSpotId = mutableIntStateOf(repository.currentDateSpotId)
     val loveCount = mutableIntStateOf(repository.loveCount)
     val heartCount = mutableIntStateOf(repository.heartCount)
-    val storyProgress = mutableIntStateOf(repository.storyProgress)
     val selectedPeriod = mutableStateOf(DisplayPeriod.DAY)
-    val completedEpisodeIds = mutableStateOf(repository.completedEpisodeIds)
     val spentActionPoints = mutableIntStateOf(repository.spentActionPoints)
     val totalEarnedPoints = mutableIntStateOf(repository.totalEarnedPoints)
     
@@ -239,7 +234,6 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
                 cumulativeSteps.intValue = repository.cumulativeSteps
                 loveCount.intValue = repository.loveCount
                 heartCount.intValue = repository.heartCount
-                completedEpisodeIds.value = repository.completedEpisodeIds
                 spentActionPoints.intValue = repository.spentActionPoints
                 totalEarnedPoints.intValue = repository.totalEarnedPoints
             }
@@ -275,38 +269,27 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
         batterySetupDone.value = true
     }
 
-    fun completeEpisode(index: Int, backgroundRes: Int) {
-        val episodeId = index.toString()
-        val completedIds = repository.completedEpisodeIds
+    var openAiApiKey: String
+        get() = repository.openAiApiKey
+        set(value) { repository.openAiApiKey = value }
 
-        if (completedIds.contains(episodeId)) {
-            return
+    fun spendPointForChat(): Boolean {
+        if (currentActionPoints.value > 0) {
+            repository.spentActionPoints++
+            spentActionPoints.intValue = repository.spentActionPoints
+            return true
         }
+        return false
+    }
 
-        if (index == 0 || currentActionPoints.value > 0) {
-            if (index != 0) {
-                repository.spentActionPoints++
-                spentActionPoints.intValue = repository.spentActionPoints
-            }
-            heartCount.intValue++
-            if (heartCount.intValue >= 10) {
-                heartCount.intValue = 0
-                if (loveCount.intValue < 10) {
-                    loveCount.intValue++
-                }
-            }
-            if (index > storyProgress.intValue) {
-                storyProgress.intValue = index
-            }
-            val newCompletedIds = completedIds + episodeId
-            repository.completedEpisodeIds = newCompletedIds
-            completedEpisodeIds.value = newCompletedIds
-            
-            repository.heartCount = heartCount.intValue
-            repository.loveCount = loveCount.intValue
-            repository.storyProgress = storyProgress.intValue
-
+    fun earnHeartFromOdekake() {
+        heartCount.intValue++
+        if (heartCount.intValue >= 10) {
+            heartCount.intValue = 0
+            if (loveCount.intValue < 10) loveCount.intValue++
         }
+        repository.heartCount = heartCount.intValue
+        repository.loveCount = loveCount.intValue
     }
 
     fun loadAllRecords() {
@@ -384,8 +367,6 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
         todaySteps.intValue = 0
         loveCount.intValue = 1
         heartCount.intValue = 0
-        storyProgress.intValue = -1
-        completedEpisodeIds.value = emptySet()
         spentActionPoints.intValue = 0
         totalEarnedPoints.intValue = 0
         userGender.value = ""
@@ -487,7 +468,15 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 composable("profile_setup") { ProfileSetupScreen(navController, viewModel) }
                 composable("battery_setup") { StabilitySetupScreen(navController, viewModel) }
                 composable("home") { HomeScreen(navController, viewModel) }
-                composable("odekake") { OdekakeScreen(navController, viewModel) }
+                composable("freechat") { FreeChatScreen(navController, viewModel) }
+                composable("odekake") { OdekakeScenarioSelectScreen(navController, viewModel) }
+                composable(
+                    route = "odekake_chat/{locationId}",
+                    arguments = listOf(navArgument("locationId") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val locationId = backStackEntry.arguments?.getString("locationId") ?: "cafe"
+                    OdekakeChatScreen(navController, viewModel, locationId)
+                }
                 composable(
                     route = "story/{episodeIndex}",
                     arguments = listOf(navArgument("episodeIndex") { type = NavType.IntType })
@@ -865,6 +854,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         onCharacterClick = {
             touchedDialogue = currentLoveContent.touchDialogues.randomOrNull()
         },
+        onFreeChatClick = { navController.navigate("freechat") },
         onOdekakeClick = { navController.navigate("odekake") },
         onRecordsClick = { navController.navigate("records") },
         onDebugClick = { navController.navigate("debug") }
@@ -888,6 +878,7 @@ fun HomeScreenContent(
     distanceStr: String,
     caloriesStr: String,
     onCharacterClick: () -> Unit,
+    onFreeChatClick: () -> Unit,
     onOdekakeClick: () -> Unit,
     onRecordsClick: () -> Unit,
     onDebugClick: () -> Unit
@@ -1004,6 +995,7 @@ fun HomeScreenContent(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding(),
+            onFreeChat = onFreeChatClick,
             onOdekake = onOdekakeClick,
             onRecords = onRecordsClick
         )
@@ -1226,7 +1218,7 @@ fun HomeCampaignBanner() {
 }
 
 @Composable
-fun HomeCustomBottomNav(modifier: Modifier = Modifier, onOdekake: () -> Unit, onRecords: () -> Unit) {
+fun HomeCustomBottomNav(modifier: Modifier = Modifier, onFreeChat: () -> Unit, onOdekake: () -> Unit, onRecords: () -> Unit) {
     Surface(modifier = modifier
         .fillMaxWidth()
         .height(80.dp), color = Color.White, shadowElevation = 10.dp) {
@@ -1234,14 +1226,15 @@ fun HomeCustomBottomNav(modifier: Modifier = Modifier, onOdekake: () -> Unit, on
             HomeNavItem(Icons.Default.Home, "ホーム", true) {}
             HomeNavItem(Icons.Default.ShoppingBag, "おでかけ", false, onOdekake)
 
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.offset(y = (-12).dp)) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier
+                .offset(y = (-12).dp)
+                .clickable { onFreeChat() }) {
                 Surface(shape = CircleShape, color = Color(0xFF4A90E2), modifier = Modifier
                     .size(56.dp)
                     .shadow(4.dp, CircleShape)) {
-                    // ★ Icons.Default.Chat に修正（AutoMirroredではないため）
                     Icon(Icons.Default.Chat, null, tint = Color.White, modifier = Modifier.padding(14.dp))
                 }
-                Text("会話", modifier = Modifier
+                Text("自由会話", modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .offset(y = 22.dp), fontSize = 10.sp, color = Color(0xFF4A90E2), fontWeight = FontWeight.Bold)
             }
@@ -1281,6 +1274,7 @@ fun HomeScreenPreview() {
             distanceStr = "5.6 km",
             caloriesStr = "238 kcal",
             onCharacterClick = {},
+            onFreeChatClick = {},
             onOdekakeClick = {},
             onRecordsClick = {},
             onDebugClick = {}
@@ -1339,146 +1333,6 @@ fun DebugScreen(navController: NavController, viewModel: StepViewModel) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun OdekakeScreen(navController: NavController, viewModel: StepViewModel) {
-    val actionPoints by viewModel.currentActionPoints
-    val loveCount by viewModel.loveCount
-    val completedIds by viewModel.completedEpisodeIds
-    var devMode by remember { mutableStateOf(false) }
-    
-    var selectedLoveLv by remember { mutableIntStateOf(loveCount.coerceIn(1, 10)) }
-
-    Scaffold(topBar = { TopAppBarWithBack(title = "おでかけ", onBack = { navController.popBackStack() }) }) { padding ->
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)) {
-            Surface(color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "5000歩で1ポイント貯まります！現在の行動ポイント: $actionPoints pt", fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("開発用全解放: ", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Switch(checked = devMode, onCheckedChange = { devMode = it }, modifier = Modifier.scale(0.8f))
-                    }
-                }
-            }
-
-            ScrollableTabRow(
-                selectedTabIndex = (selectedLoveLv - 1).coerceAtLeast(0),
-                edgePadding = 16.dp,
-                containerColor = Color.Transparent,
-                divider = {},
-                indicator = {}
-            ) {
-                (1..10).forEach { i ->
-                    val isSelected = selectedLoveLv == i
-                    val isEnabled = devMode || i <= loveCount
-
-                    Tab(
-                        selected = isSelected,
-                        onClick = { selectedLoveLv = i },
-                        enabled = isEnabled,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = when {
-                                isSelected -> MaterialTheme.colorScheme.primary
-                                isEnabled -> MaterialTheme.colorScheme.surfaceVariant
-                                else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                            },
-                            contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier
-                                .height(40.dp)
-                                .widthIn(min = 80.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = "ラブ $i",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    modifier = Modifier.padding(horizontal = 12.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            val episodesInThisLv = mainStoryEpisodes.filter { 
-                it.requiredLove == selectedLoveLv 
-            }
-
-            if (episodesInThisLv.isEmpty()) {
-                Box(modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f), contentAlignment = Alignment.Center) {
-                    Text("このレベルの物語はまだありません", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(episodesInThisLv.size) { idx ->
-                        val episode = episodesInThisLv[idx]
-                        val epIndexInFullList = mainStoryEpisodes.indexOf(episode)
-                        val isRead = completedIds.contains(epIndexInFullList.toString())
-                        val isLoveLevelMet = devMode || (selectedLoveLv <= loveCount)
-                        val isPreviousCompleted = if (epIndexInFullList == 0) true 
-                                                 else completedIds.contains((epIndexInFullList - 1).toString())
-                        val isUnlocked = devMode || (isLoveLevelMet && isPreviousCompleted)
-                        val canGo = devMode || isRead || (isUnlocked && actionPoints > 0)
-
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(
-                                    enabled = canGo,
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) { navController.navigate("story/$epIndexInFullList") },
-                            colors = CardDefaults.cardColors(containerColor = if (isRead) MaterialTheme.colorScheme.secondaryContainer else if (!isUnlocked) Color.Gray.copy(alpha = 0.3f) else if (canGo) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                        ) {
-                            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .background(
-                                            if (isRead) MaterialTheme.colorScheme.secondaryContainer
-                                            else MaterialTheme.colorScheme.primaryContainer,
-                                            CircleShape
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = if (isRead) Icons.Default.Check else if (!isUnlocked) Icons.Default.Lock else Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint = if (isRead) MaterialTheme.colorScheme.onSecondaryContainer 
-                                               else MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(text = episode.title, style = MaterialTheme.typography.titleMedium)
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    if (isRead) { Text(text = "既読", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
-                                    else if (!isUnlocked) { val reason = if (!isLoveLevelMet) "ラブLvが足りません" else "前の話をクリアしてね"; Text(text = "？？？ ($reason)", color = Color.Gray, fontSize = 12.sp) }
-                                    else if (!canGo) { Text(text = "※行動ポイントが足りません", color = Color.Red, fontSize = 12.sp) }
-                                    else { Text(text = "すぐに出かけられます！", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp) }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 @Composable
 fun StoryScreen(navController: NavController, viewModel: StepViewModel, episodeIndex: Int) {
     val episode = mainStoryEpisodes[episodeIndex]
@@ -1498,7 +1352,6 @@ fun StoryScreen(navController: NavController, viewModel: StepViewModel, episodeI
         newList
     }
     VisualNovelScreen(episodeKey = episodeIndex, script = processedScript, backgroundRes = episode.backgroundRes, playerName = playerName) {
-        viewModel.completeEpisode(episodeIndex, episode.backgroundRes)
         navController.popBackStack()
     }
 }
@@ -2287,6 +2140,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
     var tempHeight by remember { mutableStateOf(viewModel.heightCm.floatValue.toString()) }
     var tempWeight by remember { mutableStateOf(viewModel.weightKg.floatValue.toString()) }
     var tempGender by remember { mutableStateOf(viewModel.userGender.value) }
+    var tempApiKey by remember { mutableStateOf(viewModel.openAiApiKey) }
     val pinkAccent = Color(0xFFFF6B9D)
 
     Scaffold(
@@ -2313,6 +2167,15 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                 RadioButton(selected = tempGender == "女性", onClick = { tempGender = "女性" })
                 Text("女性", modifier = Modifier.clickable { tempGender = "女性" })
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("AI会話設定", fontWeight = FontWeight.Bold, color = pinkAccent, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(
+                value = tempApiKey,
+                onValueChange = { tempApiKey = it },
+                label = { Text("OpenAI APIキー") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
             Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = {
                 val h = tempHeight.toFloatOrNull() ?: 170f
@@ -2320,6 +2183,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                 viewModel.setPlayerName(tempName)
                 viewModel.setUserProfile(h, w)
                 viewModel.saveProfile(h, tempGender)
+                viewModel.openAiApiKey = tempApiKey
                 navController.popBackStack()
             }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = pinkAccent)) { Text("保存して戻る") }
         }
@@ -2366,3 +2230,344 @@ fun TopAppBarWithBack(title: String, onBack: () -> Unit) {
 }
 
 data class AggregatedData(val label: String, val steps: Int, val activeTimeMillis: Long, val dateForSort: String)
+
+// ---- AI チャット共通 ----
+
+data class ChatMessage(val role: String, val content: String)
+
+data class OdekakeLocation(val id: String, val name: String, val emoji: String)
+
+val odekakeLocations = listOf(
+    OdekakeLocation("cafe",   "カフェ",  "☕"),
+    OdekakeLocation("park",   "公園",    "🌸"),
+    OdekakeLocation("cinema", "映画館",  "🎬"),
+    OdekakeLocation("beach",  "海",      "🏖️"),
+    OdekakeLocation("home",   "おうち",  "🏠")
+)
+
+fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String): String {
+    val intimacy = when {
+        loveCount <= 2 -> "まだ少し距離がある丁寧な話し方"
+        loveCount <= 5 -> "友達のような自然な話し方"
+        else -> "とても親密で甘えた話し方"
+    }
+    return "あなたはヒカリというキャラクターです。${playerName}のことが大好きな女の子で、${intimacy}をします。返答は3文以内に収めてください。"
+}
+
+fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String): String {
+    val location = odekakeLocations.find { it.id == locationId }?.name ?: "カフェ"
+    val base = buildFreeChatSystemPrompt(loveCount, playerName)
+    return "$base 今は${playerName}と一緒に${location}に来ています。その場の雰囲気で会話してください。"
+}
+
+suspend fun callOpenAiApi(
+    apiKey: String,
+    systemPrompt: String,
+    history: List<ChatMessage>,
+    userMessage: String
+): String = withContext(Dispatchers.IO) {
+    val url = URL("https://api.openai.com/v1/chat/completions")
+    val conn = url.openConnection() as HttpURLConnection
+    conn.requestMethod = "POST"
+    conn.setRequestProperty("Content-Type", "application/json")
+    conn.setRequestProperty("Authorization", "Bearer $apiKey")
+    conn.doOutput = true
+
+    val messages = JSONArray()
+    messages.put(JSONObject().apply { put("role", "system"); put("content", systemPrompt) })
+    history.forEach { msg ->
+        messages.put(JSONObject().apply { put("role", msg.role); put("content", msg.content) })
+    }
+    messages.put(JSONObject().apply { put("role", "user"); put("content", userMessage) })
+
+    val body = JSONObject().apply {
+        put("model", "gpt-4o-mini")
+        put("max_tokens", 512)
+        put("messages", messages)
+    }.toString()
+
+    conn.outputStream.write(body.toByteArray(Charsets.UTF_8))
+    val response = conn.inputStream.bufferedReader(Charsets.UTF_8).readText()
+    JSONObject(response)
+        .getJSONArray("choices")
+        .getJSONObject(0)
+        .getJSONObject("message")
+        .getString("content")
+}
+
+// ---- 自由会話画面 ----
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
+    val loveCount by viewModel.loveCount
+    val actionPoints by viewModel.currentActionPoints
+    val playerName by viewModel.playerName
+    val messages = remember { mutableStateListOf<ChatMessage>() }
+    var inputText by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
+    }
+
+    Scaffold(topBar = {
+        TopAppBarWithBack(title = "自由会話 (${actionPoints}pt)", onBack = { navController.popBackStack() })
+    }) { padding ->
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                items(messages.size) { i ->
+                    val msg = messages[i]
+                    val isUser = msg.role == "user"
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isUser) Color(0xFF4A90E2) else Color(0xFFF0F0F0),
+                            modifier = Modifier.widthIn(max = 280.dp)
+                        ) {
+                            Text(
+                                msg.content,
+                                modifier = Modifier.padding(10.dp),
+                                color = if (isUser) Color.White else Color.DarkGray,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                }
+                if (isLoading) {
+                    item {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        }
+                    }
+                }
+            }
+
+            errorMessage?.let {
+                Text(it, color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp))
+            }
+
+            Row(modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = inputText,
+                    onValueChange = { inputText = it },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("メッセージを入力...") },
+                    maxLines = 3
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(
+                    onClick = {
+                        val text = inputText.trim()
+                        if (text.isEmpty() || isLoading) return@IconButton
+                        val apiKey = viewModel.openAiApiKey
+                        if (apiKey.isEmpty()) {
+                            errorMessage = "設定からOpenAI APIキーを入力してください"
+                            return@IconButton
+                        }
+                        if (!viewModel.spendPointForChat()) {
+                            errorMessage = "ポイントが足りません（5000歩で1ポイント）"
+                            return@IconButton
+                        }
+                        errorMessage = null
+                        val userMsg = ChatMessage("user", text)
+                        messages.add(userMsg)
+                        inputText = ""
+                        isLoading = true
+                        val historySnapshot = messages.dropLast(1).toList()
+                        scope.launch {
+                            try {
+                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName)
+                                val reply = callOpenAiApi(apiKey, systemPrompt, historySnapshot, text)
+                                messages.add(ChatMessage("assistant", reply))
+                            } catch (e: Exception) {
+                                errorMessage = "エラーが発生しました: ${e.message}"
+                            } finally {
+                                isLoading = false
+                            }
+                        }
+                    },
+                    enabled = !isLoading && inputText.isNotBlank()
+                ) {
+                    Icon(Icons.Default.Send, contentDescription = "送信", tint = Color(0xFF4A90E2))
+                }
+            }
+        }
+    }
+}
+
+// ---- おでかけ場所選択画面 ----
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OdekakeScenarioSelectScreen(navController: NavController, viewModel: StepViewModel) {
+    val actionPoints by viewModel.currentActionPoints
+
+    Scaffold(topBar = {
+        TopAppBarWithBack(title = "おでかけ (${actionPoints}pt)", onBack = { navController.popBackStack() })
+    }) { padding ->
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("どこへ行く？", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text("会話を進めるとひかりとの好感度が上がります♪", fontSize = 12.sp, color = Color.Gray)
+            Spacer(modifier = Modifier.height(8.dp))
+            odekakeLocations.forEach { loc ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { navController.navigate("odekake_chat/${loc.id}") },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(loc.emoji, fontSize = 28.sp)
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Text(loc.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ---- おでかけ会話画面 ----
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, locationId: String) {
+    val loveCount by viewModel.loveCount
+    val actionPoints by viewModel.currentActionPoints
+    val playerName by viewModel.playerName
+    val location = odekakeLocations.find { it.id == locationId } ?: odekakeLocations.first()
+    val messages = remember { mutableStateListOf<ChatMessage>() }
+    var inputText by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var odekakeMessageCount by remember { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
+    }
+
+    Scaffold(topBar = {
+        TopAppBarWithBack(
+            title = "${location.emoji} ${location.name} (${actionPoints}pt)",
+            onBack = { navController.popBackStack() }
+        )
+    }) { padding ->
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 8.dp)
+            ) {
+                items(messages.size) { i ->
+                    val msg = messages[i]
+                    val isUser = msg.role == "user"
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isUser) Color(0xFF4A90E2) else Color(0xFFF0F0F0),
+                            modifier = Modifier.widthIn(max = 280.dp)
+                        ) {
+                            Text(
+                                msg.content,
+                                modifier = Modifier.padding(10.dp),
+                                color = if (isUser) Color.White else Color.DarkGray,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                }
+                if (isLoading) {
+                    item {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        }
+                    }
+                }
+            }
+
+            errorMessage?.let {
+                Text(it, color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp))
+            }
+
+            Row(modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = inputText,
+                    onValueChange = { inputText = it },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("メッセージを入力...") },
+                    maxLines = 3
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(
+                    onClick = {
+                        val text = inputText.trim()
+                        if (text.isEmpty() || isLoading) return@IconButton
+                        val apiKey = viewModel.openAiApiKey
+                        if (apiKey.isEmpty()) {
+                            errorMessage = "設定からOpenAI APIキーを入力してください"
+                            return@IconButton
+                        }
+                        if (!viewModel.spendPointForChat()) {
+                            errorMessage = "ポイントが足りません（5000歩で1ポイント）"
+                            return@IconButton
+                        }
+                        errorMessage = null
+                        val userMsg = ChatMessage("user", text)
+                        messages.add(userMsg)
+                        inputText = ""
+                        isLoading = true
+                        odekakeMessageCount++
+                        if (odekakeMessageCount % 3 == 0) {
+                            viewModel.earnHeartFromOdekake()
+                        }
+                        val historySnapshot = messages.dropLast(1).toList()
+                        scope.launch {
+                            try {
+                                val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName)
+                                val reply = callOpenAiApi(apiKey, systemPrompt, historySnapshot, text)
+                                messages.add(ChatMessage("assistant", reply))
+                            } catch (e: Exception) {
+                                errorMessage = "エラーが発生しました: ${e.message}"
+                            } finally {
+                                isLoading = false
+                            }
+                        }
+                    },
+                    enabled = !isLoading && inputText.isNotBlank()
+                ) {
+                    Icon(Icons.Default.Send, contentDescription = "送信", tint = Color(0xFF4A90E2))
+                }
+            }
+        }
+    }
+}
