@@ -415,41 +415,13 @@ fun getHeartPath(size: Size): Path {
 
 class MainActivity : ComponentActivity() {
     private lateinit var windowInsetsController: WindowInsetsControllerCompat
-    private val hideNavBarHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private val hideNavBarRunnable = Runnable { hideNavBar() }
-
-    private fun hideNavBar() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            window.insetsController?.hide(android.view.WindowInsets.Type.navigationBars())
-        } else {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = (
-                android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-            )
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
-
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
-            if (insets.isVisible(WindowInsetsCompat.Type.navigationBars())) {
-                hideNavBarHandler.removeCallbacks(hideNavBarRunnable)
-                hideNavBarHandler.postDelayed(hideNavBarRunnable, 3000)
-            } else {
-                hideNavBarHandler.removeCallbacks(hideNavBarRunnable)
-            }
-            // ナビバーのinsetsをゼロにしてComposeに伝えることでコンテンツが上にずれなくなる
-            val consumed = WindowInsetsCompat.Builder(insets)
-                .setInsets(WindowInsetsCompat.Type.navigationBars(), androidx.core.graphics.Insets.NONE)
-                .build()
-            androidx.core.view.ViewCompat.onApplyWindowInsets(v, consumed)
-        }
 
         val database = AppDatabase.getDatabase(this)
         val repository = StepRepository(database.stepDao(), getSharedPreferences("lovemanpo_prefs", MODE_PRIVATE))
@@ -468,15 +440,15 @@ class MainActivity : ComponentActivity() {
 
     override fun dispatchTouchEvent(ev: android.view.MotionEvent?): Boolean {
         if (ev?.action == android.view.MotionEvent.ACTION_DOWN) {
-            hideNavBarHandler.removeCallbacks(hideNavBarRunnable)
-            hideNavBar()
+            // BEHAVIOR_DEFAULT に切り替えてトランジェント状態をキャンセルし、即座にhide()を効かせる
+            windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
+            windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
+            // 次フレームでトランジェント動作を復元（次回のスワイプ表示に備える）
+            window.decorView.postOnAnimation {
+                windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
         }
         return super.dispatchTouchEvent(ev)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        hideNavBarHandler.removeCallbacks(hideNavBarRunnable)
     }
 }
 
@@ -518,7 +490,10 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
             }
         }
 
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .consumeWindowInsets(WindowInsets.navigationBars)
+        ) {
             NavHost(
                 navController = navController,
                 startDestination = startDestination
