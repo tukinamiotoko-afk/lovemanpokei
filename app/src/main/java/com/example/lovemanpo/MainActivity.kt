@@ -98,6 +98,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility // 必要
@@ -474,7 +475,25 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
             }
         }
 
-        Box(modifier = Modifier.fillMaxSize()) {
+        val window = (context as? ComponentActivity)?.window
+        val windowInsetsController = remember(window) {
+            window?.let { WindowCompat.getInsetsController(it, it.decorView) }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                            if (event.changes.any { it.pressed }) {
+                                windowInsetsController?.hide(WindowInsetsCompat.Type.navigationBars())
+                            }
+                        }
+                    }
+                }
+        ) {
             NavHost(
                 navController = navController,
                 startDestination = startDestination
