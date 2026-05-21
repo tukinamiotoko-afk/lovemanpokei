@@ -98,7 +98,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility // 必要
@@ -415,12 +414,14 @@ fun getHeartPath(size: Size): Path {
 }
 
 class MainActivity : ComponentActivity() {
+    private lateinit var windowInsetsController: WindowInsetsControllerCompat
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView) // 必要
-        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE // 必要
-        windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars()) // 必要
+        windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
         val database = AppDatabase.getDatabase(this)
         val repository = StepRepository(database.stepDao(), getSharedPreferences("lovemanpo_prefs", MODE_PRIVATE))
         val viewModelFactory = StepViewModelFactory(repository)
@@ -434,6 +435,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             ラブ万歩計Theme { PedometerAppWithNavigation(viewModelFactory) }
         }
+    }
+
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent?): Boolean {
+        if (ev?.action == android.view.MotionEvent.ACTION_DOWN) {
+            windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
+        }
+        return super.dispatchTouchEvent(ev)
     }
 }
 
@@ -475,25 +483,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
             }
         }
 
-        val window = (context as? ComponentActivity)?.window
-        val windowInsetsController = remember(window) {
-            window?.let { WindowCompat.getInsetsController(it, it.decorView) }
-        }
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                            if (event.changes.any { it.pressed }) {
-                                windowInsetsController?.hide(WindowInsetsCompat.Type.navigationBars())
-                            }
-                        }
-                    }
-                }
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             NavHost(
                 navController = navController,
                 startDestination = startDestination
