@@ -416,8 +416,18 @@ fun getHeartPath(size: Size): Path {
 class MainActivity : ComponentActivity() {
     private lateinit var windowInsetsController: WindowInsetsControllerCompat
     private val hideNavBarHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private val hideNavBarRunnable = Runnable {
-        windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
+    private val hideNavBarRunnable = Runnable { hideNavBar() }
+
+    private fun hideNavBar() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            window.insetsController?.hide(android.view.WindowInsets.Type.navigationBars())
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = (
+                android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            )
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -434,7 +444,11 @@ class MainActivity : ComponentActivity() {
             } else {
                 hideNavBarHandler.removeCallbacks(hideNavBarRunnable)
             }
-            androidx.core.view.ViewCompat.onApplyWindowInsets(v, insets)
+            // ナビバーのinsetsをゼロにしてComposeに伝えることでコンテンツが上にずれなくなる
+            val consumed = WindowInsetsCompat.Builder(insets)
+                .setInsets(WindowInsetsCompat.Type.navigationBars(), androidx.core.graphics.Insets.NONE)
+                .build()
+            androidx.core.view.ViewCompat.onApplyWindowInsets(v, consumed)
         }
 
         val database = AppDatabase.getDatabase(this)
@@ -455,7 +469,7 @@ class MainActivity : ComponentActivity() {
     override fun dispatchTouchEvent(ev: android.view.MotionEvent?): Boolean {
         if (ev?.action == android.view.MotionEvent.ACTION_DOWN) {
             hideNavBarHandler.removeCallbacks(hideNavBarRunnable)
-            windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
+            hideNavBar()
         }
         return super.dispatchTouchEvent(ev)
     }
