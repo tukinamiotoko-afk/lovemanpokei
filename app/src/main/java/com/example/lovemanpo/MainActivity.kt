@@ -52,8 +52,6 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
@@ -102,13 +100,13 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import androidx.compose.animation.AnimatedVisibility // 必要
+import androidx.compose.animation.slideInVertically // 必要
+import androidx.compose.animation.slideOutVertically // 必要
+import androidx.compose.foundation.gestures.detectVerticalDragGestures // 必要
+import androidx.core.view.WindowCompat // 必要
+import androidx.core.view.WindowInsetsCompat // 必要
+import androidx.core.view.WindowInsetsControllerCompat // 必要
 
 // --- 期間の定義 ---
 enum class DisplayPeriod(val label: String) {
@@ -120,31 +118,31 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
     var cumulativeSteps: Int
         get() = prefs.getInt("CUMULATIVE_STEPS", 0)
         set(value) = prefs.edit { putInt("CUMULATIVE_STEPS", value) }
-
+        
     var lastSensorValue: Int
         get() = prefs.getInt("LAST_SENSOR_VALUE", -1)
         set(value) = prefs.edit { putInt("LAST_SENSOR_VALUE", value) }
-
+        
     var lastUpdateDay: String
         get() = prefs.getString("LAST_UPDATE_DAY", "") ?: ""
         set(value) = prefs.edit { putString("LAST_UPDATE_DAY", value) }
-
+        
     var playerName: String
         get() = prefs.getString("PLAYER_NAME", "")!!
         set(value) = prefs.edit { putString("PLAYER_NAME", value) }
-
+        
     var currentDateSpotId: Int
         get() = prefs.getInt("CURRENT_DATE_SPOT_ID", 0)
         set(value) = prefs.edit { putInt("CURRENT_DATE_SPOT_ID", value) }
-
+        
     var loveCount: Int
         get() = prefs.getInt("LOVE_COUNT_V3", 1)
         set(value) = prefs.edit { putInt("LOVE_COUNT_V3", value) }
-
+        
     var heartCount: Int
         get() = prefs.getInt("HEART_COUNT", 0)
         set(value) = prefs.edit { putInt("HEART_COUNT", value) }
-
+        
     var spentActionPoints: Int
         get() = prefs.getInt("SPENT_ACTION_POINTS", 0)
         set(value) = prefs.edit { putInt("SPENT_ACTION_POINTS", value) }
@@ -156,23 +154,23 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
     var todayPointsEarned: Int
         get() = prefs.getInt("TODAY_POINTS_EARNED", 0)
         set(value) = prefs.edit { putInt("TODAY_POINTS_EARNED", value) }
-
+        
     var storyProgress: Int
         get() = prefs.getInt("STORY_PROGRESS", -1)
         set(value) = prefs.edit { putInt("STORY_PROGRESS", value) }
-
+        
     var completedEpisodeIds: Set<String>
         get() = prefs.getStringSet("COMPLETED_EPISODE_IDS", emptySet()) ?: emptySet()
         set(value) = prefs.edit { putStringSet("COMPLETED_EPISODE_IDS", value) }
-
+        
     var heightCm: Float
         get() = prefs.getFloat("HEIGHT_CM", 170f)
         set(value) = prefs.edit { putFloat("HEIGHT_CM", value) }
-
+        
     var weightKg: Float
         get() = prefs.getFloat("WEIGHT_KG", 60f)
         set(value) = prefs.edit { putFloat("WEIGHT_KG", value) }
-
+        
     var userGender: String
         get() = prefs.getString("USER_GENDER", "")!!
         set(value) = prefs.edit { putString("USER_GENDER", value) }
@@ -190,7 +188,7 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
     }
 
     fun getAllStepRecordsFlow() = stepDao.getAllRecordsFlow()
-
+    
     suspend fun getHourlyRecords(date: String): List<HourlyStepRecord> {
         return stepDao.getHourlyRecordsForDay(date)
     }
@@ -215,7 +213,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     val completedEpisodeIds = mutableStateOf(repository.completedEpisodeIds)
     val spentActionPoints = mutableIntStateOf(repository.spentActionPoints)
     val totalEarnedPoints = mutableIntStateOf(repository.totalEarnedPoints)
-
+    
     val heightCm = mutableFloatStateOf(repository.heightCm)
     val weightKg = mutableFloatStateOf(repository.weightKg)
     val userGender = mutableStateOf(repository.userGender)
@@ -257,7 +255,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     fun setPlayerName(name: String) {
         repository.playerName = name; playerName.value = name
     }
-
+    
     fun setUserProfile(height: Float, weight: Float) {
         repository.heightCm = height
         repository.weightKg = weight
@@ -303,7 +301,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
             val newCompletedIds = completedIds + episodeId
             repository.completedEpisodeIds = newCompletedIds
             completedEpisodeIds.value = newCompletedIds
-
+            
             repository.heartCount = heartCount.intValue
             repository.loveCount = loveCount.intValue
             repository.storyProgress = storyProgress.intValue
@@ -344,14 +342,15 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
             val currentRecord = records.find { it.date == today }
             val newTodaySteps = todaySteps.intValue + amount
             val newActiveTime = (currentRecord?.activeTimeMillis ?: 0L) + (amount * 500L)
-
+            
             repository.recordSteps(today, newTodaySteps, newActiveTime)
-
+            
             val newCumulative = repository.cumulativeSteps + amount
             repository.cumulativeSteps = newCumulative
             cumulativeSteps.intValue = newCumulative
             todaySteps.intValue = newTodaySteps
 
+            // デバッグ用：ポイント付与ロジックのシミュレート
             val newPoints = newTodaySteps / 5000
             val cappedPoints = newPoints.coerceAtMost(2)
             val pointsToGrant = cappedPoints - repository.todayPointsEarned
@@ -415,10 +414,12 @@ fun getHeartPath(size: Size): Path {
 }
 
 class MainActivity : ComponentActivity() {
+    private lateinit var windowInsetsController: WindowInsetsControllerCompat
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
         val database = AppDatabase.getDatabase(this)
@@ -435,6 +436,13 @@ class MainActivity : ComponentActivity() {
             ラブ万歩計Theme { PedometerAppWithNavigation(viewModelFactory) }
         }
     }
+
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent?): Boolean {
+        if (ev?.action == android.view.MotionEvent.ACTION_DOWN) {
+            windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
+        }
+        return super.dispatchTouchEvent(ev)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -449,7 +457,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
         mutableStateOf(permissions.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED })
     }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results -> hasPermissions = results.values.all { it } }
-
+    
     LaunchedEffect(hasPermissions) {
         if (hasPermissions) {
             val serviceIntent = Intent(context, StepCounterService::class.java)
@@ -462,13 +470,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
     if (hasPermissions) {
         val navController = rememberNavController()
         val viewModel: StepViewModel = viewModel(factory = viewModelFactory)
-
-        // ナビバーをタップで消すためのコントローラーを取得
-        val window = (context as? ComponentActivity)?.window
-        val windowInsetsController = remember(window) {
-            window?.let { WindowCompat.getInsetsController(it, it.decorView) }
-        }
-
+        
         val startDestination = remember(Unit) {
             if (viewModel.playerName.value.isEmpty()) {
                 "name_input"
@@ -481,21 +483,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
             }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                // 画面のどこをタップしてもナビバーを隠す（イベントは消費しない）
-                .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                            if (event.changes.any { it.pressed }) {
-                                windowInsetsController?.hide(WindowInsetsCompat.Type.navigationBars())
-                            }
-                        }
-                    }
-                }
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             NavHost(
                 navController = navController,
                 startDestination = startDestination
@@ -533,7 +521,7 @@ fun StabilitySetupScreen(navController: NavController, viewModel: StepViewModel)
     val context = LocalContext.current
     var showBatteryDetail by remember { mutableStateOf(false) }
     var showAutoStartDetail by remember { mutableStateOf(false) }
-
+    
     var batteryChecked by remember { mutableStateOf(isBatteryOptimizationIgnored(context)) }
     var autoStartChecked by remember { mutableStateOf(false) }
 
@@ -566,9 +554,9 @@ fun StabilitySetupScreen(navController: NavController, viewModel: StepViewModel)
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-
+        
         Spacer(modifier = Modifier.height(32.dp))
-
+        
         SetupItemRow(
             number = "1",
             title = "バッテリー最適化の解除",
@@ -587,7 +575,7 @@ fun StabilitySetupScreen(navController: NavController, viewModel: StepViewModel)
 
         Spacer(modifier = Modifier.weight(1f))
         Spacer(modifier = Modifier.height(40.dp))
-
+        
         Button(
             onClick = {
                 viewModel.completeBatterySetup()
@@ -646,7 +634,7 @@ fun SetupItemRow(number: String, title: String, isDone: Boolean, onClick: () -> 
             .fillMaxWidth()
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = if (isDone) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            containerColor = if (isDone) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
                             else MaterialTheme.colorScheme.surfaceVariant
         ),
         border = if (isDone) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null
@@ -738,13 +726,15 @@ fun openAutoStartSettings(context: Context) {
             return
         }
     }
-
+    
     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
         data = "package:${context.packageName}".toUri()
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     context.startActivity(intent)
 }
+
+
 
 @Composable
 fun NameInputScreen(viewModel: StepViewModel, navController: NavController) {
@@ -821,8 +811,10 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     val heartGaugeProgress by viewModel.heartGaugeProgress
     val playerName by viewModel.playerName
 
+    // 背景固定設定
     val bgRes = R.drawable.home_haikei
 
+    // 今日の活動データを取得して計算
     val allRecords by viewModel.allStepRecords
     val todayRecord = remember(allRecords) {
         val today = java.time.LocalDate.now().toString()
@@ -830,12 +822,15 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     }
     val activeTimeMillis = todayRecord?.activeTimeMillis ?: 0L
 
+    // 距離の計算 (km)
     val distance = (todaySteps * viewModel.strideLength) / 1000.0
     val distanceStr = String.format(java.util.Locale.US, "%.1f km", distance)
 
+    // カロリーの計算
     val calories = viewModel.calculateCalories(todaySteps, activeTimeMillis)
     val caloriesStr = String.format(java.util.Locale.US, "%.0f kcal", calories)
 
+    // 時間のフォーマット (H時間 m分)
     val hours = activeTimeMillis / 3600000
     val minutes = (activeTimeMillis % 3600000) / 60000
     val activeTimeStr = "${hours}時間 ${minutes}分"
@@ -868,6 +863,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         bgRes = bgRes,
         dialogueMessage = displayMessage,
         expressionRes = displayExpression,
+        // ★ 計算した文字列を渡す
         activeTimeStr = activeTimeStr,
         distanceStr = distanceStr,
         caloriesStr = caloriesStr,
@@ -880,9 +876,10 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     )
 }
 
+
 @Composable
 fun HomeScreenContent(
-    todaySteps: Int, actionPoints: Int,
+    todaySteps: Int,    actionPoints: Int,
     stepGaugeProgress: Float,
     loveCount: Int,
     heartCount: Int,
@@ -891,6 +888,7 @@ fun HomeScreenContent(
     bgRes: Int,
     dialogueMessage: String,
     expressionRes: Int,
+    // ★ 追加
     activeTimeStr: String,
     distanceStr: String,
     caloriesStr: String,
@@ -899,20 +897,7 @@ fun HomeScreenContent(
     onRecordsClick: () -> Unit,
     onDebugClick: () -> Unit
 ) {
-    val context = LocalContext.current
-    val window = (context as? androidx.activity.ComponentActivity)?.window
-    val windowInsetsController = remember(window) {
-        window?.let { androidx.core.view.WindowCompat.getInsetsController(it, it.decorView) }
-    }
-
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .pointerInput(Unit) {
-            detectTapGestures {
-                windowInsetsController?.hide(androidx.core.view.WindowInsetsCompat.Type.navigationBars())
-            }
-        }
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = bgRes),
             contentDescription = null,
@@ -926,6 +911,7 @@ fun HomeScreenContent(
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
         ) {
+            // ヘッダー
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -976,6 +962,8 @@ fun HomeScreenContent(
                     contentScale = ContentScale.Fit
                 )
 
+
+
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopStart)
@@ -983,6 +971,7 @@ fun HomeScreenContent(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
+                    // ★ ここに渡されたデータを反映
                     HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, "目標 2時間 00分", Color(0xFFF06292))
                     HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "歩行距離", distanceStr, null, Color(0xFF4FC3F7))
                     HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
@@ -1007,8 +996,8 @@ fun HomeScreenContent(
                     .offset(y = (-50).dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    val formattedMessage = dialogueMessage.replace("○○", playerName)
-                    HomeCommentBanner(expressionRes, formattedMessage)
+                    val formattedMessage = dialogueMessage.replace("○○", playerName) // 必要
+                    HomeCommentBanner(expressionRes, formattedMessage) // 必要
                     Spacer(modifier = Modifier.height(16.dp))
                     HomeCampaignBanner()
                     Spacer(modifier = Modifier.height(100.dp))
@@ -1024,7 +1013,9 @@ fun HomeScreenContent(
             onRecords = onRecordsClick
         )
     }
-}
+} // ← ここで HomeScreenContent が終わる
+
+
 
 @Composable
 fun HomeTopCircleButton(icon: androidx.compose.ui.graphics.vector.ImageVector, containerColor: Color = Color.White, iconColor: Color = Color.Gray, onClick: () -> Unit = {}) {
@@ -1042,18 +1033,21 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .size(130.dp)
+                // ★ ここで円全体を白く塗りつぶし、少し影（shadow）をつけて背景から浮かせています
                 .shadow(2.dp, CircleShape)
                 .background(Color.White, CircleShape)
         ) {
             Canvas(modifier = Modifier
                 .fillMaxSize()
-                .padding(4.dp)) {
+                .padding(4.dp)) { // 少し余白を入れてゲージを綺麗に
                 val sw = 8.dp.toPx()
+                // ゲージの土台（薄いグレー）
                 drawArc(
                     color = Color.LightGray.copy(alpha = 0.2f),
                     startAngle = 0f, sweepAngle = 360f, useCenter = false,
                     style = Stroke(sw)
                 )
+                // 進捗（青いグラデーション）
                 drawArc(
                     brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
                         listOf(Color(0xFF4FC3F7), Color(0xFF4A90E2))
@@ -1077,6 +1071,7 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
 
 @Composable
 fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String, sub: String?, color: Color) {
+    // 文字自体の上下の余白を消す設定
     val textStyle = TextStyle(
         platformStyle = PlatformTextStyle(includeFontPadding = false)
     )
@@ -1087,12 +1082,13 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
         shadowElevation = 1.dp
     ) {
         Row(
-            modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp),
+            modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp), // 上下のパディングを少し削りました
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(5.dp))
             Column(
+                // ★ spacedBy にマイナスの値を指定して、上下の間隔を強制的に詰めます
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(label, fontSize = 8.sp, color = Color.Gray, style = textStyle)
@@ -1107,7 +1103,7 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 
 @Composable
 fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(140.dp), shadowElevation = 1.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White,modifier = Modifier.width(140.dp), shadowElevation = 1.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(14.dp))
@@ -1157,8 +1153,8 @@ fun HomeCommentBanner(expr: Int, message: String) {
                 .background(Color(0xFFFFE0E9)), contentScale = ContentScale.Crop)
             Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold)
-                Text(message, fontSize = 10.sp, color = Color.DarkGray)
+                Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold) // 必要（タイトルを固定の名前に変更）
+                Text(message, fontSize = 10.sp, color = Color.DarkGray) // 必要（セリフを表示するように変更）
             }
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
         }
@@ -1247,6 +1243,7 @@ fun HomeCustomBottomNav(modifier: Modifier = Modifier, onOdekake: () -> Unit, on
                 Surface(shape = CircleShape, color = Color(0xFF4A90E2), modifier = Modifier
                     .size(56.dp)
                     .shadow(4.dp, CircleShape)) {
+                    // ★ Icons.Default.Chat に修正（AutoMirroredではないため）
                     Icon(Icons.Default.Chat, null, tint = Color.White, modifier = Modifier.padding(14.dp))
                 }
                 Text("会話", modifier = Modifier
@@ -1268,6 +1265,7 @@ fun HomeNavItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: St
     }
 }
 
+
 @Preview(showBackground = true, name = "ホーム画面プレビュー")
 @Composable
 fun HomeScreenPreview() {
@@ -1283,6 +1281,7 @@ fun HomeScreenPreview() {
             bgRes = R.drawable.home_haikei,
             dialogueMessage = "今日も一緒にがんばろうね♪",
             expressionRes = R.drawable.hikari_smile,
+            // ★ 足りなかった引数を追加
             activeTimeStr = "1時間 32分",
             distanceStr = "5.6 km",
             caloriesStr = "238 kcal",
@@ -1293,7 +1292,6 @@ fun HomeScreenPreview() {
         )
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DebugScreen(navController: NavController, viewModel: StepViewModel) {
@@ -1353,7 +1351,7 @@ fun OdekakeScreen(navController: NavController, viewModel: StepViewModel) {
     val loveCount by viewModel.loveCount
     val completedIds by viewModel.completedEpisodeIds
     var devMode by remember { mutableStateOf(false) }
-
+    
     var selectedLoveLv by remember { mutableIntStateOf(loveCount.coerceIn(1, 10)) }
 
     Scaffold(topBar = { TopAppBarWithBack(title = "おでかけ", onBack = { navController.popBackStack() }) }) { padding ->
@@ -1412,8 +1410,8 @@ fun OdekakeScreen(navController: NavController, viewModel: StepViewModel) {
                 }
             }
 
-            val episodesInThisLv = mainStoryEpisodes.filter {
-                it.requiredLove == selectedLoveLv
+            val episodesInThisLv = mainStoryEpisodes.filter { 
+                it.requiredLove == selectedLoveLv 
             }
 
             if (episodesInThisLv.isEmpty()) {
@@ -1435,7 +1433,7 @@ fun OdekakeScreen(navController: NavController, viewModel: StepViewModel) {
                         val epIndexInFullList = mainStoryEpisodes.indexOf(episode)
                         val isRead = completedIds.contains(epIndexInFullList.toString())
                         val isLoveLevelMet = devMode || (selectedLoveLv <= loveCount)
-                        val isPreviousCompleted = if (epIndexInFullList == 0) true
+                        val isPreviousCompleted = if (epIndexInFullList == 0) true 
                                                  else completedIds.contains((epIndexInFullList - 1).toString())
                         val isUnlocked = devMode || (isLoveLevelMet && isPreviousCompleted)
                         val canGo = devMode || isRead || (isUnlocked && actionPoints > 0)
@@ -1464,7 +1462,7 @@ fun OdekakeScreen(navController: NavController, viewModel: StepViewModel) {
                                     Icon(
                                         imageVector = if (isRead) Icons.Default.Check else if (!isUnlocked) Icons.Default.Lock else Icons.Default.Check,
                                         contentDescription = null,
-                                        tint = if (isRead) MaterialTheme.colorScheme.onSecondaryContainer
+                                        tint = if (isRead) MaterialTheme.colorScheme.onSecondaryContainer 
                                                else MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
@@ -1515,14 +1513,16 @@ fun VisualNovelScreen(episodeKey: Int, script: List<StoryLine>, backgroundRes: I
     var lineIndex by remember(episodeKey) { mutableIntStateOf(0) }
     val currentLine = script[lineIndex]
 
+    // 背景リソースの決定：行ごとの指定があればそれを優先
     val currentBackground = currentLine.backgroundRes ?: backgroundRes
 
+    // 背景が切り替わるときに操作をロックするためのステート
     var isLocked by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentBackground) {
-        if (lineIndex > 0) {
+        if (lineIndex > 0) { // 最初の行以外で背景が変わった場合
             isLocked = true
-            delay(1500)
+            delay(1500) // フェードイン時間(1000ms)より少し長めに設定して操作を不能にする
             isLocked = false
         }
     }
@@ -1530,7 +1530,9 @@ fun VisualNovelScreen(episodeKey: Int, script: List<StoryLine>, backgroundRes: I
     Column(modifier = Modifier
         .fillMaxSize()
         .background(MaterialTheme.colorScheme.background)
+        // ★ ここにステータスバーを避ける設定を追加しました
         .statusBarsPadding()
+        // ★ 下のナビゲーションバーも避ける設定を追加しました
         .navigationBarsPadding()
         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
             if (!isLocked) {
@@ -1541,6 +1543,7 @@ fun VisualNovelScreen(episodeKey: Int, script: List<StoryLine>, backgroundRes: I
                 }
             }
         }) {
+        // 画像が表示されるエリア（枠付き）
         Surface(
             modifier = Modifier
                 .weight(1f)
@@ -1551,6 +1554,7 @@ fun VisualNovelScreen(episodeKey: Int, script: List<StoryLine>, backgroundRes: I
             shadowElevation = 8.dp
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
+                // 背景のフェード切り替え
                 AnimatedContent(
                     targetState = currentBackground,
                     transitionSpec = { fadeIn(animationSpec = tween(1000)) togetherWith fadeOut(animationSpec = tween(1000)) },
@@ -1585,6 +1589,7 @@ fun VisualNovelScreen(episodeKey: Int, script: List<StoryLine>, backgroundRes: I
             }
         }
 
+        // テキストウィンドウ（下部）
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1621,7 +1626,7 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
 
     val pinkAccent = Color(0xFFFF6B9D)
     val lightPinkBg = Color(0xFFFFF5F8)
-    val cardBg = Color(0xFFFFF0F5)
+    val cardBg = Color(0xFFFFF0F5) // ★ここで色を一括設定
     val brownColor = Color(0xFF8D6E63)
 
     LaunchedEffect(viewDate, period) {
@@ -1632,6 +1637,7 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
 
     val displayData = getAggregatedList(stepRecords, hourlyRecords, period, viewDate)
     val totalStepsInRange = displayData.sumOf { it.steps }
+    // 期間に応じて目標歩数を動的に計算（1日1万歩基準）
     val stepGoal = when (period) {
         DisplayPeriod.DAY -> 10000
         DisplayPeriod.WEEK -> 70000
@@ -1640,7 +1646,7 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
     }
 
     Scaffold(
-        containerColor = Color.Transparent,
+        containerColor = Color.Transparent, // ここを透明にする
         topBar = {
             Column(
                 modifier = Modifier
@@ -1648,11 +1654,13 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
+                // 1. 上部の期間選択行
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // 戻るボタン (白い円形)
                     Surface(
                         shape = CircleShape,
                         color = Color.White,
@@ -1671,6 +1679,7 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                         }
                     }
 
+                    // 期間セレクター (カプセル型)
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -1716,6 +1725,7 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                         }
                     }
 
+                    // 設定ボタン (白い円形)
                     Surface(
                         shape = CircleShape,
                         color = Color.White,
@@ -1737,6 +1747,7 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                // 2. 日付ナビゲーション (背景が透ける丸いバー)
                 Surface(
                     shape = RoundedCornerShape(24.dp),
                     color = Color.White.copy(alpha = 0.5f),
@@ -1751,6 +1762,7 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // 左矢印ボタン
                         Surface(
                             shape = CircleShape,
                             color = Color.White,
@@ -1763,6 +1775,7 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                             }
                         }
 
+                        // 日付表示（ハート付き）
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.FavoriteBorder, null, tint = pinkAccent.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(10.dp))
@@ -1776,6 +1789,7 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                             Icon(Icons.Default.FavoriteBorder, null, tint = pinkAccent.copy(alpha = 0.4f), modifier = Modifier.size(14.dp))
                         }
 
+                        // 右矢印ボタン
                         Surface(
                             shape = CircleShape,
                             color = Color.White,
@@ -1791,14 +1805,16 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                 }
             }
         }
+
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize()) { // ←ここを追加
             Image(
-                painter = painterResource(id = R.drawable.kirokugamen_haikei),
+                painter = painterResource(id = R.drawable.kirokugamen_haikei), // 背景画像を指定
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
+            // 背景を少し明るくして文字を見やすくするフィルター
             Box(modifier = Modifier
                 .fillMaxSize()
                 .background(Color.White.copy(alpha = 0.4f)))
@@ -1810,11 +1826,13 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                     .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 0.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                // 2. 上部：ひかり画像と（セリフ＋カード）を重ねるエリア
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .wrapContentHeight()
                 ) {
+                    // ひかり画像 (右下に接地)
                     Image(
                         painter = painterResource(id = R.drawable.kirokugamen_hikari),
                         contentDescription = "ひかり",
@@ -1825,11 +1843,13 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                         contentScale = ContentScale.Fit
                     )
 
+                    // 左側：セリフ画像と歩数カードの重ね合わせ
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(start = 12.dp, top = 0.dp)
                     ) {
+                        // ① セリフ画像 (後ろ側)
                         Image(
                             painter = painterResource(id = R.drawable.hukidasi_kawaii),
                             contentDescription = "セリフ",
@@ -1837,18 +1857,22 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                             contentScale = ContentScale.FillWidth
                         )
 
+                        // ② 歩数カード (前側に重ねる)
                         Surface(
                             color = cardBg,
                             shape = RoundedCornerShape(12.dp),
                             shadowElevation = 8.dp,
                             modifier = Modifier
-                                .padding(top = 130.dp)
+                                .padding(top = 130.dp) // セリフとの重なり位置
                                 .width(170.dp)
+                            // heightを指定しないので、中身を詰めればカードも縮みます
                         ) {
                             Column(
                                 modifier = Modifier.padding(12.dp),
+                                // ★ ここで一括調整！ マイナス値を入れれば文字が詰まり、カードも小さくなります
                                 verticalArrangement = Arrangement.spacedBy((-4).dp)
                             ) {
+                                // a. アイコンとラベル
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
                                         painterResource(R.drawable.footprints),
@@ -1864,14 +1888,18 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                                     )
                                 }
 
+                                // b. 歩数（メインの数字）
                                 Text(
                                     text = String.format(Locale.US, "%,d", totalStepsInRange),
                                     fontSize = 22.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = pinkAccent,
+                                    // ★ 歩数の横の位置を決めます
                                     modifier = Modifier.offset(x = 5.dp)
                                 )
 
+
+                                // c. あと○歩
                                 Text(
                                     text = "目標まであと ${
                                         String.format(
@@ -1884,14 +1912,23 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                                     color = Color.Gray
                                 )
 
+                                // --------------------------------------------------
+                                // ★ ここで「目標」と「ゲージ」の隙間を調整（数字を変える）
                                 Spacer(modifier = Modifier.height(0.dp))
+                                // --------------------------------------------------
 
+                                // --------------------------------------------------
+                                // ★ 【調整：ゲージエリア】
+                                // spacedBy(0.dp) の数字をマイナス（例: -4.dp）にすると、
+                                // ゲージと一番下の文字が重なるくらい詰まり、カードも短くなります。
                                 Column(
                                     verticalArrangement = Arrangement.spacedBy(-6.dp)
                                 ) {
                                     LinearProgressIndicator(
                                         progress = {
-                                            (totalStepsInRange.toFloat() / stepGoal).coerceAtMost(1f)
+                                            (totalStepsInRange.toFloat() / stepGoal).coerceAtMost(
+                                                1f
+                                            )
                                         },
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -1902,7 +1939,13 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                                     )
 
                                     Text(
-                                        text = "目標：${String.format(Locale.US, "%,d", stepGoal)}歩",
+                                        text = "目標：${
+                                            String.format(
+                                                Locale.US,
+                                                "%,d",
+                                                stepGoal
+                                            )
+                                        }歩",
                                         fontSize = 8.sp,
                                         modifier = Modifier.fillMaxWidth(),
                                         textAlign = TextAlign.End,
@@ -1912,8 +1955,8 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                             }
                         }
                     }
-                }
-
+                } // Boxの終わり
+                // 3. 推移グラフ
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = cardBg,
@@ -1940,7 +1983,7 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                         StepGraphPink(displayData = displayData, period = period)
                     }
                 }
-
+                // 統計詳細
                 val activeTimeMillis = displayData.sumOf { it.activeTimeMillis }
                 val calories = viewModel.calculateCalories(totalStepsInRange, activeTimeMillis)
                 val distance = (totalStepsInRange * viewModel.strideLength) / 1000.0
@@ -1954,14 +1997,18 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         StatCardNew(
-                            Modifier.weight(1f).fillMaxHeight(),
+                            Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
                             "消費カロリー",
                             String.format(Locale.US, "%.1f kcal", calories),
                             "おつかれさま！よく頑張ったね♪",
                             Icons.Default.Whatshot
                         )
                         StatCardNew(
-                            Modifier.weight(1f).fillMaxHeight(),
+                            Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
                             "歩いた距離",
                             String.format(Locale.US, "%.2f km", distance),
                             "目標まで頑張ろう！",
@@ -1976,14 +2023,18 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                     ) {
                         val timeStr = formatMillis(activeTimeMillis)
                         StatCardNew(
-                            Modifier.weight(1f).fillMaxHeight(),
+                            Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
                             "歩いた時間",
                             timeStr,
                             "すごい！毎日続けようね♪",
                             Icons.Default.Schedule
                         )
                         StatCardNew(
-                            Modifier.weight(1f).fillMaxHeight(),
+                            Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
                             "平均時速",
                             String.format(Locale.US, "%.1f km/h", speed),
                             "いいペースだよ！",
@@ -1992,6 +2043,7 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                     }
                 }
 
+                // 広告スペース
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -2008,7 +2060,6 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
         }
     }
 }
-
 @Composable
 fun StatCardNew(modifier: Modifier, label: String, value: String, comment: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
     val textStyle = TextStyle(
@@ -2021,23 +2072,23 @@ fun StatCardNew(modifier: Modifier, label: String, value: String, comment: Strin
         shadowElevation = 1.dp
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), // パディングを詰めました
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                icon,
-                null,
-                tint = Color(0xFFFF6B9D).copy(alpha = 0.6f),
-                modifier = Modifier.size(28.dp)
+                icon, 
+                null, 
+                tint = Color(0xFFFF6B9D).copy(alpha = 0.6f), 
+                modifier = Modifier.size(28.dp) // アイコンも少しコンパクトに
             )
             Spacer(modifier = Modifier.width(6.dp))
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy((2).dp) // 文字同士の隙間を詰めました
             ) {
                 Text(text = label, fontSize = 10.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
                 Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray, maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
-                Text(text = comment, fontSize = 6.sp, fontWeight = FontWeight.Bold, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
+                Text(text = comment, fontSize = 6.sp,fontWeight = FontWeight.Bold, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
             }
         }
     }
@@ -2052,15 +2103,17 @@ fun StepGraphPink(displayData: List<AggregatedData>, period: DisplayPeriod) {
     val interval = ((((rawMaxSteps / 5) + 999) / 1000) * 1000).coerceAtLeast(1000)
     val maxSteps = interval * 5
 
+    // ★ 触れている棒のインデックスを保持する状態
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
 
     Box(modifier = Modifier
         .fillMaxWidth()
-        .height(120.dp)) {
+        .height(120.dp)) { // ツールチップ表示用に高さを少し確保
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(displayData) {
+                    // 指を置いたときの検知
                     detectTapGestures(
                         onPress = { offset ->
                             val leftMargin = 35.dp.toPx()
@@ -2069,12 +2122,13 @@ fun StepGraphPink(displayData: List<AggregatedData>, period: DisplayPeriod) {
                             val index = ((offset.x - leftMargin) / barSpacing).toInt()
                                 .coerceIn(0, displayData.size - 1)
                             selectedIndex = index
-                            tryAwaitRelease()
+                            tryAwaitRelease() // 指が離れるまで待機
                             selectedIndex = null
                         }
                     )
                 }
                 .pointerInput(displayData) {
+                    // 指でなぞったときの検知
                     detectDragGestures(
                         onDragStart = { offset ->
                             val leftMargin = 35.dp.toPx()
@@ -2097,12 +2151,13 @@ fun StepGraphPink(displayData: List<AggregatedData>, period: DisplayPeriod) {
         ) {
             val leftMargin = 35.dp.toPx()
             val bottomMargin = 20.dp.toPx()
-            val tooltipAreaHeight = 25.dp.toPx()
+            val tooltipAreaHeight = 25.dp.toPx() // ツールチップ用の余白
             val graphWidth = size.width - leftMargin
             val graphHeight = size.height - bottomMargin - tooltipAreaHeight
 
             val baseY = size.height - bottomMargin
 
+            // 横線の描画
             repeat(6) { i ->
                 val y = baseY - (i * (graphHeight / 5))
                 drawLine(color = Color.LightGray.copy(alpha = 0.3f), start = Offset(leftMargin, y), end = Offset(size.width, y))
@@ -2110,6 +2165,7 @@ fun StepGraphPink(displayData: List<AggregatedData>, period: DisplayPeriod) {
                 drawContext.canvas.nativeCanvas.drawText(label, leftMargin - 8.dp.toPx(), y + 4.dp.toPx(), android.graphics.Paint().apply { color = android.graphics.Color.GRAY; textSize = 9.sp.toPx(); textAlign = android.graphics.Paint.Align.RIGHT })
             }
 
+            // 底辺の線
             drawLine(
                 color = Color.LightGray.copy(alpha = 0.5f),
                 start = Offset(leftMargin, baseY),
@@ -2127,6 +2183,7 @@ fun StepGraphPink(displayData: List<AggregatedData>, period: DisplayPeriod) {
 
                 val isSelected = index == selectedIndex
 
+                // 棒の描画
                 if (finalBarHeight > 0) {
                     val cornerRadius = 4.dp.toPx()
                     val path = Path().apply {
@@ -2146,6 +2203,7 @@ fun StepGraphPink(displayData: List<AggregatedData>, period: DisplayPeriod) {
                     drawPath(path, color = if (isSelected) pinkColor.copy(alpha = 0.7f) else pinkColor)
                 }
 
+                // ★ 選択中の棒の上に歩数を表示
                 if (isSelected) {
                     val stepsText = String.format(java.util.Locale.US, "%,d歩", data.steps)
                     val paint = android.graphics.Paint().apply {
@@ -2160,12 +2218,14 @@ fun StepGraphPink(displayData: List<AggregatedData>, period: DisplayPeriod) {
                     val rectH = 20.dp.toPx()
                     val rectY = 5.dp.toPx()
 
+                    // 背景の白枠
                     drawRoundRect(
                         color = Color.White,
                         topLeft = Offset(x - rectW / 2, rectY),
                         size = Size(rectW, rectH),
                         cornerRadius = CornerRadius(6.dp.toPx(), 6.dp.toPx())
                     )
+                    // ピンクの細い枠線
                     drawRoundRect(
                         color = pinkColor.copy(alpha = 0.5f),
                         topLeft = Offset(x - rectW / 2, rectY),
@@ -2174,6 +2234,7 @@ fun StepGraphPink(displayData: List<AggregatedData>, period: DisplayPeriod) {
                         style = Stroke(width = 1.dp.toPx())
                     )
 
+                    // 文字を描画
                     drawContext.canvas.nativeCanvas.drawText(
                         stepsText,
                         x,
@@ -2202,6 +2263,9 @@ fun StepGraphPink(displayData: List<AggregatedData>, period: DisplayPeriod) {
     }
 }
 
+
+
+// ヘルパー関数
 private fun moveDate(date: LocalDate, period: DisplayPeriod, amount: Int): LocalDate = when(period) {
     DisplayPeriod.DAY -> date.plusDays(amount.toLong())
     DisplayPeriod.WEEK -> date.plusWeeks(amount.toLong())
@@ -2282,11 +2346,11 @@ fun TopAppBarWithBack(title: String, onBack: () -> Unit) {
         title = { Text(text = title) },
         navigationIcon = { IconButton(onClick = onBack) { Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る") } },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
-        modifier = Modifier.statusBarsPadding()
+        modifier = Modifier.statusBarsPadding() // ★ これを追加！
     )
 }
 
-fun getAggregatedList(dailyRecords: List<StepRecord>, hourlyRecords: List<HourlyStepRecord>, period: DisplayPeriod, viewDate: LocalDate): List<AggregatedData> {
+        fun getAggregatedList(dailyRecords: List<StepRecord>, hourlyRecords: List<HourlyStepRecord>, period: DisplayPeriod, viewDate: LocalDate): List<AggregatedData> {
     return when (period) {
         DisplayPeriod.DAY -> {
             val dateStr = viewDate.toString()
