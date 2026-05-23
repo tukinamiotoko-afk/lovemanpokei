@@ -118,31 +118,31 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
     var cumulativeSteps: Int
         get() = prefs.getInt("CUMULATIVE_STEPS", 0)
         set(value) = prefs.edit { putInt("CUMULATIVE_STEPS", value) }
-        
+
     var lastSensorValue: Int
         get() = prefs.getInt("LAST_SENSOR_VALUE", -1)
         set(value) = prefs.edit { putInt("LAST_SENSOR_VALUE", value) }
-        
+
     var lastUpdateDay: String
         get() = prefs.getString("LAST_UPDATE_DAY", "") ?: ""
         set(value) = prefs.edit { putString("LAST_UPDATE_DAY", value) }
-        
+
     var playerName: String
         get() = prefs.getString("PLAYER_NAME", "")!!
         set(value) = prefs.edit { putString("PLAYER_NAME", value) }
-        
+
     var currentDateSpotId: Int
         get() = prefs.getInt("CURRENT_DATE_SPOT_ID", 0)
         set(value) = prefs.edit { putInt("CURRENT_DATE_SPOT_ID", value) }
-        
+
     var loveCount: Int
         get() = prefs.getInt("LOVE_COUNT_V3", 1)
         set(value) = prefs.edit { putInt("LOVE_COUNT_V3", value) }
-        
+
     var heartCount: Int
         get() = prefs.getInt("HEART_COUNT", 0)
         set(value) = prefs.edit { putInt("HEART_COUNT", value) }
-        
+
     var spentActionPoints: Int
         get() = prefs.getInt("SPENT_ACTION_POINTS", 0)
         set(value) = prefs.edit { putInt("SPENT_ACTION_POINTS", value) }
@@ -154,23 +154,23 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
     var todayPointsEarned: Int
         get() = prefs.getInt("TODAY_POINTS_EARNED", 0)
         set(value) = prefs.edit { putInt("TODAY_POINTS_EARNED", value) }
-        
+
     var storyProgress: Int
         get() = prefs.getInt("STORY_PROGRESS", -1)
         set(value) = prefs.edit { putInt("STORY_PROGRESS", value) }
-        
+
     var completedEpisodeIds: Set<String>
         get() = prefs.getStringSet("COMPLETED_EPISODE_IDS", emptySet()) ?: emptySet()
         set(value) = prefs.edit { putStringSet("COMPLETED_EPISODE_IDS", value) }
-        
+
     var heightCm: Float
         get() = prefs.getFloat("HEIGHT_CM", 170f)
         set(value) = prefs.edit { putFloat("HEIGHT_CM", value) }
-        
+
     var weightKg: Float
         get() = prefs.getFloat("WEIGHT_KG", 60f)
         set(value) = prefs.edit { putFloat("WEIGHT_KG", value) }
-        
+
     var userGender: String
         get() = prefs.getString("USER_GENDER", "")!!
         set(value) = prefs.edit { putString("USER_GENDER", value) }
@@ -188,7 +188,7 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
     }
 
     fun getAllStepRecordsFlow() = stepDao.getAllRecordsFlow()
-    
+
     suspend fun getHourlyRecords(date: String): List<HourlyStepRecord> {
         return stepDao.getHourlyRecordsForDay(date)
     }
@@ -213,7 +213,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     val completedEpisodeIds = mutableStateOf(repository.completedEpisodeIds)
     val spentActionPoints = mutableIntStateOf(repository.spentActionPoints)
     val totalEarnedPoints = mutableIntStateOf(repository.totalEarnedPoints)
-    
+
     val heightCm = mutableFloatStateOf(repository.heightCm)
     val weightKg = mutableFloatStateOf(repository.weightKg)
     val userGender = mutableStateOf(repository.userGender)
@@ -255,7 +255,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     fun setPlayerName(name: String) {
         repository.playerName = name; playerName.value = name
     }
-    
+
     fun setUserProfile(height: Float, weight: Float) {
         repository.heightCm = height
         repository.weightKg = weight
@@ -301,7 +301,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
             val newCompletedIds = completedIds + episodeId
             repository.completedEpisodeIds = newCompletedIds
             completedEpisodeIds.value = newCompletedIds
-            
+
             repository.heartCount = heartCount.intValue
             repository.loveCount = loveCount.intValue
             repository.storyProgress = storyProgress.intValue
@@ -342,9 +342,9 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
             val currentRecord = records.find { it.date == today }
             val newTodaySteps = todaySteps.intValue + amount
             val newActiveTime = (currentRecord?.activeTimeMillis ?: 0L) + (amount * 500L)
-            
+
             repository.recordSteps(today, newTodaySteps, newActiveTime)
-            
+
             val newCumulative = repository.cumulativeSteps + amount
             repository.cumulativeSteps = newCumulative
             cumulativeSteps.intValue = newCumulative
@@ -414,14 +414,13 @@ fun getHeartPath(size: Size): Path {
 }
 
 class MainActivity : ComponentActivity() {
-    private lateinit var windowInsetsController: WindowInsetsControllerCompat
-
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
         windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
+
         val database = AppDatabase.getDatabase(this)
         val repository = StepRepository(database.stepDao(), getSharedPreferences("lovemanpo_prefs", MODE_PRIVATE))
         val viewModelFactory = StepViewModelFactory(repository)
@@ -435,13 +434,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             ラブ万歩計Theme { PedometerAppWithNavigation(viewModelFactory) }
         }
-    }
-
-    override fun dispatchTouchEvent(ev: android.view.MotionEvent?): Boolean {
-        if (ev?.action == android.view.MotionEvent.ACTION_DOWN) {
-            windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
-        }
-        return super.dispatchTouchEvent(ev)
     }
 }
 
@@ -457,7 +449,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
         mutableStateOf(permissions.all { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED })
     }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { results -> hasPermissions = results.values.all { it } }
-    
+
     LaunchedEffect(hasPermissions) {
         if (hasPermissions) {
             val serviceIntent = Intent(context, StepCounterService::class.java)
@@ -470,7 +462,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
     if (hasPermissions) {
         val navController = rememberNavController()
         val viewModel: StepViewModel = viewModel(factory = viewModelFactory)
-        
+
         val startDestination = remember(Unit) {
             if (viewModel.playerName.value.isEmpty()) {
                 "name_input"
@@ -483,7 +475,10 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
             }
         }
 
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .consumeWindowInsets(WindowInsets.navigationBars)
+        ) {
             NavHost(
                 navController = navController,
                 startDestination = startDestination
@@ -521,7 +516,7 @@ fun StabilitySetupScreen(navController: NavController, viewModel: StepViewModel)
     val context = LocalContext.current
     var showBatteryDetail by remember { mutableStateOf(false) }
     var showAutoStartDetail by remember { mutableStateOf(false) }
-    
+
     var batteryChecked by remember { mutableStateOf(isBatteryOptimizationIgnored(context)) }
     var autoStartChecked by remember { mutableStateOf(false) }
 
@@ -554,9 +549,9 @@ fun StabilitySetupScreen(navController: NavController, viewModel: StepViewModel)
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        
+
         Spacer(modifier = Modifier.height(32.dp))
-        
+
         SetupItemRow(
             number = "1",
             title = "バッテリー最適化の解除",
@@ -575,7 +570,7 @@ fun StabilitySetupScreen(navController: NavController, viewModel: StepViewModel)
 
         Spacer(modifier = Modifier.weight(1f))
         Spacer(modifier = Modifier.height(40.dp))
-        
+
         Button(
             onClick = {
                 viewModel.completeBatterySetup()
@@ -634,8 +629,8 @@ fun SetupItemRow(number: String, title: String, isDone: Boolean, onClick: () -> 
             .fillMaxWidth()
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = if (isDone) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) 
-                            else MaterialTheme.colorScheme.surfaceVariant
+            containerColor = if (isDone) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            else MaterialTheme.colorScheme.surfaceVariant
         ),
         border = if (isDone) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null
     ) {
@@ -726,7 +721,7 @@ fun openAutoStartSettings(context: Context) {
             return
         }
     }
-    
+
     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
         data = "package:${context.packageName}".toUri()
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -897,14 +892,6 @@ fun HomeScreenContent(
     onRecordsClick: () -> Unit,
     onDebugClick: () -> Unit
 ) {
-
-    val context = LocalContext.current // 必要
-    val window = (context as? androidx.activity.ComponentActivity)?.window // 必要
-    val windowInsetsController = remember(window) { // 必要
-        window?.let { androidx.core.view.WindowCompat.getInsetsController(it, it.decorView) } // 必要
-    } // 必要
-
-
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = bgRes),
@@ -1359,7 +1346,7 @@ fun OdekakeScreen(navController: NavController, viewModel: StepViewModel) {
     val loveCount by viewModel.loveCount
     val completedIds by viewModel.completedEpisodeIds
     var devMode by remember { mutableStateOf(false) }
-    
+
     var selectedLoveLv by remember { mutableIntStateOf(loveCount.coerceIn(1, 10)) }
 
     Scaffold(topBar = { TopAppBarWithBack(title = "おでかけ", onBack = { navController.popBackStack() }) }) { padding ->
@@ -1418,8 +1405,8 @@ fun OdekakeScreen(navController: NavController, viewModel: StepViewModel) {
                 }
             }
 
-            val episodesInThisLv = mainStoryEpisodes.filter { 
-                it.requiredLove == selectedLoveLv 
+            val episodesInThisLv = mainStoryEpisodes.filter {
+                it.requiredLove == selectedLoveLv
             }
 
             if (episodesInThisLv.isEmpty()) {
@@ -1441,8 +1428,8 @@ fun OdekakeScreen(navController: NavController, viewModel: StepViewModel) {
                         val epIndexInFullList = mainStoryEpisodes.indexOf(episode)
                         val isRead = completedIds.contains(epIndexInFullList.toString())
                         val isLoveLevelMet = devMode || (selectedLoveLv <= loveCount)
-                        val isPreviousCompleted = if (epIndexInFullList == 0) true 
-                                                 else completedIds.contains((epIndexInFullList - 1).toString())
+                        val isPreviousCompleted = if (epIndexInFullList == 0) true
+                        else completedIds.contains((epIndexInFullList - 1).toString())
                         val isUnlocked = devMode || (isLoveLevelMet && isPreviousCompleted)
                         val canGo = devMode || isRead || (isUnlocked && actionPoints > 0)
 
@@ -1470,8 +1457,8 @@ fun OdekakeScreen(navController: NavController, viewModel: StepViewModel) {
                                     Icon(
                                         imageVector = if (isRead) Icons.Default.Check else if (!isUnlocked) Icons.Default.Lock else Icons.Default.Check,
                                         contentDescription = null,
-                                        tint = if (isRead) MaterialTheme.colorScheme.onSecondaryContainer 
-                                               else MaterialTheme.colorScheme.onPrimaryContainer
+                                        tint = if (isRead) MaterialTheme.colorScheme.onSecondaryContainer
+                                        else MaterialTheme.colorScheme.onPrimaryContainer
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(16.dp))
@@ -2084,9 +2071,9 @@ fun StatCardNew(modifier: Modifier, label: String, value: String, comment: Strin
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                icon, 
-                null, 
-                tint = Color(0xFFFF6B9D).copy(alpha = 0.6f), 
+                icon,
+                null,
+                tint = Color(0xFFFF6B9D).copy(alpha = 0.6f),
                 modifier = Modifier.size(28.dp) // アイコンも少しコンパクトに
             )
             Spacer(modifier = Modifier.width(6.dp))
@@ -2358,7 +2345,7 @@ fun TopAppBarWithBack(title: String, onBack: () -> Unit) {
     )
 }
 
-        fun getAggregatedList(dailyRecords: List<StepRecord>, hourlyRecords: List<HourlyStepRecord>, period: DisplayPeriod, viewDate: LocalDate): List<AggregatedData> {
+fun getAggregatedList(dailyRecords: List<StepRecord>, hourlyRecords: List<HourlyStepRecord>, period: DisplayPeriod, viewDate: LocalDate): List<AggregatedData> {
     return when (period) {
         DisplayPeriod.DAY -> {
             val dateStr = viewDate.toString()
