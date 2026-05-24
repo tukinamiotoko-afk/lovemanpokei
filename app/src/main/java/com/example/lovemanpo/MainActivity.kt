@@ -15,6 +15,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -466,10 +467,22 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
-                enterTransition = { slideInHorizontally(initialOffsetX = { it }) + fadeIn(tween(300)) },
-                exitTransition = { slideOutHorizontally(targetOffsetX = { -it / 3 }) + fadeOut(tween(300)) },
-                popEnterTransition = { slideInHorizontally(initialOffsetX = { -it / 3 }) + fadeIn(tween(300)) },
-                popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) + fadeOut(tween(300)) }
+                enterTransition = {
+                    slideInHorizontally(tween(380, easing = FastOutSlowInEasing)) { it } +
+                    fadeIn(tween(380, easing = FastOutSlowInEasing))
+                },
+                exitTransition = {
+                    slideOutHorizontally(tween(380, easing = FastOutSlowInEasing)) { -it / 5 } +
+                    fadeOut(tween(250))
+                },
+                popEnterTransition = {
+                    slideInHorizontally(tween(380, easing = FastOutSlowInEasing)) { -it / 5 } +
+                    fadeIn(tween(250))
+                },
+                popExitTransition = {
+                    slideOutHorizontally(tween(380, easing = FastOutSlowInEasing)) { it } +
+                    fadeOut(tween(380, easing = FastOutSlowInEasing))
+                }
             ) {
                 composable("name_input") { NameInputScreen(viewModel, navController) }
                 composable("profile_setup") { ProfileSetupScreen(navController, viewModel) }
@@ -962,7 +975,7 @@ fun HomeScreenContent(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
-                    HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, "目標 2時間 00分", Color(0xFFF06292))
+                    HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, null, Color(0xFFF06292))
                     HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "歩行距離", distanceStr, null, Color(0xFF4FC3F7))
                     HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
                 }
@@ -1095,7 +1108,7 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
         shape = RoundedCornerShape(12.dp),
         color = Color.White,
         modifier = Modifier.width(125.dp),
-        shadowElevation = 6.dp
+        shadowElevation = 14.dp
     ) {
         Row(
             modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp), // 上下のパディングを少し削りました
@@ -1119,7 +1132,7 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 
 @Composable
 fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(110.dp), shadowElevation = 6.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(110.dp), shadowElevation = 14.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(14.dp))
@@ -1144,7 +1157,7 @@ fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
 // 2. 行動ポイントカードのコメントを削除
 @Composable
 fun HomeActionPointsCard(pts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(110.dp), shadowElevation = 6.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(110.dp), shadowElevation = 14.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color(0xFF4DB6AC), modifier = Modifier.size(14.dp))
@@ -1167,7 +1180,7 @@ fun HomeActionPointsCard(pts: Int) {
 }
 @Composable
 fun HomeCommentBanner(expr: Int, message: String) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 6.dp, border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))) {
         Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Image(painter = painterResource(id = expr), contentDescription = null, modifier = Modifier
                 .size(44.dp)
