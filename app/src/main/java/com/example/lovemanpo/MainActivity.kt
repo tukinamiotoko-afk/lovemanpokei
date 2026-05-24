@@ -335,8 +335,8 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
             todaySteps.intValue = newTodaySteps
 
             // デバッグ用：ポイント付与ロジックのシミュレート
-            val newPoints = newTodaySteps / 5000
-            val cappedPoints = newPoints.coerceAtMost(2)
+            val newPoints = newTodaySteps / 2000
+            val cappedPoints = newPoints.coerceAtMost(5)
             val pointsToGrant = cappedPoints - repository.todayPointsEarned
             if (pointsToGrant > 0) {
                 repository.totalEarnedPoints += pointsToGrant
@@ -956,7 +956,7 @@ fun HomeScreenContent(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
-                    HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, "目標 2時間 00分", Color(0xFFF06292))
+                    HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, null, Color(0xFFF06292))
                     HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "歩行距離", distanceStr, null, Color(0xFF4FC3F7))
                     HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
                 }
@@ -1044,6 +1044,22 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
                     startAngle = -90f, sweepAngle = 360f * progress, useCenter = false,
                     style = Stroke(width = sw, cap = StrokeCap.Round)
                 )
+                // 2000歩ごとのメモリ（5本）
+                val radius = size.minDimension / 2f
+                val cx = size.width / 2f
+                val cy = size.height / 2f
+                repeat(5) { i ->
+                    val angleDeg = -90f + (i + 1) * 72f
+                    val rad = Math.toRadians(angleDeg.toDouble())
+                    val cos = kotlin.math.cos(rad).toFloat()
+                    val sin = kotlin.math.sin(rad).toFloat()
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(cx + (radius - sw) * cos, cy + (radius - sw) * sin),
+                        end = Offset(cx + radius * cos, cy + radius * sin),
+                        strokeWidth = 2.5.dp.toPx()
+                    )
+                }
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.AutoMirrored.Filled.DirectionsWalk, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(18.dp))
@@ -1121,11 +1137,16 @@ fun HomeActionPointsCard(pts: Int) {
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("行動ポイント", fontSize = 9.sp, color = Color.Gray)
             }
-            Text("$pts / 2 pt", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
-            Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE0F2F1), modifier = Modifier.padding(vertical = 4.dp)) {
-                Text(if (pts >= 2) "上限に達しています" else "ポイント貯蓄中", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color(0xFF00897B), fontSize = 7.sp)
+            Text("$pts / 5 pt", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(vertical = 4.dp)) {
+                repeat(5) { i ->
+                    Box(modifier = Modifier.size(10.dp).background(if (i < pts) Color(0xFF4DB6AC) else Color.LightGray.copy(alpha = 0.4f), CircleShape))
+                }
             }
-            Text("5,000歩で1ポイント！\n1日2ポイントまで貯められるよ♪\n(毎日 0:00 にリセット)", fontSize = 7.sp, color = Color.Gray, lineHeight = 9.sp)
+            Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE0F2F1)) {
+                Text(if (pts >= 5) "上限に達しています" else "ポイント貯蓄中", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color(0xFF00897B), fontSize = 7.sp)
+            }
+            Text("2,000歩で1ポイント！\n1日5ポイントまで貯められるよ♪\n(毎日 0:00 にリセット)", fontSize = 7.sp, color = Color.Gray, lineHeight = 9.sp)
         }
     }
 }
@@ -2398,7 +2419,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             return@IconButton
                         }
                         if (!viewModel.spendPointForChat()) {
-                            errorMessage = "ポイントが足りません（5000歩で1ポイント）"
+                            errorMessage = "ポイントが足りません（2000歩で1ポイント）"
                             return@IconButton
                         }
                         errorMessage = null
@@ -2555,7 +2576,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                             return@IconButton
                         }
                         if (!viewModel.spendPointForChat()) {
-                            errorMessage = "ポイントが足りません（5000歩で1ポイント）"
+                            errorMessage = "ポイントが足りません（2000歩で1ポイント）"
                             return@IconButton
                         }
                         errorMessage = null
