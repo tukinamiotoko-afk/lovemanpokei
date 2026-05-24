@@ -896,7 +896,6 @@ fun HomeScreenContent(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .verticalScroll(rememberScrollState())
         ) {
             // ヘッダー
             Row(
@@ -935,7 +934,7 @@ fun HomeScreenContent(
 
             Box(modifier = Modifier
                 .fillMaxWidth()
-                .height(370.dp)) {
+                .weight(1f)) {
                 Image(
                     painter = painterResource(id = expressionRes),
                     contentDescription = "ひかり",
@@ -949,8 +948,6 @@ fun HomeScreenContent(
                     contentScale = ContentScale.Fit
                 )
 
-
-
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopStart)
@@ -958,7 +955,6 @@ fun HomeScreenContent(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
-                    // ★ ここに渡されたデータを反映
                     HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, "目標 2時間 00分", Color(0xFFF06292))
                     HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "歩行距離", distanceStr, null, Color(0xFF4FC3F7))
                     HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
@@ -973,19 +969,18 @@ fun HomeScreenContent(
                     HomeLoveLevelCard(loveCount, heartGaugeProgress, hearts = heartCount)
                     HomeActionPointsCard(actionPoints)
                 }
-            }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .offset(y = (-40).dp)
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                val formattedMessage = dialogueMessage.replace("○○", playerName)
-                HomeCommentBanner(expressionRes, formattedMessage)
-                Spacer(modifier = Modifier.height(8.dp))
-                HomeCampaignBanner()
-                Spacer(modifier = Modifier.height(80.dp))
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, bottom = 88.dp)
+                ) {
+                    val formattedMessage = dialogueMessage.replace("○○", playerName)
+                    HomeCommentBanner(expressionRes, formattedMessage)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HomeCampaignBanner()
+                }
             }
         }
 
