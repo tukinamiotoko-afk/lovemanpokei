@@ -896,6 +896,7 @@ fun HomeScreenContent(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
+                .verticalScroll(rememberScrollState())
         ) {
             // ヘッダー
             Row(
@@ -934,7 +935,7 @@ fun HomeScreenContent(
 
             Box(modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)) {
+                .height(420.dp)) {
                 Image(
                     painter = painterResource(id = expressionRes),
                     contentDescription = "ひかり",
@@ -969,17 +970,22 @@ fun HomeScreenContent(
                     HomeLoveLevelCard(loveCount, heartGaugeProgress, hearts = heartCount)
                     HomeActionPointsCard(actionPoints)
                 }
+            }
 
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, bottom = 88.dp)
-                ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(y = (-15).dp),
+                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+                color = Color.White,
+                shadowElevation = 8.dp
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     val formattedMessage = dialogueMessage.replace("○○", playerName)
                     HomeCommentBanner(expressionRes, formattedMessage)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    HomeCampaignBanner()
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HomeAdPlaceholder()
+                    Spacer(modifier = Modifier.height(90.dp))
                 }
             }
         }
@@ -1207,6 +1213,19 @@ fun HomeCampaignBanner() {
                 .align(Alignment.TopEnd)
                 .padding(4.dp)
                 .size(10.dp), tint = Color.Gray)
+        }
+    }
+}
+
+@Composable
+fun HomeAdPlaceholder() {
+    Surface(
+        modifier = Modifier.fillMaxWidth().height(60.dp),
+        shape = RoundedCornerShape(8.dp),
+        color = Color.Gray.copy(alpha = 0.08f)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text("ここに広告が表示されます", fontSize = 12.sp, color = Color.Gray)
         }
     }
 }
