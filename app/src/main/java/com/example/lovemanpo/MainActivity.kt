@@ -974,20 +974,16 @@ fun HomeScreenContent(
                 }
             }
 
-            Surface(
-                color = Color.White,
-                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-50).dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    val formattedMessage = dialogueMessage.replace("○○", playerName) // 必要
-                    HomeCommentBanner(expressionRes, formattedMessage) // 必要
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HomeCampaignBanner()
-                    Spacer(modifier = Modifier.height(80.dp))
-                }
+                val formattedMessage = dialogueMessage.replace("○○", playerName)
+                HomeCommentBanner(expressionRes, formattedMessage)
+                Spacer(modifier = Modifier.height(8.dp))
+                HomeCampaignBanner()
+                Spacer(modifier = Modifier.height(80.dp))
             }
         }
 
