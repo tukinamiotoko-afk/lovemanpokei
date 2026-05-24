@@ -940,7 +940,9 @@ fun HomeScreenContent(
                     contentDescription = "ひかり",
                     modifier = Modifier
                         .fillMaxHeight(1.0f)
+                        .scale(1.35f)
                         .align(Alignment.BottomCenter)
+                        .offset(y = 50.dp)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
