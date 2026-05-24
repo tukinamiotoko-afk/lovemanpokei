@@ -1050,9 +1050,6 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
                 Text("歩 / 10,000 歩", fontSize = 9.sp, color = Color.Gray)
             }
         }
-        Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFF4A90E2), modifier = Modifier.offset(y = (-12).dp)) {
-            Text("目標まであと 2,158 歩", modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-        }
     }
 }
 
