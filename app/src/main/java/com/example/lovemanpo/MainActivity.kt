@@ -104,8 +104,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility // 必要
 import androidx.compose.animation.slideInVertically // 必要
 import androidx.compose.animation.slideOutVertically // 必要
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.gestures.detectVerticalDragGestures // 必要
 import androidx.core.view.WindowCompat // 必要
 import androidx.core.view.WindowInsetsCompat // 必要
@@ -337,8 +335,8 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
             todaySteps.intValue = newTodaySteps
 
             // デバッグ用：ポイント付与ロジックのシミュレート
-            val newPoints = newTodaySteps / 2000
-            val cappedPoints = newPoints.coerceAtMost(5)
+            val newPoints = newTodaySteps / 5000
+            val cappedPoints = newPoints.coerceAtMost(2)
             val pointsToGrant = cappedPoints - repository.todayPointsEarned
             if (pointsToGrant > 0) {
                 repository.totalEarnedPoints += pointsToGrant
@@ -465,11 +463,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
         ) {
             NavHost(
                 navController = navController,
-                startDestination = startDestination,
-                enterTransition = { slideInHorizontally(initialOffsetX = { it }) + fadeIn(tween(300)) },
-                exitTransition = { slideOutHorizontally(targetOffsetX = { -it / 3 }) + fadeOut(tween(300)) },
-                popEnterTransition = { slideInHorizontally(initialOffsetX = { -it / 3 }) + fadeIn(tween(300)) },
-                popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) + fadeOut(tween(300)) }
+                startDestination = startDestination
             ) {
                 composable("name_input") { NameInputScreen(viewModel, navController) }
                 composable("profile_setup") { ProfileSetupScreen(navController, viewModel) }
@@ -958,11 +952,11 @@ fun HomeScreenContent(
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(start = 16.dp, top = 90.dp),
+                        .padding(start = 16.dp, top = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
-                    HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, null, Color(0xFFF06292))
+                    HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, "目標 2時間 00分", Color(0xFFF06292))
                     HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "歩行距離", distanceStr, null, Color(0xFF4FC3F7))
                     HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
                 }
@@ -1024,7 +1018,7 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(140.dp)
+                .size(130.dp)
                 .shadow(2.dp, CircleShape)
                 .background(Color.White, CircleShape)
         ) {
@@ -1050,22 +1044,6 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
                     startAngle = -90f, sweepAngle = 360f * progress, useCenter = false,
                     style = Stroke(width = sw, cap = StrokeCap.Round)
                 )
-                // 2000歩ごとのメモリ（5本）
-                val radius = size.minDimension / 2f
-                val cx = size.width / 2f
-                val cy = size.height / 2f
-                repeat(5) { i ->
-                    val angleDeg = -90f + (i + 1) * 72f
-                    val rad = Math.toRadians(angleDeg.toDouble())
-                    val cos = kotlin.math.cos(rad).toFloat()
-                    val sin = kotlin.math.sin(rad).toFloat()
-                    drawLine(
-                        color = Color.White,
-                        start = Offset(cx + (radius - sw) * cos, cy + (radius - sw) * sin),
-                        end = Offset(cx + radius * cos, cy + radius * sin),
-                        strokeWidth = 2.5.dp.toPx()
-                    )
-                }
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.AutoMirrored.Filled.DirectionsWalk, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(18.dp))
@@ -1112,7 +1090,7 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 
 @Composable
 fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White,modifier = Modifier.width(140.dp), shadowElevation = 1.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(110.dp), shadowElevation = 1.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(14.dp))
@@ -1129,34 +1107,27 @@ fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
                 Text("$hearts / 10 ", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B9D))
                 Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(9.dp))
             }
-            Text("ラブが10個たまるとレベルが上がるよ♪", fontSize = 7.sp, color = Color.Gray, textAlign = TextAlign.Center, lineHeight = 8.sp)
+            // ★ ここにあったコメント行を削除しました
         }
     }
 }
 
+// 2. 行動ポイントカードのコメントを削除
 @Composable
 fun HomeActionPointsCard(pts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(140.dp), shadowElevation = 1.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(110.dp), shadowElevation = 1.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color(0xFF4DB6AC), modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("行動ポイント", fontSize = 9.sp, color = Color.Gray)
             }
-            Text("$pts / 5 pt", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(vertical = 4.dp)) {
-                repeat(5) { i ->
-                    Box(modifier = Modifier.size(10.dp).background(if (i < pts) Color(0xFF4DB6AC) else Color.LightGray.copy(alpha = 0.4f), CircleShape))
-                }
-            }
-            Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE0F2F1)) {
-                Text(if (pts >= 5) "上限に達しています" else "ポイント貯蓄中", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color(0xFF00897B), fontSize = 7.sp)
-            }
-            Text("2,000歩で1ポイント！\n1日5ポイントまで貯められるよ♪\n(毎日 0:00 にリセット)", fontSize = 7.sp, color = Color.Gray, lineHeight = 9.sp)
+            Text("$pts / 2 pt", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
+            // 「上限に達しています」などのステータス表示を削除しました
         }
     }
-}
 
+}
 @Composable
 fun HomeCommentBanner(expr: Int, message: String) {
     Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 2.dp, border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))) {
@@ -1347,10 +1318,6 @@ fun DebugScreen(navController: NavController, viewModel: StepViewModel) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = { viewModel.debugAddActionPoints(1) }, modifier = Modifier.weight(1f)) { Text("+1 pt") }
                         Button(onClick = { viewModel.debugAddActionPoints(10) }, modifier = Modifier.weight(1f)) { Text("+10 pt") }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { viewModel.debugAddActionPoints(-1) }, modifier = Modifier.weight(1f)) { Text("-1 pt") }
-                        Button(onClick = { viewModel.debugAddActionPoints(-10) }, modifier = Modifier.weight(1f)) { Text("-10 pt") }
                     }
                 }
             }
@@ -2425,7 +2392,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             return@IconButton
                         }
                         if (!viewModel.spendPointForChat()) {
-                            errorMessage = "ポイントが足りません（2000歩で1ポイント）"
+                            errorMessage = "ポイントが足りません（5000歩で1ポイント）"
                             return@IconButton
                         }
                         errorMessage = null
@@ -2582,7 +2549,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                             return@IconButton
                         }
                         if (!viewModel.spendPointForChat()) {
-                            errorMessage = "ポイントが足りません（2000歩で1ポイント）"
+                            errorMessage = "ポイントが足りません（5000歩で1ポイント）"
                             return@IconButton
                         }
                         errorMessage = null
