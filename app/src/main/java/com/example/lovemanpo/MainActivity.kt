@@ -1095,7 +1095,7 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
         shape = RoundedCornerShape(12.dp),
         color = Color.White,
         modifier = Modifier.width(125.dp),
-        shadowElevation = 1.dp
+        shadowElevation = 6.dp
     ) {
         Row(
             modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp), // 上下のパディングを少し削りました
@@ -1119,7 +1119,7 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 
 @Composable
 fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(110.dp), shadowElevation = 1.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(110.dp), shadowElevation = 6.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(14.dp))
@@ -1144,7 +1144,7 @@ fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
 // 2. 行動ポイントカードのコメントを削除
 @Composable
 fun HomeActionPointsCard(pts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(110.dp), shadowElevation = 1.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(110.dp), shadowElevation = 6.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color(0xFF4DB6AC), modifier = Modifier.size(14.dp))
@@ -1167,7 +1167,7 @@ fun HomeActionPointsCard(pts: Int) {
 }
 @Composable
 fun HomeCommentBanner(expr: Int, message: String) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 2.dp, border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 6.dp, border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))) {
         Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Image(painter = painterResource(id = expr), contentDescription = null, modifier = Modifier
                 .size(44.dp)
@@ -1183,6 +1183,7 @@ fun HomeCommentBanner(expr: Int, message: String) {
             Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.6f))
                 Text(message, fontSize = 10.sp, color = Color.DarkGray)
             }
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
