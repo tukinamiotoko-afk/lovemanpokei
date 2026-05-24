@@ -953,7 +953,7 @@ fun HomeScreenContent(
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(start = 16.dp, top = 90.dp),
+                        .padding(start = 16.dp, top = 50.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
