@@ -104,6 +104,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility // 必要
 import androidx.compose.animation.slideInVertically // 必要
 import androidx.compose.animation.slideOutVertically // 必要
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.gestures.detectVerticalDragGestures // 必要
 import androidx.core.view.WindowCompat // 必要
 import androidx.core.view.WindowInsetsCompat // 必要
@@ -463,7 +465,11 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
         ) {
             NavHost(
                 navController = navController,
-                startDestination = startDestination
+                startDestination = startDestination,
+                enterTransition = { slideInHorizontally(initialOffsetX = { it }) + fadeIn(tween(300)) },
+                exitTransition = { slideOutHorizontally(targetOffsetX = { -it / 3 }) + fadeOut(tween(300)) },
+                popEnterTransition = { slideInHorizontally(initialOffsetX = { -it / 3 }) + fadeIn(tween(300)) },
+                popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) + fadeOut(tween(300)) }
             ) {
                 composable("name_input") { NameInputScreen(viewModel, navController) }
                 composable("profile_setup") { ProfileSetupScreen(navController, viewModel) }
