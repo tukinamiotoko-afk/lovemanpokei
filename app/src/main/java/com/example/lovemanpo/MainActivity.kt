@@ -952,7 +952,7 @@ fun HomeScreenContent(
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(start = 16.dp, top = 90.dp),
+                        .padding(start = 16.dp, top = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
@@ -1018,7 +1018,7 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(140.dp)
+                .size(130.dp)
                 .shadow(2.dp, CircleShape)
                 .background(Color.White, CircleShape)
         ) {
@@ -1090,7 +1090,7 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 
 @Composable
 fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White,modifier = Modifier.width(140.dp), shadowElevation = 1.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(110.dp), shadowElevation = 1.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(14.dp))
@@ -1107,14 +1107,15 @@ fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
                 Text("$hearts / 10 ", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B9D))
                 Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(9.dp))
             }
-            Text("ラブが10個たまるとレベルが上がるよ♪", fontSize = 7.sp, color = Color.Gray, textAlign = TextAlign.Center, lineHeight = 8.sp)
+            // ★ ここにあったコメント行を削除しました
         }
     }
 }
 
+// 2. 行動ポイントカードのコメントを削除
 @Composable
 fun HomeActionPointsCard(pts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(140.dp), shadowElevation = 1.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(110.dp), shadowElevation = 1.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color(0xFF4DB6AC), modifier = Modifier.size(14.dp))
@@ -1122,14 +1123,11 @@ fun HomeActionPointsCard(pts: Int) {
                 Text("行動ポイント", fontSize = 9.sp, color = Color.Gray)
             }
             Text("$pts / 2 pt", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
-            Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE0F2F1), modifier = Modifier.padding(vertical = 4.dp)) {
-                Text(if (pts >= 2) "上限に達しています" else "ポイント貯蓄中", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color(0xFF00897B), fontSize = 7.sp)
-            }
-            Text("5,000歩で1ポイント！\n1日2ポイントまで貯められるよ♪\n(毎日 0:00 にリセット)", fontSize = 7.sp, color = Color.Gray, lineHeight = 9.sp)
+            // 「上限に達しています」などのステータス表示を削除しました
         }
     }
-}
 
+}
 @Composable
 fun HomeCommentBanner(expr: Int, message: String) {
     Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 2.dp, border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))) {
