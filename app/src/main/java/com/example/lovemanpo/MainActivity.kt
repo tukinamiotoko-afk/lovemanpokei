@@ -934,15 +934,13 @@ fun HomeScreenContent(
 
             Box(modifier = Modifier
                 .fillMaxWidth()
-                .height(420.dp)) {
+                .height(460.dp)) {
                 Image(
                     painter = painterResource(id = expressionRes),
                     contentDescription = "ひかり",
                     modifier = Modifier
                         .fillMaxHeight(1.0f)
-                        .scale(1.35f)
                         .align(Alignment.BottomCenter)
-                        .offset(y = 50.dp)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
