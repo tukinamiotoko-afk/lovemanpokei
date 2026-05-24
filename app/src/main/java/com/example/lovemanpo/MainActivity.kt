@@ -934,7 +934,7 @@ fun HomeScreenContent(
 
             Box(modifier = Modifier
                 .fillMaxWidth()
-                .height(540.dp)) {
+                .height(420.dp)) {
                 Image(
                     painter = painterResource(id = expressionRes),
                     contentDescription = "ひかり",
@@ -986,7 +986,7 @@ fun HomeScreenContent(
                     HomeCommentBanner(expressionRes, formattedMessage) // 必要
                     Spacer(modifier = Modifier.height(16.dp))
                     HomeCampaignBanner()
-                    Spacer(modifier = Modifier.height(100.dp))
+                    Spacer(modifier = Modifier.height(80.dp))
                 }
             }
         }
