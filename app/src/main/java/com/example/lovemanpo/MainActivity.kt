@@ -105,8 +105,6 @@ import androidx.compose.animation.AnimatedVisibility // 必要
 import androidx.compose.animation.slideInVertically // 必要
 import androidx.compose.animation.slideOutVertically // 必要
 import androidx.compose.foundation.gestures.detectVerticalDragGestures // 必要
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.core.view.WindowCompat // 必要
 import androidx.core.view.WindowInsetsCompat // 必要
 import androidx.core.view.WindowInsetsControllerCompat // 必要
@@ -867,8 +865,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
 
 @Composable
 fun HomeScreenContent(
-    todaySteps: Int,
-    actionPoints: Int,
+    todaySteps: Int,    actionPoints: Int,
     stepGaugeProgress: Float,
     loveCount: Int,
     heartCount: Int,
@@ -877,6 +874,7 @@ fun HomeScreenContent(
     bgRes: Int,
     dialogueMessage: String,
     expressionRes: Int,
+    // ★ 追加
     activeTimeStr: String,
     distanceStr: String,
     caloriesStr: String,
@@ -898,9 +896,9 @@ fun HomeScreenContent(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-            // ★ スクロールを削除し、固定レイアウトにします
+                .verticalScroll(rememberScrollState())
         ) {
-            // ヘッダー (日付・設定など)
+            // ヘッダー
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -911,18 +909,15 @@ fun HomeScreenContent(
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = Color.White,
-                    modifier = Modifier.width(120.dp)
+                    modifier = Modifier.width(160.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy((-2).dp)
-                    ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CalendarToday, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.CalendarToday, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("5/25 (土)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
+                            Text("5/25 (土)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
                         }
-                        Text("おはようございます！☀️", fontSize = 6.sp, color = Color.Gray)
+                        Text("おはようございます！☀️", fontSize = 9.sp, color = Color.Gray)
                     }
                 }
 
@@ -938,20 +933,14 @@ fun HomeScreenContent(
                 }
             }
 
-            // ★ キャラクターと統計エリア：weight(1f) で余白をすべて埋めます
             Box(modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)) {
+                .height(420.dp)) {
                 Image(
                     painter = painterResource(id = expressionRes),
                     contentDescription = "ひかり",
                     modifier = Modifier
                         .fillMaxHeight(1.0f)
-                        .graphicsLayer(
-                            scaleX = 1.3f, // 大きさはここで調整
-                            scaleY = 1.3f,
-                            transformOrigin = TransformOrigin(0.5f, 1.0f)
-                        )
                         .align(Alignment.BottomCenter)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
@@ -960,11 +949,10 @@ fun HomeScreenContent(
                     contentScale = ContentScale.Fit
                 )
 
-                // 統計アイテム (左側)
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(start = 16.dp, top = 20.dp),
+                        .padding(start = 16.dp, top = 90.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
@@ -973,7 +961,6 @@ fun HomeScreenContent(
                     HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
                 }
 
-                // カード (右側)
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -985,22 +972,21 @@ fun HomeScreenContent(
                 }
             }
 
-            // ★ セリフと広告のエリア：ここが画面下部に接地します
-            Column(
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-15).dp) // キャラクターと少し重ねる
-                    .padding(horizontal = 16.dp)
+                    .offset(y = (-15).dp),
+                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+                color = Color.White,
+                shadowElevation = 8.dp
             ) {
-                val formattedMessage = dialogueMessage.replace("○○", playerName)
-                HomeCommentBanner(expressionRes, formattedMessage)
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                HomeAdPlaceholder()
-
-                // 下部ナビゲーションバー(80dp)と少しの余白
-                Spacer(modifier = Modifier.height(90.dp))
+                Column(modifier = Modifier.padding(16.dp)) {
+                    val formattedMessage = dialogueMessage.replace("○○", playerName)
+                    HomeCommentBanner(expressionRes, formattedMessage)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HomeAdPlaceholder()
+                    Spacer(modifier = Modifier.height(90.dp))
+                }
             }
         }
 
@@ -1013,7 +999,8 @@ fun HomeScreenContent(
             onRecords = onRecordsClick
         )
     }
-}
+} // ← ここで HomeScreenContent が終わる
+
 
 
 @Composable
@@ -1103,7 +1090,7 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 
 @Composable
 fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White,modifier = Modifier.width(115.dp), shadowElevation = 1.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White,modifier = Modifier.width(140.dp), shadowElevation = 1.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(14.dp))
@@ -1127,7 +1114,7 @@ fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
 
 @Composable
 fun HomeActionPointsCard(pts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(115.dp), shadowElevation = 1.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(140.dp), shadowElevation = 1.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color(0xFF4DB6AC), modifier = Modifier.size(14.dp))
@@ -1138,7 +1125,7 @@ fun HomeActionPointsCard(pts: Int) {
             Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE0F2F1), modifier = Modifier.padding(vertical = 4.dp)) {
                 Text(if (pts >= 2) "上限に達しています" else "ポイント貯蓄中", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color(0xFF00897B), fontSize = 7.sp)
             }
-            Text("5,000歩で1ポイント！\n1日2ポイントまで貯められるよ♪\n", fontSize = 7.sp, color = Color.Gray, lineHeight = 9.sp)
+            Text("5,000歩で1ポイント！\n1日2ポイントまで貯められるよ♪\n(毎日 0:00 にリセット)", fontSize = 7.sp, color = Color.Gray, lineHeight = 9.sp)
         }
     }
 }
@@ -1202,16 +1189,43 @@ fun HomeWeeklySection() {
 }
 
 @Composable
+fun HomeCampaignBanner() {
+    Surface(modifier = Modifier
+        .fillMaxWidth()
+        .height(70.dp), shape = RoundedCornerShape(8.dp), color = Color(0xFFE3F2FD)) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Row(modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(modifier = Modifier
+                    .size(50.dp)
+                    .background(Color.White, RoundedCornerShape(4.dp)))
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text("歩いた分だけ、いいことあるよ。", fontSize = 9.sp, color = Color(0xFF1976D2))
+                    Text("SPRING CAMPAIGN", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color(0xFF1976D2))
+                    Surface(shape = RoundedCornerShape(10.dp), color = Color(0xFFE91E63)) {
+                        Text("詳しくはこちら ▶", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color.White, fontSize = 7.sp)
+                    }
+                }
+            }
+            Icon(Icons.Default.Info, null, modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(4.dp)
+                .size(10.dp), tint = Color.Gray)
+        }
+    }
+}
+
+@Composable
 fun HomeAdPlaceholder() {
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(70.dp), // バナーと同じ高さ
-        shape = RoundedCornerShape(12.dp),
-        color = Color.Gray// 控えめなグレー
+        modifier = Modifier.fillMaxWidth().height(60.dp),
+        shape = RoundedCornerShape(8.dp),
+        color = Color.Gray.copy(alpha = 0.08f)
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text("広告スペース", fontSize = 12.sp, color = Color.Gray)
+            Text("ここに広告が表示されます", fontSize = 12.sp, color = Color.Gray)
         }
     }
 }
@@ -2321,9 +2335,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             .padding(padding)) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 12.dp),
+                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
@@ -2480,9 +2492,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
             .padding(padding)) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 12.dp),
+                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
