@@ -908,15 +908,15 @@ fun HomeScreenContent(
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = Color.White,
-                    modifier = Modifier.width(160.dp)
+                    modifier = Modifier.width(120.dp)
                 ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
+                    Column(modifier = Modifier.padding(6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.CalendarToday, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("5/25 (土)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
+                            Text("5/25 (土)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
                         }
-                        Text("おはようございます！☀️", fontSize = 9.sp, color = Color.Gray)
+                        Text("おはようございます！☀️", fontSize = 6.sp, color = Color.Gray)
                     }
                 }
 
@@ -953,7 +953,7 @@ fun HomeScreenContent(
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(start = 16.dp, top = 50.dp),
+                        .padding(start = 16.dp, top = 30.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
@@ -1091,7 +1091,7 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 
 @Composable
 fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White,modifier = Modifier.width(140.dp), shadowElevation = 1.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White,modifier = Modifier.width(115.dp), shadowElevation = 1.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(14.dp))
@@ -1115,7 +1115,7 @@ fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
 
 @Composable
 fun HomeActionPointsCard(pts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(140.dp), shadowElevation = 1.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(115.dp), shadowElevation = 1.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color(0xFF4DB6AC), modifier = Modifier.size(14.dp))
@@ -1126,7 +1126,7 @@ fun HomeActionPointsCard(pts: Int) {
             Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE0F2F1), modifier = Modifier.padding(vertical = 4.dp)) {
                 Text(if (pts >= 2) "上限に達しています" else "ポイント貯蓄中", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color(0xFF00897B), fontSize = 7.sp)
             }
-            Text("5,000歩で1ポイント！\n1日2ポイントまで貯められるよ♪\n(毎日 0:00 にリセット)", fontSize = 7.sp, color = Color.Gray, lineHeight = 9.sp)
+            Text("5,000歩で1ポイント！\n1日2ポイントまで貯められるよ♪\n", fontSize = 7.sp, color = Color.Gray, lineHeight = 9.sp)
         }
     }
 }
