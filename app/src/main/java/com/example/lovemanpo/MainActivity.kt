@@ -935,8 +935,7 @@ fun HomeScreenContent(
 
             Box(modifier = Modifier
                 .fillMaxWidth()
-                .height(370.dp)
-                .clipToBounds()) {
+                .height(370.dp)) {
                 Image(
                     painter = painterResource(id = expressionRes),
                     contentDescription = "ひかり",
@@ -979,6 +978,7 @@ fun HomeScreenContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .offset(y = (-40).dp)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 val formattedMessage = dialogueMessage.replace("○○", playerName)
