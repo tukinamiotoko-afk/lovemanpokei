@@ -105,6 +105,8 @@ import androidx.compose.animation.AnimatedVisibility // 必要
 import androidx.compose.animation.slideInVertically // 必要
 import androidx.compose.animation.slideOutVertically // 必要
 import androidx.compose.foundation.gestures.detectVerticalDragGestures // 必要
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.core.view.WindowCompat // 必要
 import androidx.core.view.WindowInsetsCompat // 必要
 import androidx.core.view.WindowInsetsControllerCompat // 必要
@@ -865,7 +867,8 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
 
 @Composable
 fun HomeScreenContent(
-    todaySteps: Int,    actionPoints: Int,
+    todaySteps: Int,
+    actionPoints: Int,
     stepGaugeProgress: Float,
     loveCount: Int,
     heartCount: Int,
@@ -874,7 +877,6 @@ fun HomeScreenContent(
     bgRes: Int,
     dialogueMessage: String,
     expressionRes: Int,
-    // ★ 追加
     activeTimeStr: String,
     distanceStr: String,
     caloriesStr: String,
@@ -896,8 +898,9 @@ fun HomeScreenContent(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
+            // ★ スクロールを削除し、固定レイアウトにします
         ) {
-            // ヘッダー
+            // ヘッダー (日付・設定など)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -910,9 +913,12 @@ fun HomeScreenContent(
                     color = Color.White,
                     modifier = Modifier.width(120.dp)
                 ) {
-                    Column(modifier = Modifier.padding(6.dp)) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy((-2).dp)
+                    ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CalendarToday, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.CalendarToday, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("5/25 (土)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
                         }
@@ -932,6 +938,7 @@ fun HomeScreenContent(
                 }
             }
 
+            // ★ キャラクターと統計エリア：weight(1f) で余白をすべて埋めます
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)) {
@@ -940,6 +947,11 @@ fun HomeScreenContent(
                     contentDescription = "ひかり",
                     modifier = Modifier
                         .fillMaxHeight(1.0f)
+                        .graphicsLayer(
+                            scaleX = 1.3f, // 大きさはここで調整
+                            scaleY = 1.3f,
+                            transformOrigin = TransformOrigin(0.5f, 1.0f)
+                        )
                         .align(Alignment.BottomCenter)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
@@ -948,10 +960,11 @@ fun HomeScreenContent(
                     contentScale = ContentScale.Fit
                 )
 
+                // 統計アイテム (左側)
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(start = 16.dp, top = 30.dp),
+                        .padding(start = 16.dp, top = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
@@ -960,6 +973,7 @@ fun HomeScreenContent(
                     HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
                 }
 
+                // カード (右側)
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -969,18 +983,24 @@ fun HomeScreenContent(
                     HomeLoveLevelCard(loveCount, heartGaugeProgress, hearts = heartCount)
                     HomeActionPointsCard(actionPoints)
                 }
+            }
 
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, bottom = 88.dp)
-                ) {
-                    val formattedMessage = dialogueMessage.replace("○○", playerName)
-                    HomeCommentBanner(expressionRes, formattedMessage)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    HomeCampaignBanner()
-                }
+            // ★ セリフと広告のエリア：ここが画面下部に接地します
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(y = (-15).dp) // キャラクターと少し重ねる
+                    .padding(horizontal = 16.dp)
+            ) {
+                val formattedMessage = dialogueMessage.replace("○○", playerName)
+                HomeCommentBanner(expressionRes, formattedMessage)
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                HomeAdPlaceholder()
+
+                // 下部ナビゲーションバー(80dp)と少しの余白
+                Spacer(modifier = Modifier.height(90.dp))
             }
         }
 
@@ -993,8 +1013,7 @@ fun HomeScreenContent(
             onRecords = onRecordsClick
         )
     }
-} // ← ここで HomeScreenContent が終わる
-
+}
 
 
 @Composable
@@ -1183,30 +1202,16 @@ fun HomeWeeklySection() {
 }
 
 @Composable
-fun HomeCampaignBanner() {
-    Surface(modifier = Modifier
-        .fillMaxWidth()
-        .height(70.dp), shape = RoundedCornerShape(8.dp), color = Color(0xFFE3F2FD)) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Row(modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier
-                    .size(50.dp)
-                    .background(Color.White, RoundedCornerShape(4.dp)))
-                Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text("歩いた分だけ、いいことあるよ。", fontSize = 9.sp, color = Color(0xFF1976D2))
-                    Text("SPRING CAMPAIGN", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color(0xFF1976D2))
-                    Surface(shape = RoundedCornerShape(10.dp), color = Color(0xFFE91E63)) {
-                        Text("詳しくはこちら ▶", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color.White, fontSize = 7.sp)
-                    }
-                }
-            }
-            Icon(Icons.Default.Info, null, modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(4.dp)
-                .size(10.dp), tint = Color.Gray)
+fun HomeAdPlaceholder() {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(70.dp), // バナーと同じ高さ
+        shape = RoundedCornerShape(12.dp),
+        color = Color.Gray// 控えめなグレー
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text("広告スペース", fontSize = 12.sp, color = Color.Gray)
         }
     }
 }
@@ -2316,7 +2321,9 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             .padding(padding)) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
@@ -2473,7 +2480,9 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
             .padding(padding)) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
