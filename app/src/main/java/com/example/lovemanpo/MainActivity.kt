@@ -1024,8 +1024,14 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
+                .size(142.dp)
+                .shadow(3.dp, CircleShape)
+                .background(Color.White, CircleShape)
+        ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
                 .size(130.dp)
-                .shadow(2.dp, CircleShape)
                 .background(Color.White, CircleShape)
         ) {
             Box(
@@ -1074,6 +1080,7 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
                 Text("歩 / 10,000 歩", fontSize = 9.sp, color = Color.Gray)
             }
             }
+        }
         }
     }
 }
@@ -1167,9 +1174,16 @@ fun HomeCommentBanner(expr: Int, message: String) {
                 .clip(CircleShape)
                 .background(Color(0xFFFFE0E9)), contentScale = ContentScale.Crop)
             Spacer(modifier = Modifier.width(10.dp))
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(40.dp)
+                    .background(Color.LightGray.copy(alpha = 0.5f))
+            )
+            Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold) // 必要（タイトルを固定の名前に変更）
-                Text(message, fontSize = 10.sp, color = Color.DarkGray) // 必要（セリフを表示するように変更）
+                Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold)
+                Text(message, fontSize = 10.sp, color = Color.DarkGray)
             }
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
         }
