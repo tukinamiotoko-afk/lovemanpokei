@@ -1019,11 +1019,14 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(130.dp)
-                // ★ ここで円全体を白く塗りつぶし、少し影（shadow）をつけて背景から浮かせています
+                .size(140.dp)
                 .shadow(2.dp, CircleShape)
                 .background(Color.White, CircleShape)
         ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(130.dp)
+            ) {
             Canvas(modifier = Modifier
                 .fillMaxSize()
                 .padding(4.dp)) { // 少し余白を入れてゲージを綺麗に
@@ -1048,6 +1051,7 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
                 Text("今日の歩数", fontSize = 10.sp, color = Color.Gray)
                 Text(String.format(java.util.Locale.US, "%,d", steps), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray)
                 Text("歩 / 10,000 歩", fontSize = 9.sp, color = Color.Gray)
+            }
             }
         }
     }
