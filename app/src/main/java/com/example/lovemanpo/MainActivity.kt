@@ -456,14 +456,24 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
         val viewModel: StepViewModel = viewModel(factory = viewModelFactory)
 
         var navTrigger by remember { mutableStateOf(0) }
+        val routeHistory = remember { mutableListOf<String>() }
         LaunchedEffect(navController) {
-            var prevStackSize = navController.currentBackStack.value.size
             var isFirst = true
-            navController.currentBackStackEntryFlow.collect {
-                if (isFirst) { isFirst = false; return@collect }
-                val currentSize = navController.currentBackStack.value.size
-                if (currentSize > prevStackSize) navTrigger++
-                prevStackSize = currentSize
+            navController.currentBackStackEntryFlow.collect { entry ->
+                val route = entry.destination.route ?: return@collect
+                if (isFirst) {
+                    isFirst = false
+                    routeHistory.add(route)
+                    return@collect
+                }
+                // 履歴の1つ前のルートと一致 → 戻る操作
+                if (routeHistory.size >= 2 && routeHistory[routeHistory.size - 2] == route) {
+                    routeHistory.removeAt(routeHistory.size - 1)
+                } else {
+                    // 前進 → キャラ演出を発火
+                    routeHistory.add(route)
+                    navTrigger++
+                }
             }
         }
 
