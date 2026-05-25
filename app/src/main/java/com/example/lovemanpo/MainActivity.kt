@@ -21,6 +21,8 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -485,20 +487,16 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 navController = navController,
                 startDestination = startDestination,
                 enterTransition = {
-                    slideInHorizontally(tween(650, delayMillis = 120, easing = FastOutSlowInEasing)) { it } +
-                    fadeIn(tween(200, delayMillis = 120))
+                    slideInHorizontally(tween(500, delayMillis = 120, easing = FastOutSlowInEasing)) { it }
                 },
                 exitTransition = {
-                    slideOutHorizontally(tween(650, delayMillis = 120, easing = FastOutSlowInEasing)) { -it } +
-                    fadeOut(tween(200, delayMillis = 120))
+                    ExitTransition.None
                 },
                 popEnterTransition = {
-                    slideInHorizontally(tween(500, delayMillis = 80, easing = FastOutSlowInEasing)) { -it } +
-                    fadeIn(tween(200, delayMillis = 80))
+                    EnterTransition.None
                 },
                 popExitTransition = {
-                    slideOutHorizontally(tween(500, delayMillis = 80, easing = FastOutSlowInEasing)) { it } +
-                    fadeOut(tween(300))
+                    slideOutHorizontally(tween(500, easing = FastOutSlowInEasing)) { it }
                 }
             ) {
                 composable("name_input") { NameInputScreen(viewModel, navController) }
