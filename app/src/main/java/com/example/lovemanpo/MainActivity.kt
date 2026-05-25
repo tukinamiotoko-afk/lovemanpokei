@@ -1043,6 +1043,7 @@ fun HomeScreenContent(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
+                    Spacer(modifier = Modifier.height(10.dp))
                     HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, null, Color(0xFFF06292))
                     HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "歩行距離", distanceStr, null, Color(0xFF4FC3F7))
                     HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
