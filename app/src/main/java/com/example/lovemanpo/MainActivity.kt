@@ -454,9 +454,11 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
 
         var navTrigger by remember { mutableStateOf(0) }
         LaunchedEffect(navController) {
-            navController.currentBackStackEntryFlow
-                .drop(1)
-                .collect { navTrigger++ }
+            var isFirst = true
+            navController.currentBackStackEntryFlow.collect {
+                if (isFirst) { isFirst = false; return@collect }
+                navTrigger++
+            }
         }
 
         val startDestination = remember(Unit) {
