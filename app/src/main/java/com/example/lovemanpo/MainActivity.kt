@@ -485,19 +485,19 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 navController = navController,
                 startDestination = startDestination,
                 enterTransition = {
-                    slideInHorizontally(tween(650, easing = FastOutSlowInEasing)) { it } +
-                    fadeIn(tween(200))
+                    slideInHorizontally(tween(650, delayMillis = 120, easing = FastOutSlowInEasing)) { it } +
+                    fadeIn(tween(200, delayMillis = 120))
                 },
                 exitTransition = {
-                    slideOutHorizontally(tween(650, easing = FastOutSlowInEasing)) { -it } +
-                    fadeOut(tween(200))
+                    slideOutHorizontally(tween(650, delayMillis = 120, easing = FastOutSlowInEasing)) { -it } +
+                    fadeOut(tween(200, delayMillis = 120))
                 },
                 popEnterTransition = {
-                    slideInHorizontally(tween(500, easing = FastOutSlowInEasing)) { -it } +
-                    fadeIn(tween(200))
+                    slideInHorizontally(tween(500, delayMillis = 80, easing = FastOutSlowInEasing)) { -it } +
+                    fadeIn(tween(200, delayMillis = 80))
                 },
                 popExitTransition = {
-                    slideOutHorizontally(tween(500, easing = FastOutSlowInEasing)) { it } +
+                    slideOutHorizontally(tween(500, delayMillis = 80, easing = FastOutSlowInEasing)) { it } +
                     fadeOut(tween(300))
                 }
             ) {
@@ -550,6 +550,7 @@ fun CharacterPullOverlay() {
 
         LaunchedEffect(screenWidthPx) {
             animTranslationX.snapTo(0f)
+            delay(120)
             animTranslationX.animateTo(
                 targetValue = -screenWidthPx,
                 animationSpec = tween(650, easing = FastOutSlowInEasing)
