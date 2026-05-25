@@ -1245,11 +1245,20 @@ fun HomeActionPointsCard(pts: Int) {
     }
 
 }
+fun expressionToFaceRes(expr: Int): Int = when (expr) {
+    R.drawable.hikari_smile     -> R.drawable.hikari_smile_face
+    R.drawable.hikari_blush     -> R.drawable.hikari_blush_face
+    R.drawable.hikari_think     -> R.drawable.hikari_think_face
+    R.drawable.hikari_celebrate -> R.drawable.hikari_celebrate_face
+    R.drawable.hikari_devil     -> R.drawable.hikari_devil_face
+    else                        -> R.drawable.hikari_smile_face
+}
+
 @Composable
 fun HomeCommentBanner(expr: Int, message: String) {
     Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFE4EF), shadowElevation = 14.dp, border = BorderStroke(1.dp, Color(0xFFFFB7D0).copy(alpha = 0.5f))) {
         Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Image(painter = painterResource(id = expr), contentDescription = null, modifier = Modifier
+            Image(painter = painterResource(id = expressionToFaceRes(expr)), contentDescription = null, modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape)
                 .background(Color(0xFFFFE0E9)), contentScale = ContentScale.Crop)
