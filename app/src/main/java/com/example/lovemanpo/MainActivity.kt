@@ -551,7 +551,7 @@ fun CharacterPullOverlay() {
             delay(120)
             animTranslationX.animateTo(
                 targetValue = -screenWidthPx,
-                animationSpec = tween(650, easing = FastOutSlowInEasing)
+                animationSpec = tween(500, easing = FastOutSlowInEasing)
             )
             visible = false
         }
