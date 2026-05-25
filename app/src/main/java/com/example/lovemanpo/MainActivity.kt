@@ -1638,7 +1638,7 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
     val cardBg = Color(0xFFFFF0F5) // ★ここで色を一括設定
     val brownColor = Color(0xFF8D6E63)
 
-    LaunchedEffect(viewDate, period) {
+    LaunchedEffect(viewDate, period, stepRecords) {
         if (period == DisplayPeriod.DAY) {
             viewModel.fetchHourlyRecords(viewDate.toString())
         }
