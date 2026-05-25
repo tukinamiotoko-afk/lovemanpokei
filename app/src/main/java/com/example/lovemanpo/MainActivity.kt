@@ -984,22 +984,27 @@ fun HomeScreenContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
+                Surface(shape = RoundedCornerShape(12.dp),
                     color = Color.White,
-                    modifier = Modifier.width(160.dp)
+                    // height(48.dp) などで高さを固定できます
+                    modifier = Modifier.width(130.dp)
                 ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
+                    // padding の vertical（上下）を減らすか、
+                    // Column に Arrangement.Center を入れると綺麗に収まります
+                    Column(
+                        modifier = Modifier.padding(horizontal = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy((-2).dp, Alignment.CenterVertically)
+                    ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CalendarToday, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.CalendarToday, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("5/25 (土)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
+                            Text("5/25 (土)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
                         }
-                        Text("おはようございます！☀️", fontSize = 9.sp, color = Color.Gray)
+                        Text("おはようございます！☀️", fontSize = 7.sp, color = Color.Gray)
                     }
                 }
 
@@ -1100,7 +1105,7 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(142.dp)
+                .size(130.dp)
                 .shadow(3.dp, CircleShape)
                 .background(Color.White, CircleShape)
         ) {
@@ -1170,7 +1175,7 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = Color.White,
-        modifier = Modifier.width(125.dp),
+        modifier = Modifier.width(110.dp),
         shadowElevation = 14.dp
     ) {
         Row(
@@ -1234,9 +1239,7 @@ fun HomeActionPointsCard(pts: Int) {
                 }
             }
             Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE0F2F1)) {
-                Text(if (pts >= 5) "上限に達しています" else "ポイント貯蓄中", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color(0xFF00897B), fontSize = 7.sp)
             }
-            Text("2,000歩で1ポイント！\n1日5ポイントまで貯められるよ♪\n(毎日 0:00 にリセット)", fontSize = 7.sp, color = Color.Gray, lineHeight = 9.sp)
         }
     }
 
