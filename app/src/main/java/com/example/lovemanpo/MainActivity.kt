@@ -16,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.fadeIn
@@ -59,6 +60,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.PlatformTextStyle
@@ -449,7 +451,14 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
     if (hasPermissions) {
         val navController = rememberNavController()
         val viewModel: StepViewModel = viewModel(factory = viewModelFactory)
-        
+
+        var navTrigger by remember { mutableStateOf(0) }
+        LaunchedEffect(navController) {
+            navController.currentBackStackEntryFlow
+                .drop(1)
+                .collect { navTrigger++ }
+        }
+
         val startDestination = remember(Unit) {
             if (viewModel.playerName.value.isEmpty()) {
                 "name_input"
@@ -470,20 +479,20 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 navController = navController,
                 startDestination = startDestination,
                 enterTransition = {
-                    scaleIn(tween(420, easing = FastOutSlowInEasing), initialScale = 0.90f) +
-                    fadeIn(tween(420, easing = FastOutSlowInEasing))
+                    slideInHorizontally(tween(650, easing = FastOutSlowInEasing)) { it } +
+                    fadeIn(tween(200))
                 },
                 exitTransition = {
-                    scaleOut(tween(300, easing = FastOutSlowInEasing), targetScale = 1.06f) +
-                    fadeOut(tween(300))
+                    slideOutHorizontally(tween(650, easing = FastOutSlowInEasing)) { -it / 4 } +
+                    fadeOut(tween(200))
                 },
                 popEnterTransition = {
-                    scaleIn(tween(300, easing = FastOutSlowInEasing), initialScale = 0.94f) +
-                    fadeIn(tween(300))
+                    slideInHorizontally(tween(500, easing = FastOutSlowInEasing)) { -it / 4 } +
+                    fadeIn(tween(200))
                 },
                 popExitTransition = {
-                    scaleOut(tween(420, easing = FastOutSlowInEasing), targetScale = 0.90f) +
-                    fadeOut(tween(420, easing = FastOutSlowInEasing))
+                    slideOutHorizontally(tween(500, easing = FastOutSlowInEasing)) { it } +
+                    fadeOut(tween(300))
                 }
             ) {
                 composable("name_input") { NameInputScreen(viewModel, navController) }
@@ -510,9 +519,36 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 composable("settings") { SettingsScreen(navController, viewModel) }
                 composable("debug") { DebugScreen(navController, viewModel) }
             }
+            key(navTrigger) {
+                if (navTrigger > 0) CharacterPullOverlay()
+            }
         }
     } else {
         PermissionRequestScreen { launcher.launch(permissions.toTypedArray()) }
+    }
+}
+
+@Composable
+fun CharacterPullOverlay() {
+    val offsetFraction = remember { Animatable(1.15f) }
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+
+    LaunchedEffect(Unit) {
+        offsetFraction.animateTo(
+            targetValue = -0.45f,
+            animationSpec = tween(650, easing = FastOutSlowInEasing)
+        )
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Image(
+            painter = painterResource(R.drawable.hikari_gamenwohipparu_sd),
+            contentDescription = null,
+            modifier = Modifier
+                .height(200.dp)
+                .align(Alignment.BottomStart)
+                .offset(x = (screenWidthDp * offsetFraction.value).dp)
+        )
     }
 }
 
