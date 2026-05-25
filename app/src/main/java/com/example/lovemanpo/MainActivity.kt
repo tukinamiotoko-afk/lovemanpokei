@@ -486,11 +486,11 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                     fadeIn(tween(200))
                 },
                 exitTransition = {
-                    slideOutHorizontally(tween(650, easing = FastOutSlowInEasing)) { -it / 4 } +
+                    slideOutHorizontally(tween(650, easing = FastOutSlowInEasing)) { -it } +
                     fadeOut(tween(200))
                 },
                 popEnterTransition = {
-                    slideInHorizontally(tween(500, easing = FastOutSlowInEasing)) { -it / 4 } +
+                    slideInHorizontally(tween(500, easing = FastOutSlowInEasing)) { -it } +
                     fadeIn(tween(200))
                 },
                 popExitTransition = {
@@ -543,10 +543,10 @@ fun CharacterPullOverlay() {
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val screenWidthPx = constraints.maxWidth.toFloat()
-        val animTranslationX = remember { Animatable(screenWidthPx) }
+        val animTranslationX = remember { Animatable(0f) }
 
         LaunchedEffect(screenWidthPx) {
-            animTranslationX.snapTo(screenWidthPx)
+            animTranslationX.snapTo(0f)
             animTranslationX.animateTo(
                 targetValue = -screenWidthPx,
                 animationSpec = tween(650, easing = FastOutSlowInEasing)
