@@ -16,6 +16,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -468,20 +470,20 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 navController = navController,
                 startDestination = startDestination,
                 enterTransition = {
-                    slideInHorizontally(tween(380, easing = FastOutSlowInEasing)) { it } +
-                    fadeIn(tween(380, easing = FastOutSlowInEasing))
+                    scaleIn(tween(420, easing = FastOutSlowInEasing), initialScale = 0.90f) +
+                    fadeIn(tween(420, easing = FastOutSlowInEasing))
                 },
                 exitTransition = {
-                    slideOutHorizontally(tween(380, easing = FastOutSlowInEasing)) { -it / 5 } +
-                    fadeOut(tween(250))
+                    scaleOut(tween(300, easing = FastOutSlowInEasing), targetScale = 1.06f) +
+                    fadeOut(tween(300))
                 },
                 popEnterTransition = {
-                    slideInHorizontally(tween(380, easing = FastOutSlowInEasing)) { -it / 5 } +
-                    fadeIn(tween(250))
+                    scaleIn(tween(300, easing = FastOutSlowInEasing), initialScale = 0.94f) +
+                    fadeIn(tween(300))
                 },
                 popExitTransition = {
-                    slideOutHorizontally(tween(380, easing = FastOutSlowInEasing)) { it } +
-                    fadeOut(tween(380, easing = FastOutSlowInEasing))
+                    scaleOut(tween(420, easing = FastOutSlowInEasing), targetScale = 0.90f) +
+                    fadeOut(tween(420, easing = FastOutSlowInEasing))
                 }
             ) {
                 composable("name_input") { NameInputScreen(viewModel, navController) }
