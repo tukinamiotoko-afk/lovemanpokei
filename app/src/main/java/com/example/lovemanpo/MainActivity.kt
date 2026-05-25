@@ -989,7 +989,7 @@ fun HomeScreenContent(
                 verticalAlignment = Alignment.Top
             ) {
                 Surface(shape = RoundedCornerShape(12.dp),
-                    color = Color.White,
+                    color = Color(0xFFFFF0F5),
                     // height(48.dp) などで高さを固定できます
                     modifier = Modifier.width(130.dp)
                 ) {
@@ -1175,7 +1175,7 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
     )
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = Color.White,
+        color = Color(0xFFFFF0F5),
         modifier = Modifier.width(110.dp),
         shadowElevation = 14.dp
     ) {
@@ -1201,7 +1201,7 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 
 @Composable
 fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(110.dp), shadowElevation = 14.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFE4EF), modifier = Modifier.width(110.dp), shadowElevation = 14.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(14.dp))
@@ -1226,7 +1226,7 @@ fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
 // 2. 行動ポイントカードのコメントを削除
 @Composable
 fun HomeActionPointsCard(pts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(110.dp), shadowElevation = 14.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFF0F5), modifier = Modifier.width(110.dp), shadowElevation = 14.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color(0xFF4DB6AC), modifier = Modifier.size(14.dp))
@@ -1247,7 +1247,7 @@ fun HomeActionPointsCard(pts: Int) {
 }
 @Composable
 fun HomeCommentBanner(expr: Int, message: String) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFE4EF), shadowElevation = 14.dp, border = BorderStroke(1.dp, Color(0xFFFFB7D0).copy(alpha = 0.5f))) {
         Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Image(painter = painterResource(id = expr), contentDescription = null, modifier = Modifier
                 .size(44.dp)
