@@ -16,7 +16,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.fadeIn
@@ -1107,6 +1109,11 @@ fun HomeTopCircleButton(icon: androidx.compose.ui.graphics.vector.ImageVector, c
 
 @Composable
 fun HomeStepCircleGauge(steps: Int, progress: Float) {
+    val animatedSteps by animateIntAsState(
+        targetValue = steps,
+        animationSpec = tween(durationMillis = 600, easing = LinearEasing),
+        label = "stepCount"
+    )
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             contentAlignment = Alignment.Center,
@@ -1163,7 +1170,7 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.AutoMirrored.Filled.DirectionsWalk, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(18.dp))
                 Text("今日の歩数", fontSize = 10.sp, color = Color.Gray)
-                Text(String.format(java.util.Locale.US, "%,d", steps), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray)
+                Text(String.format(java.util.Locale.US, "%,d", animatedSteps), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray)
                 Text("歩 / 10,000 歩", fontSize = 9.sp, color = Color.Gray)
             }
             }
