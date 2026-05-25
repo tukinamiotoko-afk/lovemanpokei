@@ -455,10 +455,13 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
 
         var navTrigger by remember { mutableStateOf(0) }
         LaunchedEffect(navController) {
+            var prevStackSize = navController.currentBackStack.value.size
             var isFirst = true
             navController.currentBackStackEntryFlow.collect {
                 if (isFirst) { isFirst = false; return@collect }
-                navTrigger++
+                val currentSize = navController.currentBackStack.value.size
+                if (currentSize > prevStackSize) navTrigger++
+                prevStackSize = currentSize
             }
         }
 
