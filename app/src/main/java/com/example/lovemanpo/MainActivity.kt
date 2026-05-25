@@ -532,24 +532,34 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
 
 @Composable
 fun CharacterPullOverlay() {
-    val offsetFraction = remember { Animatable(1.15f) }
-    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    var visible by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
-        offsetFraction.animateTo(
-            targetValue = -0.45f,
-            animationSpec = tween(650, easing = FastOutSlowInEasing)
-        )
+        visible = true
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    if (!visible) return
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val screenWidthPx = constraints.maxWidth.toFloat()
+        val animTranslationX = remember { Animatable(screenWidthPx) }
+
+        LaunchedEffect(screenWidthPx) {
+            animTranslationX.snapTo(screenWidthPx)
+            animTranslationX.animateTo(
+                targetValue = -screenWidthPx,
+                animationSpec = tween(650, easing = FastOutSlowInEasing)
+            )
+            visible = false
+        }
+
         Image(
             painter = painterResource(R.drawable.hikari_gamenwohipparu_sd),
             contentDescription = null,
             modifier = Modifier
                 .height(200.dp)
-                .align(Alignment.BottomStart)
-                .offset(x = (screenWidthDp * offsetFraction.value).dp)
+                .align(Alignment.BottomEnd)
+                .graphicsLayer { translationX = animTranslationX.value }
         )
     }
 }
