@@ -1053,50 +1053,7 @@ fun HomeScreenContent(
                         )
                     )
             ) {
-                Box {
-                    BoxWithConstraints(modifier = Modifier.matchParentSize()) {
-                        val s = 36.dp
-                        val positions = listOf(
-                            Triple(0.02f, 0.04f, -25f),
-                            Triple(0.12f, 0.78f,  18f),
-                            Triple(0.22f, 0.18f, -10f),
-                            Triple(0.32f, 0.88f,  22f),
-                            Triple(0.42f, 0.06f, -18f),
-                            Triple(0.52f, 0.82f,  14f),
-                            Triple(0.62f, 0.12f, -28f),
-                            Triple(0.72f, 0.76f,   8f),
-                            Triple(0.82f, 0.02f,  20f),
-                            Triple(0.92f, 0.85f, -12f),
-                            Triple(0.07f, 0.45f,  15f),
-                            Triple(0.47f, 0.50f, -20f),
-                            Triple(0.77f, 0.42f,  10f),
-                            Triple(0.17f, 0.62f, -30f),
-                            Triple(0.27f, 0.35f,  25f),
-                            Triple(0.37f, 0.70f, -15f),
-                            Triple(0.57f, 0.28f,  30f),
-                            Triple(0.67f, 0.55f, -22f),
-                            Triple(0.87f, 0.38f,  17f),
-                            Triple(0.97f, 0.60f, -10f),
-                            Triple(0.04f, 0.90f,  28f),
-                            Triple(0.54f, 0.15f, -35f),
-                            Triple(0.84f, 0.68f,  12f),
-                            Triple(0.34f, 0.52f, -18f),
-                            Triple(0.74f, 0.22f,  20f),
-                            Triple(0.44f, 0.95f, -25f),
-                        )
-                        for ((xFrac, yFrac, angle) in positions) {
-                            Image(
-                                painter = painterResource(R.drawable.hikari_sd),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(s)
-                                    .offset(x = maxWidth * xFrac - s / 2, y = maxHeight * yFrac - s / 2)
-                                    .graphicsLayer(rotationZ = angle, alpha = 0.12f),
-                                contentScale = ContentScale.Fit
-                            )
-                        }
-                    }
-                    Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
                     val formattedMessage = dialogueMessage.replace("○○", playerName)
                     HomeCommentBanner(expressionRes, formattedMessage)
                     Spacer(modifier = Modifier.height(12.dp))
@@ -1113,7 +1070,6 @@ fun HomeScreenContent(
                     Spacer(modifier = Modifier.height(90.dp))
                 }
             }
-        }
         } // outer Column
 
         HomeCustomBottomNav(
