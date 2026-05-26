@@ -107,6 +107,8 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -1162,7 +1164,12 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
             modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp), // 上下のパディングを少し削りました
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
+            val topColor = Color(
+                red = minOf(1f, color.red + 0.25f),
+                green = minOf(1f, color.green + 0.25f),
+                blue = minOf(1f, color.blue + 0.25f)
+            )
+            Icon(icon, null, tint = Color.Unspecified, modifier = Modifier.size(20.dp).gradientTint(listOf(topColor, color)))
             Spacer(modifier = Modifier.width(5.dp))
             Column(
                 // ★ spacedBy にマイナスの値を指定して、上下の間隔を強制的に詰めます
@@ -1183,7 +1190,7 @@ fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
     Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFE4EF), modifier = Modifier.width(110.dp), shadowElevation = 14.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(14.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("ラブレベル", fontSize = 9.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold)
             }
@@ -1209,7 +1216,7 @@ fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 Text("$hearts / 10 ", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B9D))
-                Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(9.dp))
+                Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(9.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
             }
             // ★ ここにあったコメント行を削除しました
         }
@@ -1222,14 +1229,24 @@ fun HomeActionPointsCard(pts: Int) {
     Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFF0F5), modifier = Modifier.width(110.dp), shadowElevation = 14.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Place, null, tint = Color(0xFF4DB6AC), modifier = Modifier.size(14.dp))
+                Icon(Icons.Default.Place, null, tint = Color.Unspecified, modifier = Modifier.size(14.dp).gradientTint(listOf(Color(0xFF80CBC4), Color(0xFF00695C))))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("行動ポイント", fontSize = 9.sp, color = Color.Gray)
             }
             Text("$pts / 5 pt", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(vertical = 4.dp)) {
                 repeat(5) { i ->
-                    Box(modifier = Modifier.size(10.dp).background(if (i < pts) Color(0xFF4DB6AC) else Color.LightGray.copy(alpha = 0.4f), CircleShape))
+                    Canvas(modifier = Modifier.size(10.dp)) {
+                        if (i < pts) {
+                            drawCircle(
+                                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    listOf(Color(0xFF80CBC4), Color(0xFF00695C))
+                                )
+                            )
+                        } else {
+                            drawCircle(color = Color.LightGray.copy(alpha = 0.4f))
+                        }
+                    }
                 }
             }
             Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE0F2F1)) {
@@ -1238,6 +1255,16 @@ fun HomeActionPointsCard(pts: Int) {
     }
 
 }
+fun Modifier.gradientTint(colors: List<Color>): Modifier = this
+    .graphicsLayer(alpha = 0.99f)
+    .drawWithContent {
+        drawContent()
+        drawRect(
+            brush = androidx.compose.ui.graphics.Brush.verticalGradient(colors),
+            blendMode = BlendMode.SrcAtop
+        )
+    }
+
 fun expressionToFaceRes(expr: Int): Int = when (expr) {
     R.drawable.hikari_smile     -> R.drawable.hikari_smile_face
     R.drawable.hikari_blush     -> R.drawable.hikari_blush_face
