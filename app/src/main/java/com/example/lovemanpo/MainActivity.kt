@@ -1057,7 +1057,7 @@ fun HomeScreenContent(
                     .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                     .background(
                         brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                            listOf(Color(0xFFFFF0F5), Color(0xFFFFCCE5))
+                            listOf(Color(0xFFF0F8FF), Color(0xFFD6EEFF))
                         )
                     )
             ) {
