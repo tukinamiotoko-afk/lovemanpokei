@@ -1338,7 +1338,7 @@ fun HomeCommentBanner(expr: Int, message: String) {
                     modifier = Modifier
                         .width(1.dp)
                         .fillMaxHeight()
-                        .background(Color.LightGray.copy(alpha = 0.5f))
+                        .background(Color(0xFFFFB7D0).copy(alpha = 0.7f))
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -1346,7 +1346,7 @@ fun HomeCommentBanner(expr: Int, message: String) {
                         Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
                     }
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.6f))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
                     Text(message, fontSize = 10.sp, color = Color.DarkGray)
                 }
         }
