@@ -1041,13 +1041,17 @@ fun HomeScreenContent(
                 }
             }
 
-            Surface(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-15).dp),
-                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-                color = Color(0xFFFFF0F5),
-                shadowElevation = 8.dp
+                    .offset(y = (-15).dp)
+                    .shadow(8.dp, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                    .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(Color(0xFFFFF0F5), Color(0xFFFFCCE5))
+                        )
+                    )
             ) {
                 Box {
                     BoxWithConstraints(modifier = Modifier.matchParentSize()) {
@@ -1338,7 +1342,7 @@ fun HomeCommentBanner(expr: Int, message: String) {
                     modifier = Modifier
                         .width(1.dp)
                         .fillMaxHeight()
-                        .background(Color.LightGray.copy(alpha = 0.5f))
+                        .background(Color(0xFFFFB7D0).copy(alpha = 0.7f))
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -1346,7 +1350,7 @@ fun HomeCommentBanner(expr: Int, message: String) {
                         Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
                     }
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.6f))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
                     Text(message, fontSize = 10.sp, color = Color.DarkGray)
                 }
         }
