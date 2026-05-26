@@ -1288,13 +1288,16 @@ fun HomeCommentBanner(expr: Int, message: String) {
             BoxWithConstraints(modifier = Modifier.matchParentSize()) {
                 val s = 32.dp
                 listOf(
-                    Triple(0.04f, 0.10f, -28f),
-                    Triple(0.20f, 0.50f,  18f),
-                    Triple(0.36f, 0.05f,  -8f),
-                    Triple(0.52f, 0.55f,  24f),
-                    Triple(0.66f, 0.10f, -18f),
-                    Triple(0.80f, 0.48f,  12f),
-                    Triple(0.92f, 0.00f,  -5f),
+                    Triple(0.02f, 0.05f, -28f),
+                    Triple(0.14f, 0.55f,  18f),
+                    Triple(0.25f, 0.00f,  -8f),
+                    Triple(0.36f, 0.50f,  24f),
+                    Triple(0.47f, 0.08f, -15f),
+                    Triple(0.57f, 0.52f,  10f),
+                    Triple(0.67f, 0.02f, -22f),
+                    Triple(0.76f, 0.48f,  16f),
+                    Triple(0.85f, 0.05f,  -6f),
+                    Triple(0.94f, 0.50f,  20f),
                 ).forEach { (xFrac, yFrac, angle) ->
                     Image(
                         painter = painterResource(R.drawable.hikari_sd),
