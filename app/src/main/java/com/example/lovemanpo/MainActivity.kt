@@ -1041,13 +1041,17 @@ fun HomeScreenContent(
                 }
             }
 
-            Surface(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-15).dp),
-                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-                color = Color(0xFFFFF0F5),
-                shadowElevation = 8.dp
+                    .offset(y = (-15).dp)
+                    .shadow(8.dp, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                    .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(Color(0xFFFFF0F5), Color(0xFFFFCCE5))
+                        )
+                    )
             ) {
                 Box {
                     BoxWithConstraints(modifier = Modifier.matchParentSize()) {
