@@ -1150,35 +1150,42 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
 
 @Composable
 fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String, sub: String?, color: Color) {
-    // 文字自体の上下の余白を消す設定
-    val textStyle = TextStyle(
-        platformStyle = PlatformTextStyle(includeFontPadding = false)
+    val textStyle = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+    val bgTop = Color(
+        red = minOf(1f, color.red + 0.45f),
+        green = minOf(1f, color.green + 0.45f),
+        blue = minOf(1f, color.blue + 0.45f)
     )
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFFFF0F5),
-        modifier = Modifier.width(110.dp),
-        shadowElevation = 14.dp
+    val bgBottom = Color(
+        red = minOf(1f, color.red + 0.2f),
+        green = minOf(1f, color.green + 0.2f),
+        blue = minOf(1f, color.blue + 0.2f)
+    )
+    val iconTop = Color(
+        red = minOf(1f, color.red + 0.25f),
+        green = minOf(1f, color.green + 0.25f),
+        blue = minOf(1f, color.blue + 0.25f)
+    )
+    Box(
+        modifier = Modifier
+            .width(110.dp)
+            .shadow(elevation = 6.dp, shape = RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(bgTop, bgBottom))
+            )
     ) {
         Row(
-            modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp), // 上下のパディングを少し削りました
+            modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val topColor = Color(
-                red = minOf(1f, color.red + 0.25f),
-                green = minOf(1f, color.green + 0.25f),
-                blue = minOf(1f, color.blue + 0.25f)
-            )
-            Icon(icon, null, tint = Color.Unspecified, modifier = Modifier.size(20.dp).gradientTint(listOf(topColor, color)))
+            Icon(icon, null, tint = Color.Unspecified, modifier = Modifier.size(20.dp).gradientTint(listOf(iconTop, color)))
             Spacer(modifier = Modifier.width(5.dp))
-            Column(
-                // ★ spacedBy にマイナスの値を指定して、上下の間隔を強制的に詰めます
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(label, fontSize = 8.sp, color = Color.Gray, style = textStyle)
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(label, fontSize = 8.sp, color = color.copy(alpha = 0.7f), style = textStyle)
                 Text(value, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray, style = textStyle)
                 if (sub != null) {
-                    Text(sub, fontSize = 8.sp, color = Color.Gray, style = textStyle)
+                    Text(sub, fontSize = 8.sp, color = color.copy(alpha = 0.7f), style = textStyle)
                 }
             }
         }
