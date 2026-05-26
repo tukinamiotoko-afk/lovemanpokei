@@ -1049,7 +1049,36 @@ fun HomeScreenContent(
                 color = Color(0xFFFFF0F5),
                 shadowElevation = 8.dp
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Box {
+                    BoxWithConstraints(modifier = Modifier.matchParentSize()) {
+                        val s = 36.dp
+                        listOf(
+                            Triple(0.02f, 0.04f, -25f),
+                            Triple(0.12f, 0.78f,  18f),
+                            Triple(0.22f, 0.18f, -10f),
+                            Triple(0.32f, 0.88f,  22f),
+                            Triple(0.42f, 0.06f, -18f),
+                            Triple(0.52f, 0.82f,  14f),
+                            Triple(0.62f, 0.12f, -28f),
+                            Triple(0.72f, 0.76f,   8f),
+                            Triple(0.82f, 0.02f,  20f),
+                            Triple(0.92f, 0.85f, -12f),
+                            Triple(0.07f, 0.45f,  15f),
+                            Triple(0.47f, 0.50f, -20f),
+                            Triple(0.77f, 0.42f,  10f),
+                        ).forEach { (xFrac, yFrac, angle) ->
+                            Image(
+                                painter = painterResource(R.drawable.hikari_sd),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(s)
+                                    .offset(x = maxWidth * xFrac - s / 2, y = maxHeight * yFrac - s / 2)
+                                    .graphicsLayer(rotationZ = angle, alpha = 0.12f),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                    }
+                    Column(modifier = Modifier.padding(16.dp)) {
                     val formattedMessage = dialogueMessage.replace("○○", playerName)
                     HomeCommentBanner(expressionRes, formattedMessage)
                     Spacer(modifier = Modifier.height(12.dp))
@@ -1284,33 +1313,7 @@ fun expressionToFaceRes(expr: Int): Int = when (expr) {
 @Composable
 fun HomeCommentBanner(expr: Int, message: String) {
     Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0))) {
-        Box {
-            BoxWithConstraints(modifier = Modifier.matchParentSize()) {
-                val s = 32.dp
-                listOf(
-                    Triple(0.02f, 0.05f, -28f),
-                    Triple(0.14f, 0.55f,  18f),
-                    Triple(0.25f, 0.00f,  -8f),
-                    Triple(0.36f, 0.50f,  24f),
-                    Triple(0.47f, 0.08f, -15f),
-                    Triple(0.57f, 0.52f,  10f),
-                    Triple(0.67f, 0.02f, -22f),
-                    Triple(0.76f, 0.48f,  16f),
-                    Triple(0.85f, 0.05f,  -6f),
-                    Triple(0.94f, 0.50f,  20f),
-                ).forEach { (xFrac, yFrac, angle) ->
-                    Image(
-                        painter = painterResource(R.drawable.hikari_sd),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(s)
-                            .offset(x = maxWidth * xFrac - s / 2, y = maxHeight * yFrac - s / 2)
-                            .graphicsLayer(rotationZ = angle, alpha = 0.13f),
-                        contentScale = ContentScale.Fit
-                    )
-                }
-            }
-            Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Image(painter = painterResource(id = expressionToFaceRes(expr)), contentDescription = null, modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
@@ -1329,7 +1332,6 @@ fun HomeCommentBanner(expr: Int, message: String) {
                     Text(message, fontSize = 10.sp, color = Color.DarkGray)
                 }
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
-            }
         }
     }
 }
