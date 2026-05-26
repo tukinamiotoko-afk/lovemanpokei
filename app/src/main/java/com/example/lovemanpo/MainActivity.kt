@@ -1052,7 +1052,7 @@ fun HomeScreenContent(
                 Box {
                     BoxWithConstraints(modifier = Modifier.matchParentSize()) {
                         val s = 36.dp
-                        listOf(
+                        val positions = listOf(
                             Triple(0.02f, 0.04f, -25f),
                             Triple(0.12f, 0.78f,  18f),
                             Triple(0.22f, 0.18f, -10f),
@@ -1066,7 +1066,8 @@ fun HomeScreenContent(
                             Triple(0.07f, 0.45f,  15f),
                             Triple(0.47f, 0.50f, -20f),
                             Triple(0.77f, 0.42f,  10f),
-                        ).forEach { (xFrac, yFrac, angle) ->
+                        )
+                        for ((xFrac, yFrac, angle) in positions) {
                             Image(
                                 painter = painterResource(R.drawable.hikari_sd),
                                 contentDescription = null,
