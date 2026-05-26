@@ -15,8 +15,16 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -43,6 +51,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -51,10 +60,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.PlatformTextStyle
@@ -103,6 +114,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility // 必要
 import androidx.compose.animation.slideInVertically // 必要
 import androidx.compose.animation.slideOutVertically // 必要
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.gestures.detectVerticalDragGestures // 必要
 import androidx.core.view.WindowCompat // 必要
 import androidx.core.view.WindowInsetsCompat // 必要
@@ -334,8 +347,8 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
             todaySteps.intValue = newTodaySteps
 
             // デバッグ用：ポイント付与ロジックのシミュレート
-            val newPoints = newTodaySteps / 5000
-            val cappedPoints = newPoints.coerceAtMost(2)
+            val newPoints = newTodaySteps / 2000
+            val cappedPoints = newPoints.coerceAtMost(5)
             val pointsToGrant = cappedPoints - repository.todayPointsEarned
             if (pointsToGrant > 0) {
                 repository.totalEarnedPoints += pointsToGrant
@@ -443,7 +456,29 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
     if (hasPermissions) {
         val navController = rememberNavController()
         val viewModel: StepViewModel = viewModel(factory = viewModelFactory)
-        
+
+        var navTrigger by remember { mutableStateOf(0) }
+        val routeHistory = remember { mutableListOf<String>() }
+        LaunchedEffect(navController) {
+            var isFirst = true
+            navController.currentBackStackEntryFlow.collect { entry ->
+                val route = entry.destination.route ?: return@collect
+                if (isFirst) {
+                    isFirst = false
+                    routeHistory.add(route)
+                    return@collect
+                }
+                // 履歴の1つ前のルートと一致 → 戻る操作
+                if (routeHistory.size >= 2 && routeHistory[routeHistory.size - 2] == route) {
+                    routeHistory.removeAt(routeHistory.size - 1)
+                } else {
+                    // 前進 → キャラ演出を発火
+                    routeHistory.add(route)
+                    navTrigger++
+                }
+            }
+        }
+
         val startDestination = remember(Unit) {
             if (viewModel.playerName.value.isEmpty()) {
                 "name_input"
@@ -462,7 +497,19 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
         ) {
             NavHost(
                 navController = navController,
-                startDestination = startDestination
+                startDestination = startDestination,
+                enterTransition = {
+                    slideInHorizontally(tween(500, delayMillis = 120, easing = FastOutSlowInEasing)) { it }
+                },
+                exitTransition = {
+                    ExitTransition.None
+                },
+                popEnterTransition = {
+                    EnterTransition.None
+                },
+                popExitTransition = {
+                    slideOutHorizontally(tween(500, easing = FastOutSlowInEasing)) { it }
+                }
             ) {
                 composable("name_input") { NameInputScreen(viewModel, navController) }
                 composable("profile_setup") { ProfileSetupScreen(navController, viewModel) }
@@ -488,9 +535,47 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 composable("settings") { SettingsScreen(navController, viewModel) }
                 composable("debug") { DebugScreen(navController, viewModel) }
             }
+            key(navTrigger) {
+                if (navTrigger > 0) CharacterPullOverlay()
+            }
         }
     } else {
         PermissionRequestScreen { launcher.launch(permissions.toTypedArray()) }
+    }
+}
+
+@Composable
+fun CharacterPullOverlay() {
+    var visible by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        visible = true
+    }
+
+    if (!visible) return
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val screenWidthPx = constraints.maxWidth.toFloat()
+        val animTranslationX = remember { Animatable(0f) }
+
+        LaunchedEffect(screenWidthPx) {
+            animTranslationX.snapTo(0f)
+            delay(120)
+            animTranslationX.animateTo(
+                targetValue = -screenWidthPx,
+                animationSpec = tween(500, easing = FastOutSlowInEasing)
+            )
+            visible = false
+        }
+
+        Image(
+            painter = painterResource(R.drawable.hikari_gamenwohipparu_sd),
+            contentDescription = null,
+            modifier = Modifier
+                .height(200.dp)
+                .align(Alignment.BottomEnd)
+                .graphicsLayer { translationX = animTranslationX.value }
+        )
     }
 }
 
@@ -901,25 +986,10 @@ fun HomeScreenContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.Top
             ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.White,
-                    modifier = Modifier.width(160.dp)
-                ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CalendarToday, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("5/25 (土)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
-                        }
-                        Text("おはようございます！☀️", fontSize = 9.sp, color = Color.Gray)
-                    }
-                }
-
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     HomeTopCircleButton(Icons.Default.Notifications)
                     HomeTopCircleButton(Icons.Default.Settings)
@@ -934,7 +1004,7 @@ fun HomeScreenContent(
 
             Box(modifier = Modifier
                 .fillMaxWidth()
-                .height(540.dp)) {
+                .height(420.dp)) {
                 Image(
                     painter = painterResource(id = expressionRes),
                     contentDescription = "ひかり",
@@ -948,19 +1018,13 @@ fun HomeScreenContent(
                     contentScale = ContentScale.Fit
                 )
 
-
-
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(start = 16.dp, top = 90.dp),
+                        .padding(start = 16.dp, top = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
-                    // ★ ここに渡されたデータを反映
-                    HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, "目標 2時間 00分", Color(0xFFF06292))
-                    HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "歩行距離", distanceStr, null, Color(0xFF4FC3F7))
-                    HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
                 }
 
                 Column(
@@ -975,18 +1039,28 @@ fun HomeScreenContent(
             }
 
             Surface(
-                color = Color.White,
-                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-50).dp)
+                    .offset(y = (-15).dp),
+                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+                color = Color.White,
+                shadowElevation = 8.dp
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    val formattedMessage = dialogueMessage.replace("○○", playerName) // 必要
-                    HomeCommentBanner(expressionRes, formattedMessage) // 必要
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HomeCampaignBanner()
-                    Spacer(modifier = Modifier.height(100.dp))
+                    val formattedMessage = dialogueMessage.replace("○○", playerName)
+                    HomeCommentBanner(expressionRes, formattedMessage)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, null, Color(0xFFF06292))
+                        HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "歩行距離", distanceStr, null, Color(0xFF4FC3F7))
+                        HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HomeAdPlaceholder()
+                    Spacer(modifier = Modifier.height(90.dp))
                 }
             }
         }
@@ -1007,7 +1081,7 @@ fun HomeScreenContent(
 @Composable
 fun HomeTopCircleButton(icon: androidx.compose.ui.graphics.vector.ImageVector, containerColor: Color = Color.White, iconColor: Color = Color.Gray, onClick: () -> Unit = {}) {
     Surface(shape = CircleShape, color = containerColor, modifier = Modifier
-        .size(40.dp)
+        .size(30.dp)
         .clickable { onClick() }) {
         Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = iconColor, modifier = Modifier.size(22.dp)) }
     }
@@ -1015,38 +1089,57 @@ fun HomeTopCircleButton(icon: androidx.compose.ui.graphics.vector.ImageVector, c
 
 @Composable
 fun HomeStepCircleGauge(steps: Int, progress: Float) {
+    val animatedSteps by animateIntAsState(
+        targetValue = steps,
+        animationSpec = tween(durationMillis = 600, easing = LinearEasing),
+        label = "stepCount"
+    )
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .size(130.dp)
-                // ★ ここで円全体を白く塗りつぶし、少し影（shadow）をつけて背景から浮かせています
-                .shadow(2.dp, CircleShape)
+                .shadow(3.dp, CircleShape)
                 .background(Color.White, CircleShape)
         ) {
-            Canvas(modifier = Modifier
-                .fillMaxSize()
-                .padding(4.dp)) { // 少し余白を入れてゲージを綺麗に
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(4.dp)
+            ) {
                 val sw = 8.dp.toPx()
-                // ゲージの土台（薄いグレー）
                 drawArc(
                     color = Color.LightGray.copy(alpha = 0.2f),
                     startAngle = 0f, sweepAngle = 360f, useCenter = false,
                     style = Stroke(sw)
                 )
-                // 進捗（青いグラデーション）
                 drawArc(
-                    brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
-                        listOf(Color(0xFF4FC3F7), Color(0xFF4A90E2))
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(Color(0xFF81D4FA), Color(0xFF1565C0))
                     ),
                     startAngle = -90f, sweepAngle = 360f * progress, useCenter = false,
                     style = Stroke(width = sw, cap = StrokeCap.Round)
                 )
+                val radius = size.minDimension / 2f
+                val cx = size.width / 2f
+                val cy = size.height / 2f
+                repeat(5) { i ->
+                    val angleDeg = -90f + (i + 1) * 72f
+                    val rad = Math.toRadians(angleDeg.toDouble())
+                    val cos = kotlin.math.cos(rad).toFloat()
+                    val sin = kotlin.math.sin(rad).toFloat()
+                    drawLine(
+                        color = Color.White,
+                        start = Offset(cx + (radius - sw) * cos, cy + (radius - sw) * sin),
+                        end = Offset(cx + radius * cos, cy + radius * sin),
+                        strokeWidth = 2.5.dp.toPx()
+                    )
+                }
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.AutoMirrored.Filled.DirectionsWalk, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(18.dp))
                 Text("今日の歩数", fontSize = 10.sp, color = Color.Gray)
-                Text(String.format(java.util.Locale.US, "%,d", steps), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray)
+                Text(String.format(java.util.Locale.US, "%,d", animatedSteps), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray)
                 Text("歩 / 10,000 歩", fontSize = 9.sp, color = Color.Gray)
             }
         }
@@ -1061,9 +1154,9 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
     )
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = Color.White,
-        modifier = Modifier.width(125.dp),
-        shadowElevation = 1.dp
+        color = Color(0xFFFFF0F5),
+        modifier = Modifier.width(110.dp),
+        shadowElevation = 14.dp
     ) {
         Row(
             modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp), // 上下のパディングを少し削りました
@@ -1087,7 +1180,7 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 
 @Composable
 fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White,modifier = Modifier.width(140.dp), shadowElevation = 1.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFE4EF), modifier = Modifier.width(110.dp), shadowElevation = 14.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(14.dp))
@@ -1104,41 +1197,62 @@ fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
                 Text("$hearts / 10 ", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B9D))
                 Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(9.dp))
             }
-            Text("ラブが10個たまるとレベルが上がるよ♪", fontSize = 7.sp, color = Color.Gray, textAlign = TextAlign.Center, lineHeight = 8.sp)
+            // ★ ここにあったコメント行を削除しました
         }
     }
 }
 
+// 2. 行動ポイントカードのコメントを削除
 @Composable
 fun HomeActionPointsCard(pts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.width(140.dp), shadowElevation = 1.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFF0F5), modifier = Modifier.width(110.dp), shadowElevation = 14.dp) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color(0xFF4DB6AC), modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("行動ポイント", fontSize = 9.sp, color = Color.Gray)
             }
-            Text("$pts / 2 pt", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
-            Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE0F2F1), modifier = Modifier.padding(vertical = 4.dp)) {
-                Text(if (pts >= 2) "上限に達しています" else "ポイント貯蓄中", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color(0xFF00897B), fontSize = 7.sp)
+            Text("$pts / 5 pt", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(vertical = 4.dp)) {
+                repeat(5) { i ->
+                    Box(modifier = Modifier.size(10.dp).background(if (i < pts) Color(0xFF4DB6AC) else Color.LightGray.copy(alpha = 0.4f), CircleShape))
+                }
             }
-            Text("5,000歩で1ポイント！\n1日2ポイントまで貯められるよ♪\n(毎日 0:00 にリセット)", fontSize = 7.sp, color = Color.Gray, lineHeight = 9.sp)
+            Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE0F2F1)) {
+            }
         }
     }
+
+}
+fun expressionToFaceRes(expr: Int): Int = when (expr) {
+    R.drawable.hikari_smile     -> R.drawable.hikari_smile_face
+    R.drawable.hikari_blush     -> R.drawable.hikari_blush_face
+    R.drawable.hikari_think     -> R.drawable.hikari_think_face
+    R.drawable.hikari_celebrate -> R.drawable.hikari_celebrate_face
+    R.drawable.hikari_devil     -> R.drawable.hikari_devil_face
+    else                        -> R.drawable.hikari_smile_face
 }
 
 @Composable
 fun HomeCommentBanner(expr: Int, message: String) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 2.dp, border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFE4EF), shadowElevation = 14.dp, border = BorderStroke(1.dp, Color(0xFFFFB7D0).copy(alpha = 0.5f))) {
         Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Image(painter = painterResource(id = expr), contentDescription = null, modifier = Modifier
+            Image(painter = painterResource(id = expressionToFaceRes(expr)), contentDescription = null, modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape)
                 .background(Color(0xFFFFE0E9)), contentScale = ContentScale.Crop)
             Spacer(modifier = Modifier.width(10.dp))
+            Box(
+                modifier = Modifier
+                    .width(1.dp)
+                    .height(40.dp)
+                    .background(Color.LightGray.copy(alpha = 0.5f))
+            )
+            Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold) // 必要（タイトルを固定の名前に変更）
-                Text(message, fontSize = 10.sp, color = Color.DarkGray) // 必要（セリフを表示するように変更）
+                Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.6f))
+                Text(message, fontSize = 10.sp, color = Color.DarkGray)
             }
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
         }
@@ -1210,6 +1324,19 @@ fun HomeCampaignBanner() {
                 .align(Alignment.TopEnd)
                 .padding(4.dp)
                 .size(10.dp), tint = Color.Gray)
+        }
+    }
+}
+
+@Composable
+fun HomeAdPlaceholder() {
+    Surface(
+        modifier = Modifier.fillMaxWidth().height(60.dp),
+        shape = RoundedCornerShape(8.dp),
+        color = Color.Gray.copy(alpha = 0.08f)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text("ここに広告が表示されます", fontSize = 12.sp, color = Color.Gray)
         }
     }
 }
@@ -1304,6 +1431,10 @@ fun DebugScreen(navController: NavController, viewModel: StepViewModel) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = { viewModel.debugAddActionPoints(1) }, modifier = Modifier.weight(1f)) { Text("+1 pt") }
                         Button(onClick = { viewModel.debugAddActionPoints(10) }, modifier = Modifier.weight(1f)) { Text("+10 pt") }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { viewModel.debugAddActionPoints(-1) }, modifier = Modifier.weight(1f)) { Text("-1 pt") }
+                        Button(onClick = { viewModel.debugAddActionPoints(-10) }, modifier = Modifier.weight(1f)) { Text("-10 pt") }
                     }
                 }
             }
@@ -1474,7 +1605,7 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
     val cardBg = Color(0xFFFFF0F5) // ★ここで色を一括設定
     val brownColor = Color(0xFF8D6E63)
 
-    LaunchedEffect(viewDate, period) {
+    LaunchedEffect(viewDate, period, stepRecords) {
         if (period == DisplayPeriod.DAY) {
             viewModel.fetchHourlyRecords(viewDate.toString())
         }
@@ -2378,7 +2509,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             return@IconButton
                         }
                         if (!viewModel.spendPointForChat()) {
-                            errorMessage = "ポイントが足りません（5000歩で1ポイント）"
+                            errorMessage = "ポイントが足りません（2000歩で1ポイント）"
                             return@IconButton
                         }
                         errorMessage = null
@@ -2535,7 +2666,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                             return@IconButton
                         }
                         if (!viewModel.spendPointForChat()) {
-                            errorMessage = "ポイントが足りません（5000歩で1ポイント）"
+                            errorMessage = "ポイントが足りません（2000歩で1ポイント）"
                             return@IconButton
                         }
                         errorMessage = null
