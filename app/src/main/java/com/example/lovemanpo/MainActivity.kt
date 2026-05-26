@@ -103,6 +103,7 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.TimeUnit
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.getValue
@@ -1171,9 +1172,8 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
             .width(110.dp)
             .shadow(elevation = 6.dp, shape = RoundedCornerShape(12.dp))
             .clip(RoundedCornerShape(12.dp))
-            .background(
-                brush = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(bgTop, bgBottom))
-            )
+            .background(brush = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(bgTop, bgBottom)))
+            .border(1.dp, color.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
     ) {
         Row(
             modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp),
@@ -1194,7 +1194,7 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 
 @Composable
 fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFE4EF), modifier = Modifier.width(110.dp), shadowElevation = 14.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFE4EF), modifier = Modifier.width(110.dp), shadowElevation = 14.dp, border = BorderStroke(1.dp, Color(0xFFFF6B9D).copy(alpha = 0.5f))) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(14.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
@@ -1233,7 +1233,7 @@ fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
 // 2. 行動ポイントカードのコメントを削除
 @Composable
 fun HomeActionPointsCard(pts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFF0F5), modifier = Modifier.width(110.dp), shadowElevation = 14.dp) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFF0F5), modifier = Modifier.width(110.dp), shadowElevation = 14.dp, border = BorderStroke(1.dp, Color(0xFF4DB6AC).copy(alpha = 0.5f))) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color.Unspecified, modifier = Modifier.size(14.dp).gradientTint(listOf(Color(0xFF80CBC4), Color(0xFF00695C))))
@@ -1286,20 +1286,28 @@ fun HomeCommentBanner(expr: Int, message: String) {
     Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFB7D0), shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFE4EF))) {
         Box {
             Canvas(modifier = Modifier.matchParentSize()) {
-                val dotRadius = 4.dp.toPx()
-                val spacingX = 28.dp.toPx()
-                val spacingY = 28.dp.toPx()
-                val dotColor = Color.White.copy(alpha = 0.30f)
+                val s = 5.dp.toPx()
+                val spacingX = 22.dp.toPx()
+                val spacingY = 22.dp.toPx()
+                val heartColor = Color.White.copy(alpha = 0.28f)
                 var row = 0
-                var y = spacingY / 2
-                while (y < size.height) {
+                var cy = spacingY / 2
+                while (cy < size.height) {
                     val offsetX = if (row % 2 == 0) spacingX / 2 else 0f
-                    var x = offsetX
-                    while (x < size.width) {
-                        drawCircle(color = dotColor, radius = dotRadius, center = Offset(x, y))
-                        x += spacingX
+                    var cx = offsetX
+                    while (cx < size.width) {
+                        val path = Path().apply {
+                            moveTo(cx, cy - s * 0.1f)
+                            cubicTo(cx, cy - s * 0.5f, cx - s, cy - s * 0.5f, cx - s, cy - s * 0.1f)
+                            cubicTo(cx - s, cy + s * 0.5f, cx, cy + s * 0.8f, cx, cy + s)
+                            cubicTo(cx, cy + s * 0.8f, cx + s, cy + s * 0.5f, cx + s, cy - s * 0.1f)
+                            cubicTo(cx + s, cy - s * 0.5f, cx, cy - s * 0.5f, cx, cy - s * 0.1f)
+                            close()
+                        }
+                        drawPath(path, color = heartColor)
+                        cx += spacingX
                     }
-                    y += spacingY
+                    cy += spacingY
                     row++
                 }
             }
