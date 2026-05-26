@@ -1097,6 +1097,7 @@ fun HomeScreenContent(
                 }
             }
         }
+        } // outer Column
 
         HomeCustomBottomNav(
             modifier = Modifier
