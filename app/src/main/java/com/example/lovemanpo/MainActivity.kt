@@ -1045,44 +1045,24 @@ fun HomeScreenContent(
                     .fillMaxWidth()
                     .offset(y = (-15).dp),
                 shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-                color = Color.White,
+                color = Color(0xFFFFF0F5),
                 shadowElevation = 8.dp
             ) {
-                Box {
-                    Canvas(modifier = Modifier.matchParentSize()) {
-                        val dotRadius = 6.dp.toPx()
-                        val spacingX = 32.dp.toPx()
-                        val spacingY = 32.dp.toPx()
-                        val dotColor = Color(0xFFFF80AB).copy(alpha = 0.10f)
-                        var row = 0
-                        var y = spacingY / 2
-                        while (y < size.height) {
-                            val offsetX = if (row % 2 == 0) spacingX / 2 else 0f
-                            var x = offsetX
-                            while (x < size.width) {
-                                drawCircle(color = dotColor, radius = dotRadius, center = Offset(x, y))
-                                x += spacingX
-                            }
-                            y += spacingY
-                            row++
-                        }
+                Column(modifier = Modifier.padding(16.dp)) {
+                    val formattedMessage = dialogueMessage.replace("○○", playerName)
+                    HomeCommentBanner(expressionRes, formattedMessage)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, null, Color(0xFFF06292))
+                        HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "歩行距離", distanceStr, null, Color(0xFF4FC3F7))
+                        HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
                     }
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        val formattedMessage = dialogueMessage.replace("○○", playerName)
-                        HomeCommentBanner(expressionRes, formattedMessage)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, null, Color(0xFFF06292))
-                            HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "歩行距離", distanceStr, null, Color(0xFF4FC3F7))
-                            HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        HomeAdPlaceholder()
-                        Spacer(modifier = Modifier.height(90.dp))
-                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HomeAdPlaceholder()
+                    Spacer(modifier = Modifier.height(90.dp))
                 }
             }
         }
@@ -1309,7 +1289,7 @@ fun HomeCommentBanner(expr: Int, message: String) {
                 val dotRadius = 4.dp.toPx()
                 val spacingX = 28.dp.toPx()
                 val spacingY = 28.dp.toPx()
-                val dotColor = Color.White.copy(alpha = 0.12f)
+                val dotColor = Color.White.copy(alpha = 0.30f)
                 var row = 0
                 var y = spacingY / 2
                 while (y < size.height) {
