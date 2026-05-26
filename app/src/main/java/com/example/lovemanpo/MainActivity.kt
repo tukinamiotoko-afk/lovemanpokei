@@ -1283,7 +1283,7 @@ fun expressionToFaceRes(expr: Int): Int = when (expr) {
 
 @Composable
 fun HomeCommentBanner(expr: Int, message: String) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFF6B9D), shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFE4EF))) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFB7D0), shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFE4EF))) {
         Box {
             Canvas(modifier = Modifier.matchParentSize()) {
                 val dotRadius = 4.dp.toPx()
