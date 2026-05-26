@@ -993,15 +993,25 @@ fun HomeScreenContent(
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
         ) {
-            // ヘッダー
+            // カード行 + ボタン列
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.Top
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                HomeLoveLevelCard(
+                    modifier = Modifier.weight(1f),
+                    lv = loveCount,
+                    progress = heartGaugeProgress,
+                    hearts = heartCount
+                )
+                HomeActionPointsCard(
+                    modifier = Modifier.weight(0.72f),
+                    pts = actionPoints
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     HomeTopCircleButton(Icons.Default.Notifications)
                     HomeTopCircleButton(Icons.Default.Settings)
                     HomeTopCircleButton(
@@ -1015,7 +1025,7 @@ fun HomeScreenContent(
 
             Box(modifier = Modifier
                 .fillMaxWidth()
-                .height(420.dp)) {
+                .height(380.dp)) {
                 Image(
                     painter = painterResource(id = expressionRes),
                     contentDescription = "ひかり",
@@ -1032,20 +1042,10 @@ fun HomeScreenContent(
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(start = 16.dp, top = 20.dp),
+                        .padding(start = 16.dp, top = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
-                }
-
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(end = 16.dp, top = 0.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    HomeLoveLevelCard(loveCount, heartGaugeProgress, hearts = heartCount)
-                    HomeActionPointsCard(actionPoints)
                 }
             }
 
@@ -1205,56 +1205,65 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 }
 
 @Composable
-fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
+fun HomeLoveLevelCard(modifier: Modifier = Modifier, lv: Int, progress: Float, hearts: Int) {
+    val faceRes = when (lv) {
+        in 1..3  -> R.drawable.hikari_sd_face_level1
+        in 4..6  -> R.drawable.hikari_sd_face_level2
+        in 7..8  -> R.drawable.hikari_sd_face_level3
+        else     -> R.drawable.hikari_sd_face_level4
+    }
     Box(
-        modifier = Modifier
-            .width(110.dp)
+        modifier = modifier
             .shadow(14.dp, RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
             .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFFFAFC), Color(0xFFFFDDEE))))
             .border(1.dp, Color(0xFFFF6B9D).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(14.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("ラブレベル", fontSize = 9.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
-            }
-            Text("Lv. $lv", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray, fontFamily = MplusRoundedFontFamily)
-            Spacer(modifier = Modifier.height(4.dp))
-            Canvas(
+        Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Image(
+                painter = painterResource(id = faceRes),
+                contentDescription = null,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
+                    .size(54.dp)
                     .clip(CircleShape)
-            ) {
-                drawRoundRect(
-                    color = Color(0xFFFFE0E9),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2)
-                )
-                drawRoundRect(
-                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                        listOf(Color(0xFFFF80AB), Color(0xFFE91E63))
-                    ),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2),
-                    size = size.copy(width = size.width * progress)
-                )
+                    .background(Color(0xFFFFE0E9)),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(12.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text("ラブレベル", fontSize = 9.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
+                }
+                Text("Lv. $lv", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray, fontFamily = MplusRoundedFontFamily)
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(5.dp)
+                        .clip(CircleShape)
+                ) {
+                    drawRoundRect(color = Color(0xFFFFE0E9), cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2))
+                    drawRoundRect(
+                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2),
+                        size = size.copy(width = size.width * progress)
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("$hearts / 10 ", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B9D), fontFamily = MplusRoundedFontFamily)
+                    Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(8.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
+                }
             }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                Text("$hearts / 10 ", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B9D), fontFamily = MplusRoundedFontFamily)
-                Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(9.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
-            }
-            // ★ ここにあったコメント行を削除しました
         }
     }
 }
 
 // 2. 行動ポイントカードのコメントを削除
 @Composable
-fun HomeActionPointsCard(pts: Int) {
+fun HomeActionPointsCard(modifier: Modifier = Modifier, pts: Int) {
     Box(
-        modifier = Modifier
-            .width(110.dp)
+        modifier = modifier
             .shadow(14.dp, RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
             .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFF5FFFE), Color(0xFFCCEFEC))))
