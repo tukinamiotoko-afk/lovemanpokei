@@ -987,29 +987,9 @@ fun HomeScreenContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.Top
             ) {
-                Surface(shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFFFFF0F5),
-                    // height(48.dp) などで高さを固定できます
-                    modifier = Modifier.width(130.dp)
-                ) {
-                    // padding の vertical（上下）を減らすか、
-                    // Column に Arrangement.Center を入れると綺麗に収まります
-                    Column(
-                        modifier = Modifier.padding(horizontal = 10.dp),
-                        verticalArrangement = Arrangement.spacedBy((-2).dp, Alignment.CenterVertically)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CalendarToday, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("5/25 (土)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
-                        }
-                        Text("おはようございます！☀️", fontSize = 7.sp, color = Color.Gray)
-                    }
-                }
-
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     HomeTopCircleButton(Icons.Default.Notifications)
                     HomeTopCircleButton(Icons.Default.Settings)
