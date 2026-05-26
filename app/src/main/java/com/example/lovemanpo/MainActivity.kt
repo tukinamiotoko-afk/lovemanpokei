@@ -1182,10 +1182,10 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
             Icon(icon, null, tint = Color.Unspecified, modifier = Modifier.size(20.dp).gradientTint(listOf(iconTop, color)))
             Spacer(modifier = Modifier.width(5.dp))
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(label, fontSize = 8.sp, color = color.copy(alpha = 0.7f), style = textStyle)
+                Text(label, fontSize = 8.sp, color = Color.Gray, style = textStyle)
                 Text(value, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray, style = textStyle)
                 if (sub != null) {
-                    Text(sub, fontSize = 8.sp, color = color.copy(alpha = 0.7f), style = textStyle)
+                    Text(sub, fontSize = 8.sp, color = Color.Gray, style = textStyle)
                 }
             }
         }
