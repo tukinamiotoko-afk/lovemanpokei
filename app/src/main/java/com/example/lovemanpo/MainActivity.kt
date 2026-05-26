@@ -1152,14 +1152,14 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
 fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String, sub: String?, color: Color) {
     val textStyle = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
     val bgTop = Color(
-        red = minOf(1f, color.red + 0.45f),
-        green = minOf(1f, color.green + 0.45f),
-        blue = minOf(1f, color.blue + 0.45f)
+        red = minOf(1f, color.red + 0.6f),
+        green = minOf(1f, color.green + 0.6f),
+        blue = minOf(1f, color.blue + 0.6f)
     )
     val bgBottom = Color(
-        red = minOf(1f, color.red + 0.2f),
-        green = minOf(1f, color.green + 0.2f),
-        blue = minOf(1f, color.blue + 0.2f)
+        red = minOf(1f, color.red + 0.42f),
+        green = minOf(1f, color.green + 0.42f),
+        blue = minOf(1f, color.blue + 0.42f)
     )
     val iconTop = Color(
         red = minOf(1f, color.red + 0.25f),
