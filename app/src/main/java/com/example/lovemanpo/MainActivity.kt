@@ -1328,7 +1328,7 @@ fun expressionToFaceRes(expr: Int): Int = when (expr) {
 @Composable
 fun HomeCommentBanner(expr: Int, message: String) {
     Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0))) {
-        Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.padding(10.dp).height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
                 Image(painter = painterResource(id = expressionToFaceRes(expr)), contentDescription = null, modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
@@ -1337,16 +1337,18 @@ fun HomeCommentBanner(expr: Int, message: String) {
                 Box(
                     modifier = Modifier
                         .width(1.dp)
-                        .height(40.dp)
+                        .fillMaxHeight()
                         .background(Color.LightGray.copy(alpha = 0.5f))
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
+                    }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.6f))
                     Text(message, fontSize = 10.sp, color = Color.DarkGray)
                 }
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
         }
     }
 }
