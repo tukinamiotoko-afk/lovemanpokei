@@ -70,6 +70,8 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -409,6 +411,12 @@ fun getHeartPath(size: Size): Path {
         close()
     }
 }
+
+val MplusRoundedFontFamily = FontFamily(
+    Font(R.font.mplus_rounded_regular, FontWeight.Normal),
+    Font(R.font.mplus_rounded_bold, FontWeight.Bold),
+    Font(R.font.mplus_rounded_extrabold, FontWeight.ExtraBold),
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -1210,9 +1218,9 @@ fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(14.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("ラブレベル", fontSize = 9.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold)
+                Text("ラブレベル", fontSize = 9.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
             }
-            Text("Lv. $lv", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray)
+            Text("Lv. $lv", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray, fontFamily = MplusRoundedFontFamily)
             Spacer(modifier = Modifier.height(4.dp))
             Canvas(
                 modifier = Modifier
@@ -1233,7 +1241,7 @@ fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
                 )
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                Text("$hearts / 10 ", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B9D))
+                Text("$hearts / 10 ", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B9D), fontFamily = MplusRoundedFontFamily)
                 Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(9.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
             }
             // ★ ここにあったコメント行を削除しました
@@ -1256,9 +1264,9 @@ fun HomeActionPointsCard(pts: Int) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color.Unspecified, modifier = Modifier.size(14.dp).gradientTint(listOf(Color(0xFF80CBC4), Color(0xFF00695C))))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("行動ポイント", fontSize = 9.sp, color = Color.Gray)
+                Text("行動ポイント", fontSize = 9.sp, color = Color.Gray, fontFamily = MplusRoundedFontFamily)
             }
-            Text("$pts / 5 pt", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
+            Text("$pts / 5 pt", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray, fontFamily = MplusRoundedFontFamily)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(vertical = 4.dp)) {
                 repeat(5) { i ->
                     Canvas(modifier = Modifier.size(10.dp)) {
