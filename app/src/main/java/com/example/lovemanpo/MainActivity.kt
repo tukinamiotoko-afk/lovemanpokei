@@ -1283,36 +1283,44 @@ fun expressionToFaceRes(expr: Int): Int = when (expr) {
 
 @Composable
 fun HomeCommentBanner(expr: Int, message: String) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFB7D0), shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFE4EF))) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0))) {
         Box {
-            Image(
-                painter = painterResource(R.drawable.hikari_sd),
-                contentDescription = null,
+            Row(
                 modifier = Modifier
-                    .height(80.dp)
-                    .align(Alignment.CenterEnd)
-                    .graphicsLayer(alpha = 0.15f),
-                contentScale = ContentScale.Fit
-            )
+                    .matchParentSize(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                repeat(5) {
+                    Image(
+                        painter = painterResource(R.drawable.hikari_sd),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .height(70.dp)
+                            .graphicsLayer(alpha = 0.12f),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
             Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Image(painter = painterResource(id = expressionToFaceRes(expr)), contentDescription = null, modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.3f)), contentScale = ContentScale.Crop)
+                    .background(Color(0xFFFFE0E9)), contentScale = ContentScale.Crop)
                 Spacer(modifier = Modifier.width(10.dp))
                 Box(
                     modifier = Modifier
                         .width(1.dp)
                         .height(40.dp)
-                        .background(Color.White.copy(alpha = 0.4f))
+                        .background(Color.LightGray.copy(alpha = 0.5f))
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("ひかり", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color.White.copy(alpha = 0.4f))
-                    Text(message, fontSize = 10.sp, color = Color.White)
+                    Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold)
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.6f))
+                    Text(message, fontSize = 10.sp, color = Color.DarkGray)
                 }
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.White.copy(alpha = 0.7f))
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
             }
         }
     }
