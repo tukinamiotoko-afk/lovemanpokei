@@ -1102,27 +1102,17 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
                 .shadow(3.dp, CircleShape)
                 .background(Color.White, CircleShape)
         ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(130.dp)
-                .background(Color.White, CircleShape)
-        ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.size(130.dp)
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(4.dp)
             ) {
-            Canvas(modifier = Modifier
-                .fillMaxSize()
-                .padding(4.dp)) { // 少し余白を入れてゲージを綺麗に
                 val sw = 8.dp.toPx()
-                // ゲージの土台（薄いグレー）
                 drawArc(
                     color = Color.LightGray.copy(alpha = 0.2f),
                     startAngle = 0f, sweepAngle = 360f, useCenter = false,
                     style = Stroke(sw)
                 )
-                // 進捗（青いグラデーション）
                 drawArc(
                     brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
                         listOf(Color(0xFF4FC3F7), Color(0xFF4A90E2))
@@ -1130,7 +1120,6 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
                     startAngle = -90f, sweepAngle = 360f * progress, useCenter = false,
                     style = Stroke(width = sw, cap = StrokeCap.Round)
                 )
-                // 2000歩ごとのメモリ（5本）
                 val radius = size.minDimension / 2f
                 val cx = size.width / 2f
                 val cy = size.height / 2f
@@ -1153,8 +1142,6 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
                 Text(String.format(java.util.Locale.US, "%,d", animatedSteps), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray)
                 Text("歩 / 10,000 歩", fontSize = 9.sp, color = Color.Gray)
             }
-            }
-        }
         }
     }
 }
