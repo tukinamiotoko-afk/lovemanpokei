@@ -1114,8 +1114,8 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
                     style = Stroke(sw)
                 )
                 drawArc(
-                    brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
-                        listOf(Color(0xFF4FC3F7), Color(0xFF4A90E2))
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(Color(0xFF81D4FA), Color(0xFF1565C0))
                     ),
                     startAngle = -90f, sweepAngle = 360f * progress, useCenter = false,
                     style = Stroke(width = sw, cap = StrokeCap.Round)
