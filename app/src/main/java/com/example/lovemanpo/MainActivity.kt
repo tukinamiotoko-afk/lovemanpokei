@@ -1285,32 +1285,15 @@ fun expressionToFaceRes(expr: Int): Int = when (expr) {
 fun HomeCommentBanner(expr: Int, message: String) {
     Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFB7D0), shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFE4EF))) {
         Box {
-            Canvas(modifier = Modifier.matchParentSize()) {
-                val s = 5.dp.toPx()
-                val spacingX = 22.dp.toPx()
-                val spacingY = 22.dp.toPx()
-                val heartColor = Color.White.copy(alpha = 0.28f)
-                var row = 0
-                var cy = spacingY / 2
-                while (cy < size.height) {
-                    val offsetX = if (row % 2 == 0) spacingX / 2 else 0f
-                    var cx = offsetX
-                    while (cx < size.width) {
-                        val path = Path().apply {
-                            moveTo(cx, cy - s * 0.1f)
-                            cubicTo(cx, cy - s * 0.5f, cx - s, cy - s * 0.5f, cx - s, cy - s * 0.1f)
-                            cubicTo(cx - s, cy + s * 0.5f, cx, cy + s * 0.8f, cx, cy + s)
-                            cubicTo(cx, cy + s * 0.8f, cx + s, cy + s * 0.5f, cx + s, cy - s * 0.1f)
-                            cubicTo(cx + s, cy - s * 0.5f, cx, cy - s * 0.5f, cx, cy - s * 0.1f)
-                            close()
-                        }
-                        drawPath(path, color = heartColor)
-                        cx += spacingX
-                    }
-                    cy += spacingY
-                    row++
-                }
-            }
+            Image(
+                painter = painterResource(R.drawable.hikari_sd),
+                contentDescription = null,
+                modifier = Modifier
+                    .height(80.dp)
+                    .align(Alignment.CenterEnd)
+                    .graphicsLayer(alpha = 0.15f),
+                contentScale = ContentScale.Fit
+            )
             Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Image(painter = painterResource(id = expressionToFaceRes(expr)), contentDescription = null, modifier = Modifier
                     .size(44.dp)
