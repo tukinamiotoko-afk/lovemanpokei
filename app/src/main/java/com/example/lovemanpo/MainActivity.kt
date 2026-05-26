@@ -1303,13 +1303,13 @@ fun expressionToFaceRes(expr: Int): Int = when (expr) {
 
 @Composable
 fun HomeCommentBanner(expr: Int, message: String) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFE4EF), shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFF6B9D))) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFF6B9D), shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFE4EF))) {
         Box {
             Canvas(modifier = Modifier.matchParentSize()) {
                 val dotRadius = 4.dp.toPx()
                 val spacingX = 28.dp.toPx()
                 val spacingY = 28.dp.toPx()
-                val dotColor = Color(0xFFFF80AB).copy(alpha = 0.12f)
+                val dotColor = Color.White.copy(alpha = 0.12f)
                 var row = 0
                 var y = spacingY / 2
                 while (y < size.height) {
@@ -1327,21 +1327,21 @@ fun HomeCommentBanner(expr: Int, message: String) {
                 Image(painter = painterResource(id = expressionToFaceRes(expr)), contentDescription = null, modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFFFE0E9)), contentScale = ContentScale.Crop)
+                    .background(Color.White.copy(alpha = 0.3f)), contentScale = ContentScale.Crop)
                 Spacer(modifier = Modifier.width(10.dp))
                 Box(
                     modifier = Modifier
                         .width(1.dp)
                         .height(40.dp)
-                        .background(Color.LightGray.copy(alpha = 0.5f))
+                        .background(Color.White.copy(alpha = 0.4f))
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold)
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.6f))
-                    Text(message, fontSize = 10.sp, color = Color.DarkGray)
+                    Text("ひかり", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color.White.copy(alpha = 0.4f))
+                    Text(message, fontSize = 10.sp, color = Color.White)
                 }
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.White.copy(alpha = 0.7f))
             }
         }
     }
