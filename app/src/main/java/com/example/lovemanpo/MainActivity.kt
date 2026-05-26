@@ -1189,10 +1189,24 @@ fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
             }
             Text("Lv. $lv", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray)
             Spacer(modifier = Modifier.height(4.dp))
-            LinearProgressIndicator(progress = { progress }, modifier = Modifier
-                .fillMaxWidth()
-                .height(6.dp)
-                .clip(CircleShape), color = Color(0xFFFF6B9D), trackColor = Color(0xFFFFE0E9))
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(CircleShape)
+            ) {
+                drawRoundRect(
+                    color = Color(0xFFFFE0E9),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2)
+                )
+                drawRoundRect(
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(Color(0xFFFF80AB), Color(0xFFE91E63))
+                    ),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2),
+                    size = size.copy(width = size.width * progress)
+                )
+            }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 Text("$hearts / 10 ", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B9D))
                 Icon(Icons.Default.Favorite, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(9.dp))
