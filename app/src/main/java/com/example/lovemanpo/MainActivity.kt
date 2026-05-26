@@ -1285,19 +1285,24 @@ fun expressionToFaceRes(expr: Int): Int = when (expr) {
 fun HomeCommentBanner(expr: Int, message: String) {
     Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0))) {
         Box {
-            Row(
-                modifier = Modifier
-                    .matchParentSize(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                repeat(5) {
+            BoxWithConstraints(modifier = Modifier.matchParentSize()) {
+                val s = 32.dp
+                listOf(
+                    Triple(0.04f, 0.10f, -28f),
+                    Triple(0.20f, 0.50f,  18f),
+                    Triple(0.36f, 0.05f,  -8f),
+                    Triple(0.52f, 0.55f,  24f),
+                    Triple(0.66f, 0.10f, -18f),
+                    Triple(0.80f, 0.48f,  12f),
+                    Triple(0.92f, 0.00f,  -5f),
+                ).forEach { (xFrac, yFrac, angle) ->
                     Image(
                         painter = painterResource(R.drawable.hikari_sd),
                         contentDescription = null,
                         modifier = Modifier
-                            .height(70.dp)
-                            .graphicsLayer(alpha = 0.12f),
+                            .size(s)
+                            .offset(x = maxWidth * xFrac - s / 2, y = maxHeight * yFrac - s / 2)
+                            .graphicsLayer(rotationZ = angle, alpha = 0.13f),
                         contentScale = ContentScale.Fit
                     )
                 }
