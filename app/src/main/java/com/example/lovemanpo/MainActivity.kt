@@ -1050,9 +1050,9 @@ fun HomeScreenContent(
             ) {
                 Box {
                     Canvas(modifier = Modifier.matchParentSize()) {
-                        val dotRadius = 2.5.dp.toPx()
-                        val spacingX = 24.dp.toPx()
-                        val spacingY = 24.dp.toPx()
+                        val dotRadius = 6.dp.toPx()
+                        val spacingX = 32.dp.toPx()
+                        val spacingY = 32.dp.toPx()
                         val dotColor = Color(0xFFFF80AB).copy(alpha = 0.10f)
                         var row = 0
                         var y = spacingY / 2
