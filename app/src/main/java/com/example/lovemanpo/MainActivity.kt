@@ -1203,7 +1203,7 @@ fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
             .width(110.dp)
             .shadow(14.dp, RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
-            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFFF0F7), Color(0xFFFFBBD9))))
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFFFAFC), Color(0xFFFFDDEE))))
             .border(1.dp, Color(0xFFFF6B9D).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.padding(10.dp)) {
@@ -1249,7 +1249,7 @@ fun HomeActionPointsCard(pts: Int) {
             .width(110.dp)
             .shadow(14.dp, RoundedCornerShape(16.dp))
             .clip(RoundedCornerShape(16.dp))
-            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFE8FAF8), Color(0xFFB2DFDB))))
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFF5FFFE), Color(0xFFCCEFEC))))
             .border(1.dp, Color(0xFF4DB6AC).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
     ) {
         Column(modifier = Modifier.padding(10.dp)) {
