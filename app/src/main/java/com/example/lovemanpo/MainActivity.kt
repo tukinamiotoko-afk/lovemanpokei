@@ -1236,7 +1236,17 @@ fun HomeLoveLevelCard(modifier: Modifier = Modifier, lv: Int, progress: Float, h
                     Spacer(modifier = Modifier.width(3.dp))
                     Text("ラブレベル", fontSize = 9.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
                 }
-                Text("Lv. $lv", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray, fontFamily = MplusRoundedFontFamily)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Text("Lv. $lv", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray, fontFamily = MplusRoundedFontFamily)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("$hearts / 10 ", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B9D), fontFamily = MplusRoundedFontFamily)
+                        Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(8.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
+                    }
+                }
                 Canvas(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1249,10 +1259,6 @@ fun HomeLoveLevelCard(modifier: Modifier = Modifier, lv: Int, progress: Float, h
                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2),
                         size = size.copy(width = size.width * progress)
                     )
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("$hearts / 10 ", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B9D), fontFamily = MplusRoundedFontFamily)
-                    Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(8.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
                 }
             }
         }
