@@ -1198,7 +1198,14 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 
 @Composable
 fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFE4EF), modifier = Modifier.width(110.dp), shadowElevation = 14.dp, border = BorderStroke(1.dp, Color(0xFFFF6B9D).copy(alpha = 0.5f))) {
+    Box(
+        modifier = Modifier
+            .width(110.dp)
+            .shadow(14.dp, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFFF0F7), Color(0xFFFFBBD9))))
+            .border(1.dp, Color(0xFFFF6B9D).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+    ) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(14.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
@@ -1237,7 +1244,14 @@ fun HomeLoveLevelCard(lv: Int, progress: Float, hearts: Int) {
 // 2. 行動ポイントカードのコメントを削除
 @Composable
 fun HomeActionPointsCard(pts: Int) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color(0xFFFFF0F5), modifier = Modifier.width(110.dp), shadowElevation = 14.dp, border = BorderStroke(1.dp, Color(0xFF4DB6AC).copy(alpha = 0.5f))) {
+    Box(
+        modifier = Modifier
+            .width(110.dp)
+            .shadow(14.dp, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFE8FAF8), Color(0xFFB2DFDB))))
+            .border(1.dp, Color(0xFF4DB6AC).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+    ) {
         Column(modifier = Modifier.padding(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color.Unspecified, modifier = Modifier.size(14.dp).gradientTint(listOf(Color(0xFF80CBC4), Color(0xFF00695C))))
