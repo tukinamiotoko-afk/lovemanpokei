@@ -1369,7 +1369,7 @@ fun HintSdHikari(modifier: Modifier = Modifier) {
             painter = painterResource(R.drawable.hikari_sd_hint),
             contentDescription = "ヒント",
             modifier = Modifier
-                .size(80.dp)
+                .size(160.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
