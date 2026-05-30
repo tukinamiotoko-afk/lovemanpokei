@@ -1053,7 +1053,7 @@ fun HomeScreenContent(
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
                 }
 
-                HintSdHikari(modifier = Modifier.align(Alignment.BottomStart).padding(start = 8.dp, bottom = 4.dp))
+                HintSdHikari(modifier = Modifier.align(Alignment.BottomStart).offset(x = (-20).dp))
             }
 
             Box(
