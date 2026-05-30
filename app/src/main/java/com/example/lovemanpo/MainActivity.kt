@@ -1043,6 +1043,8 @@ fun HomeScreenContent(
                 ) {
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
                 }
+
+                HintSdHikari(modifier = Modifier.align(Alignment.BottomStart).padding(start = 8.dp, bottom = 4.dp))
             }
 
             Box(
@@ -1315,6 +1317,62 @@ fun expressionToFaceRes(expr: Int): Int = when (expr) {
     R.drawable.hikari_devil     -> R.drawable.hikari_devil_face
     else                        -> R.drawable.hikari_smile_face
 }
+
+@Composable
+fun HintSdHikari(modifier: Modifier = Modifier) {
+    val hints = listOf(
+        "5,000歩歩くと\n行動ポイントが1つもらえるよ！",
+        "行動ポイントを使って\nひかりとお話しできるよ♪",
+        "おでかけで会話すると\nラブレベルが上がるよ！",
+        "毎日歩いてひかりとの\n仲を深めよう♪",
+        "セリフをタップすると\nひかりが話しかけてくれるよ！",
+        "自由会話でいつでも\nひかりと話せるよ♪"
+    )
+    var showHint by remember { mutableStateOf(false) }
+    var currentHint by remember { mutableStateOf("") }
+
+    Box(modifier = modifier) {
+        if (showHint) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .offset(x = 4.dp, y = (-72).dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { showHint = false },
+                shape = RoundedCornerShape(12.dp),
+                color = Color.White,
+                shadowElevation = 8.dp,
+                border = BorderStroke(1.dp, Color(0xFFFFB7D0))
+            ) {
+                Text(
+                    currentHint,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    fontSize = 11.sp,
+                    color = Color(0xFF1A1A1A),
+                    lineHeight = 16.sp,
+                    fontFamily = MplusRoundedFontFamily
+                )
+            }
+        }
+        Image(
+            painter = painterResource(R.drawable.hikari_sd),
+            contentDescription = "ヒント",
+            modifier = Modifier
+                .size(60.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    currentHint = hints.random()
+                    showHint = !showHint
+                },
+            contentScale = ContentScale.Fit
+        )
+    }
+}
+
 
 @Composable
 fun HomeCommentBanner(expr: Int, message: String, onClick: () -> Unit = {}) {
