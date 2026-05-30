@@ -248,12 +248,21 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
             repository.getAllStepRecordsFlow().collectLatest { records ->
                 allStepRecords.value = records.sortedBy { it.date }
                 val today = LocalDate.now().toString()
-                todaySteps.intValue = records.find { it.date == today }?.stepCount ?: 0
+                val newTodaySteps = records.find { it.date == today }?.stepCount ?: 0
+                todaySteps.intValue = newTodaySteps
                 cumulativeSteps.intValue = repository.cumulativeSteps
                 loveCount.intValue = repository.loveCount
                 heartCount.intValue = repository.heartCount
                 spentActionPoints.intValue = repository.spentActionPoints
                 totalEarnedPoints.intValue = repository.totalEarnedPoints
+
+                val earned = (newTodaySteps / 2000).coerceAtMost(5)
+                val toGrant = earned - repository.todayPointsEarned
+                if (toGrant > 0) {
+                    repository.totalEarnedPoints += toGrant
+                    repository.todayPointsEarned = earned
+                    totalEarnedPoints.intValue = repository.totalEarnedPoints
+                }
             }
         }
     }
@@ -1321,7 +1330,7 @@ fun expressionToFaceRes(expr: Int): Int = when (expr) {
 @Composable
 fun HintSdHikari(modifier: Modifier = Modifier) {
     val hints = listOf(
-        "5,000歩歩くと\n行動ポイントが1つもらえるよ！",
+        "2,000歩歩くと\n行動ポイントが1つもらえるよ！",
         "行動ポイントを使って\nひかりとお話しできるよ♪",
         "おでかけで会話すると\nラブレベルが上がるよ！",
         "毎日歩いてひかりとの\n仲を深めよう♪",
@@ -1360,7 +1369,7 @@ fun HintSdHikari(modifier: Modifier = Modifier) {
             painter = painterResource(R.drawable.hikari_sd_hint),
             contentDescription = "ヒント",
             modifier = Modifier
-                .size(60.dp)
+                .size(80.dp)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
