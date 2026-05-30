@@ -1275,9 +1275,9 @@ fun HomeActionPointsCard(modifier: Modifier = Modifier, pts: Int) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color.Unspecified, modifier = Modifier.size(14.dp).gradientTint(listOf(Color(0xFF80CBC4), Color(0xFF00695C))))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("行動ポイント", fontSize = 9.sp, color = Color.Gray, fontFamily = MplusRoundedFontFamily)
+                Text("行動ポイント", fontSize = 9.sp, color = Color(0xFF444444), fontFamily = MplusRoundedFontFamily)
             }
-            Text("$pts / 5 pt", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray, fontFamily = MplusRoundedFontFamily)
+            Text("$pts / 5 pt", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A), fontFamily = MplusRoundedFontFamily)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 2.dp)) {
                 repeat(5) { i ->
                     Canvas(modifier = Modifier.size(10.dp)) {
