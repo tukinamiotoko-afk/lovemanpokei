@@ -997,18 +997,19 @@ fun HomeScreenContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .height(IntrinsicSize.Min)
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 HomeLoveLevelCard(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     lv = loveCount,
                     progress = heartGaugeProgress,
                     hearts = heartCount
                 )
                 HomeActionPointsCard(
-                    modifier = Modifier.weight(0.72f),
+                    modifier = Modifier.weight(0.72f).fillMaxHeight(),
                     pts = actionPoints
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1282,7 +1283,7 @@ fun HomeActionPointsCard(modifier: Modifier = Modifier, pts: Int) {
                 Text("行動ポイント", fontSize = 9.sp, color = Color.Gray, fontFamily = MplusRoundedFontFamily)
             }
             Text("$pts / 5 pt", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray, fontFamily = MplusRoundedFontFamily)
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(vertical = 4.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 2.dp)) {
                 repeat(5) { i ->
                     Canvas(modifier = Modifier.size(10.dp)) {
                         if (i < pts) {
@@ -1296,8 +1297,6 @@ fun HomeActionPointsCard(modifier: Modifier = Modifier, pts: Int) {
                         }
                     }
                 }
-            }
-            Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFE0F2F1)) {
             }
         }
     }
