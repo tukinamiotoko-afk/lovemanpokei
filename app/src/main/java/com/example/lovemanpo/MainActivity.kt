@@ -1345,7 +1345,7 @@ fun HintSdHikari(modifier: Modifier = Modifier) {
             Surface(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .offset(x = 4.dp, y = (-72).dp)
+                    .offset(x = 40.dp, y = (-72).dp)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
