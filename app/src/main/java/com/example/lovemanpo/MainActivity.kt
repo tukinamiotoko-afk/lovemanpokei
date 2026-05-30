@@ -997,19 +997,18 @@ fun HomeScreenContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(IntrinsicSize.Min)
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 HomeLoveLevelCard(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    modifier = Modifier.weight(1f),
                     lv = loveCount,
                     progress = heartGaugeProgress,
                     hearts = heartCount
                 )
                 HomeActionPointsCard(
-                    modifier = Modifier.weight(0.72f).fillMaxHeight(),
+                    modifier = Modifier.weight(0.72f),
                     pts = actionPoints
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
