@@ -535,6 +535,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 composable("profile_setup") { ProfileSetupScreen(navController, viewModel) }
                 composable("battery_setup") { StabilitySetupScreen(navController, viewModel) }
                 composable("home") { HomeScreen(navController, viewModel) }
+                composable("chatmenu") { ChatMenuScreen(navController, viewModel) }
                 composable("freechat") { FreeChatScreen(navController, viewModel) }
                 composable("odekake") { OdekakeScenarioSelectScreen(navController, viewModel) }
                 composable(
@@ -959,7 +960,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         onCharacterClick = {
             touchedDialogue = currentLoveContent.touchDialogues.randomOrNull()
         },
-        onFreeChatClick = { navController.navigate("freechat") },
+        onFreeChatClick = { navController.navigate("chatmenu") },
         onOdekakeClick = { navController.navigate("odekake") },
         onRecordsClick = { navController.navigate("records") },
         onDebugClick = { navController.navigate("debug") }
@@ -1335,7 +1336,7 @@ fun HintSdHikari(modifier: Modifier = Modifier) {
         "おでかけで会話すると\nラブレベルが上がるよ！",
         "毎日歩いてひかりとの\n仲を深めよう♪",
         "セリフをタップすると\nひかりが話しかけてくれるよ！",
-        "自由会話でいつでも\nひかりと話せるよ♪"
+        "おしゃべりからいつでも\nひかりと話せるよ♪"
     )
     var showHint by remember { mutableStateOf(false) }
     var currentHint by remember { mutableStateOf("") }
@@ -1500,7 +1501,6 @@ fun HomeCustomBottomNav(modifier: Modifier = Modifier, onFreeChat: () -> Unit, o
         .height(80.dp), color = Color.White, shadowElevation = 10.dp) {
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically) {
             HomeNavItem(Icons.Default.Home, "ホーム", true) {}
-            HomeNavItem(Icons.Default.ShoppingBag, "おでかけ", false, onOdekake)
 
             Box(contentAlignment = Alignment.Center, modifier = Modifier
                 .offset(y = (-12).dp)
@@ -1510,7 +1510,7 @@ fun HomeCustomBottomNav(modifier: Modifier = Modifier, onFreeChat: () -> Unit, o
                     .shadow(4.dp, CircleShape)) {
                     Icon(Icons.Default.Chat, null, tint = Color.White, modifier = Modifier.padding(14.dp))
                 }
-                Text("自由会話", modifier = Modifier
+                Text("おしゃべり", modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .offset(y = 22.dp), fontSize = 10.sp, color = Color(0xFF4A90E2), fontWeight = FontWeight.Bold)
             }
@@ -2573,6 +2573,59 @@ suspend fun callOpenAiApi(
         .getJSONObject(0)
         .getJSONObject("message")
         .getString("content")
+}
+
+// ---- おしゃべり選択画面 ----
+@Composable
+fun ChatMenuScreen(navController: NavController, viewModel: StepViewModel) {
+    val actionPoints by viewModel.currentActionPoints
+    Scaffold(
+        topBar = { TopAppBarWithBack(title = "おしゃべり (${actionPoints}pt)", onBack = { navController.popBackStack() }) }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // 自由会話カード
+            Surface(
+                modifier = Modifier.fillMaxWidth().clickable { navController.navigate("freechat") },
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFFF0F8FF),
+                shadowElevation = 8.dp,
+                border = BorderStroke(1.dp, Color(0xFF4A90E2).copy(alpha = 0.4f))
+            ) {
+                Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Chat, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(36.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text("自由会話", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A), fontFamily = MplusRoundedFontFamily)
+                        Text("ひかりと自由に話せるよ♪\n1メッセージ = 1ポイント消費", fontSize = 11.sp, color = Color.Gray, fontFamily = MplusRoundedFontFamily)
+                    }
+                }
+            }
+            // おでかけカード
+            Surface(
+                modifier = Modifier.fillMaxWidth().clickable { navController.navigate("odekake") },
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFFFFF0F8),
+                shadowElevation = 8.dp,
+                border = BorderStroke(1.dp, Color(0xFFFF6B9D).copy(alpha = 0.4f))
+            ) {
+                Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.ShoppingBag, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(36.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text("おでかけ", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A), fontFamily = MplusRoundedFontFamily)
+                        Text("場所を選んでひかりとお出かけ♪\n会話でラブレベルUP！", fontSize = 11.sp, color = Color.Gray, fontFamily = MplusRoundedFontFamily)
+                    }
+                }
+            }
+        }
+    }
 }
 
 // ---- 自由会話画面 ----
