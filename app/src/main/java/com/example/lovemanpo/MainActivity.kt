@@ -1031,11 +1031,7 @@ fun HomeScreenContent(
                     contentDescription = "ひかり",
                     modifier = Modifier
                         .fillMaxHeight(1.0f)
-                        .align(Alignment.BottomCenter)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { onCharacterClick() },
+                        .align(Alignment.BottomCenter),
                     contentScale = ContentScale.Fit
                 )
 
@@ -1063,7 +1059,7 @@ fun HomeScreenContent(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     val formattedMessage = dialogueMessage.replace("○○", playerName)
-                    HomeCommentBanner(expressionRes, formattedMessage)
+                    HomeCommentBanner(expressionRes, formattedMessage, onClick = onCharacterClick)
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -1321,8 +1317,8 @@ fun expressionToFaceRes(expr: Int): Int = when (expr) {
 }
 
 @Composable
-fun HomeCommentBanner(expr: Int, message: String) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0))) {
+fun HomeCommentBanner(expr: Int, message: String, onClick: () -> Unit = {}) {
+    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0)), modifier = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }) {
         Row(modifier = Modifier.padding(10.dp).height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
                 Image(painter = painterResource(id = expressionToFaceRes(expr)), contentDescription = null, modifier = Modifier
                     .size(44.dp)
