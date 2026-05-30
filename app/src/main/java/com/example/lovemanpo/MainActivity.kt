@@ -1357,7 +1357,7 @@ fun HintSdHikari(modifier: Modifier = Modifier) {
             }
         }
         Image(
-            painter = painterResource(R.drawable.hikari_sd),
+            painter = painterResource(R.drawable.hikari_sd_hint),
             contentDescription = "ヒント",
             modifier = Modifier
                 .size(60.dp)
