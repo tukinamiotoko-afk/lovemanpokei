@@ -2508,66 +2508,6 @@ fun PermissionRequestScreen(onRequestPermission: () -> Unit) {
     }
 }
 
-@Composable
-fun HoldToDeleteButton(onDelete: () -> Unit) {
-    var progress by remember { mutableFloatStateOf(0f) }
-    var isHolding by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-    val holdDurationMs = 5000L
-
-    LaunchedEffect(isHolding) {
-        if (isHolding) {
-            val start = System.currentTimeMillis()
-            while (isHolding) {
-                val elapsed = System.currentTimeMillis() - start
-                progress = (elapsed.toFloat() / holdDurationMs).coerceAtMost(1f)
-                if (progress >= 1f) {
-                    onDelete()
-                    progress = 0f
-                    isHolding = false
-                    break
-                }
-                kotlinx.coroutines.delay(16)
-            }
-        } else {
-            progress = 0f
-        }
-    }
-
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(40.dp)
-            .pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-                        isHolding = true
-                        do {
-                            val event = awaitPointerEvent()
-                        } while (event.changes.any { it.pressed })
-                        isHolding = false
-                    }
-                }
-            }
-    ) {
-        if (progress > 0f) {
-            CircularProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.size(36.dp),
-                color = Color.Red,
-                strokeWidth = 3.dp,
-                trackColor = Color.LightGray.copy(alpha = 0.3f)
-            )
-        }
-        Icon(
-            Icons.Default.DeleteOutline,
-            contentDescription = "長押しで履歴削除",
-            tint = if (progress > 0f) Color.Red else Color.Gray,
-            modifier = Modifier.size(22.dp)
-        )
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -2630,6 +2570,20 @@ fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName:
     val location = odekakeLocations.find { it.id == locationId }?.name ?: "カフェ"
     val base = buildFreeChatSystemPrompt(loveCount, playerName)
     return "$base 今は${playerName}と一緒に${location}に来ています。その場の雰囲気で会話してください。"
+}
+
+fun detectHikariExpression(text: String): Int {
+    val blushKeywords = listOf("好き", "照れ", "恥ずかし", "ドキ", "♡", "❤", "💕", "嬉し", "ありがとう", "うれし", "かわい")
+    val celebrateKeywords = listOf("やった", "すごい", "わあ", "わ～", "わーい", "えへへ", "うれしい", "最高", "！！", "楽し", "たのし")
+    val devilKeywords = listOf("もう", "だって", "ふふ", "えへ", "くすくす", "意地悪", "ずるい", "ぷんぷん", "怒", "だめ")
+    val thinkKeywords = listOf("えーと", "うーん", "そうだね", "そうかな", "考え", "難し", "どうかな", "まあ", "確かに")
+    return when {
+        blushKeywords.any { text.contains(it) } -> R.drawable.hikari_blush
+        celebrateKeywords.any { text.contains(it) } -> R.drawable.hikari_celebrate
+        devilKeywords.any { text.contains(it) } -> R.drawable.hikari_devil
+        thinkKeywords.any { text.contains(it) } -> R.drawable.hikari_think
+        else -> R.drawable.hikari_smile
+    }
 }
 
 suspend fun callGeminiApi(
@@ -2746,8 +2700,24 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     var inputText by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var deleteProgress by remember { mutableFloatStateOf(0f) }
+    var hikariExpression by remember { mutableIntStateOf(R.drawable.hikari_smile) }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    LaunchedEffect(showDeleteConfirm) {
+        if (showDeleteConfirm) {
+            deleteProgress = 0f
+            val steps = 100
+            repeat(steps) {
+                kotlinx.coroutines.delay(50L)
+                deleteProgress = (it + 1) / steps.toFloat()
+            }
+        } else {
+            deleteProgress = 0f
+        }
+    }
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
@@ -2758,13 +2728,38 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             title = "自由会話 (${actionPoints}pt)",
             onBack = { navController.popBackStack() },
             actions = {
-                HoldToDeleteButton(onDelete = { viewModel.clearFreeChatHistory() })
+                IconButton(onClick = { showDeleteConfirm = !showDeleteConfirm }) {
+                    Icon(Icons.Default.DeleteOutline, contentDescription = "履歴削除", tint = Color.Gray)
+                }
             }
         )
     }) { padding ->
         Column(modifier = Modifier
             .fillMaxSize()
             .padding(padding)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Color(0xFFFFF0F5), Color(0xFFFAFAFA))))
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.animation.AnimatedContent(
+                    targetState = hikariExpression,
+                    transitionSpec = {
+                        androidx.compose.animation.fadeIn(animationSpec = tween(300)) togetherWith
+                        androidx.compose.animation.fadeOut(animationSpec = tween(200))
+                    },
+                    label = "hikari_expression"
+                ) { exprRes ->
+                    Image(
+                        painter = painterResource(exprRes),
+                        contentDescription = "ひかり",
+                        modifier = Modifier.height(140.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
@@ -2840,6 +2835,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName)
                                 val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
                                 messages.add(ChatMessage("assistant", reply))
+                                hikariExpression = detectHikariExpression(reply)
                                 viewModel.saveFreeChatHistory()
                             } catch (e: Exception) {
                                 errorMessage = "エラーが発生しました: ${e.message}"
@@ -2851,6 +2847,61 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                     enabled = !isLoading && inputText.isNotBlank()
                 ) {
                     Icon(Icons.Default.Send, contentDescription = "送信", tint = Color(0xFF4A90E2))
+                }
+            }
+
+            androidx.compose.animation.AnimatedVisibility(
+                visible = showDeleteConfirm,
+                enter = androidx.compose.animation.slideInVertically { it },
+                exit = androidx.compose.animation.slideOutVertically { it }
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFFF8F8F8),
+                    tonalElevation = 8.dp,
+                    shadowElevation = 8.dp
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Text(
+                            "履歴を削除しますか？",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.DarkGray
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        LinearProgressIndicator(
+                            progress = { deleteProgress },
+                            modifier = Modifier.fillMaxWidth().height(4.dp),
+                            color = if (deleteProgress >= 1f) Color(0xFFE53935) else Color(0xFFFF8A80),
+                            trackColor = Color(0xFFEEEEEE)
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(onClick = { showDeleteConfirm = false }) {
+                                Text("キャンセル", color = Color.Gray)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    if (deleteProgress >= 1f) {
+                                        viewModel.clearFreeChatHistory()
+                                        showDeleteConfirm = false
+                                    }
+                                },
+                                enabled = deleteProgress >= 1f,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFE53935),
+                                    disabledContainerColor = Color(0xFFBDBDBD)
+                                )
+                            ) {
+                                Text("削除", color = Color.White)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -2907,6 +2958,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var odekakeMessageCount by remember { mutableIntStateOf(0) }
+    var hikariExpression by remember { mutableIntStateOf(R.drawable.hikari_smile) }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
@@ -2923,6 +2975,29 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
         Column(modifier = Modifier
             .fillMaxSize()
             .padding(padding)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Color(0xFFFFF0F5), Color(0xFFFAFAFA))))
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                androidx.compose.animation.AnimatedContent(
+                    targetState = hikariExpression,
+                    transitionSpec = {
+                        androidx.compose.animation.fadeIn(animationSpec = tween(300)) togetherWith
+                        androidx.compose.animation.fadeOut(animationSpec = tween(200))
+                    },
+                    label = "hikari_expression_odekake"
+                ) { exprRes ->
+                    Image(
+                        painter = painterResource(exprRes),
+                        contentDescription = "ひかり",
+                        modifier = Modifier.height(140.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
@@ -3002,6 +3077,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                                 val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName)
                                 val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
                                 messages.add(ChatMessage("assistant", reply))
+                                hikariExpression = detectHikariExpression(reply)
                             } catch (e: Exception) {
                                 errorMessage = "エラーが発生しました: ${e.message}"
                             } finally {
