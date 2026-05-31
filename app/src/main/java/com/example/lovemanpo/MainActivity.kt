@@ -2685,8 +2685,25 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     var inputText by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showClearDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    if (showClearDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearDialog = false },
+            title = { Text("履歴を削除") },
+            text = { Text("会話の履歴をすべて削除しますか？\nこの操作は元に戻せません。") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearFreeChatHistory(); showClearDialog = false }) {
+                    Text("削除", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearDialog = false }) { Text("キャンセル") }
+            }
+        )
+    }
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
@@ -2697,7 +2714,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             title = "自由会話 (${actionPoints}pt)",
             onBack = { navController.popBackStack() },
             actions = {
-                IconButton(onClick = { viewModel.clearFreeChatHistory() }) {
+                IconButton(onClick = { showClearDialog = true }) {
                     Icon(Icons.Default.DeleteOutline, contentDescription = "履歴削除", tint = Color.Gray)
                 }
             }
