@@ -2508,6 +2508,67 @@ fun PermissionRequestScreen(onRequestPermission: () -> Unit) {
     }
 }
 
+@Composable
+fun HoldToDeleteButton(onDelete: () -> Unit) {
+    var progress by remember { mutableFloatStateOf(0f) }
+    var isHolding by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val holdDurationMs = 5000L
+
+    LaunchedEffect(isHolding) {
+        if (isHolding) {
+            val start = System.currentTimeMillis()
+            while (isHolding) {
+                val elapsed = System.currentTimeMillis() - start
+                progress = (elapsed.toFloat() / holdDurationMs).coerceAtMost(1f)
+                if (progress >= 1f) {
+                    onDelete()
+                    progress = 0f
+                    isHolding = false
+                    break
+                }
+                kotlinx.coroutines.delay(16)
+            }
+        } else {
+            progress = 0f
+        }
+    }
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(40.dp)
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        isHolding = true
+                        do {
+                            val event = awaitPointerEvent()
+                        } while (event.changes.any { it.pressed })
+                        isHolding = false
+                    }
+                }
+            }
+    ) {
+        if (progress > 0f) {
+            CircularProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.size(36.dp),
+                color = Color.Red,
+                strokeWidth = 3.dp,
+                trackColor = Color.LightGray.copy(alpha = 0.3f)
+            )
+        }
+        Icon(
+            Icons.Default.DeleteOutline,
+            contentDescription = "長押しで履歴削除",
+            tint = if (progress > 0f) Color.Red else Color.Gray,
+            modifier = Modifier.size(22.dp)
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopAppBarWithBack(title: String, onBack: () -> Unit, actions: @Composable () -> Unit = {}) {
@@ -2685,25 +2746,8 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     var inputText by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var showClearDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-
-    if (showClearDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearDialog = false },
-            title = { Text("履歴を削除") },
-            text = { Text("会話の履歴をすべて削除しますか？\nこの操作は元に戻せません。") },
-            confirmButton = {
-                TextButton(onClick = { viewModel.clearFreeChatHistory(); showClearDialog = false }) {
-                    Text("削除", color = Color.Red)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearDialog = false }) { Text("キャンセル") }
-            }
-        )
-    }
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
@@ -2714,9 +2758,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             title = "自由会話 (${actionPoints}pt)",
             onBack = { navController.popBackStack() },
             actions = {
-                IconButton(onClick = { showClearDialog = true }) {
-                    Icon(Icons.Default.DeleteOutline, contentDescription = "履歴削除", tint = Color.Gray)
-                }
+                HoldToDeleteButton(onDelete = { viewModel.clearFreeChatHistory() })
             }
         )
     }) { padding ->
