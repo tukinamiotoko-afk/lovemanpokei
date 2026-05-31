@@ -2766,7 +2766,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(Color(0xFFFFF0F5), Color(0xFFFAFAFA))))
+                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFFF0F5), Color(0xFFFAFAFA))))
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -3004,7 +3004,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(Color(0xFFFFF0F5), Color(0xFFFAFAFA))))
+                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFFF0F5), Color(0xFFFAFAFA))))
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
