@@ -2572,18 +2572,44 @@ fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName:
     return "$base 今は${playerName}と一緒に${location}に来ています。その場の雰囲気で会話してください。"
 }
 
-fun detectHikariExpression(text: String): Int {
-    val blushKeywords = listOf("好き", "照れ", "恥ずかし", "ドキ", "♡", "❤", "💕", "嬉し", "ありがとう", "うれし", "かわい")
-    val celebrateKeywords = listOf("やった", "すごい", "わあ", "わ～", "わーい", "えへへ", "うれしい", "最高", "！！", "楽し", "たのし")
-    val devilKeywords = listOf("もう", "だって", "ふふ", "えへ", "くすくす", "意地悪", "ずるい", "ぷんぷん", "怒", "だめ")
-    val thinkKeywords = listOf("えーと", "うーん", "そうだね", "そうかな", "考え", "難し", "どうかな", "まあ", "確かに")
-    return when {
-        blushKeywords.any { text.contains(it) } -> R.drawable.hikari_blush
-        celebrateKeywords.any { text.contains(it) } -> R.drawable.hikari_celebrate
-        devilKeywords.any { text.contains(it) } -> R.drawable.hikari_devil
-        thinkKeywords.any { text.contains(it) } -> R.drawable.hikari_think
-        else -> R.drawable.hikari_smile
-    }
+fun detectHikariExpression(text: String): Int = when {
+    listOf("キス", "ちゅ").any { text.contains(it) }
+        -> R.drawable.osyaberi_kiss
+    listOf("ハグ", "抱きし", "ぎゅっ").any { text.contains(it) }
+        -> R.drawable.osyaberi_hagu
+    listOf("添い寝", "眠い", "ねむ", "おやすみ", "寝よ", "寝てる").any { text.contains(it) }
+        -> R.drawable.osyaberi_soine
+    listOf("見つめ", "じっと").any { text.contains(it) }
+        -> R.drawable.osyaberi_mitumeau
+    listOf("好き", "愛し", "恋", "♡", "❤", "💕").any { text.contains(it) }
+        -> R.drawable.osyaberi_koigokoro
+    listOf("照れ", "恥ずかし", "ドキ", "はずかし").any { text.contains(it) }
+        -> R.drawable.osyaberi_tereru
+    listOf("ごめん", "すまな", "申し訳", "悪かっ").any { text.contains(it) }
+        -> R.drawable.osyaberi_nakigao_mousiwakenai
+    listOf("泣", "悲し", "つらい", "涙", "なみだ").any { text.contains(it) }
+        -> R.drawable.osyaberi_namida
+    listOf("落ち込", "しょんぼり", "へこん").any { text.contains(it) }
+        -> R.drawable.osyaberi_otikomu
+    listOf("怒", "ムカ", "ふざけ", "許さな").any { text.contains(it) }
+        -> R.drawable.osyaberi_okoru
+    listOf("不機嫌", "むすっ", "機嫌が").any { text.contains(it) }
+        -> R.drawable.osyaberi_hukigenn
+    listOf("もう", "ちゃんと", "だめ", "しっかり").any { text.contains(it) }
+        -> R.drawable.osyaberi_sukoshiokoru
+    listOf("嫉妬", "やきもち", "誰と", "誰と話").any { text.contains(it) }
+        -> R.drawable.osyaberi_sitto
+    listOf("冷たい", "別に", "関係な", "どうでも").any { text.contains(it) }
+        -> R.drawable.osyaberi_tumetaime
+    listOf("不安", "心配", "どうしよ", "こわい").any { text.contains(it) }
+        -> R.drawable.osyaberi_huan
+    listOf("びっくり", "驚", "え！", "まじ", "うそ", "嘘").any { text.contains(it) }
+        -> R.drawable.osyaberi_odoroki
+    listOf("えーと", "うーん", "考え", "どうかな", "むずかし").any { text.contains(it) }
+        -> R.drawable.osyaberi_kangaeru
+    listOf("ありがとう", "よかった", "うれしい", "嬉し").any { text.contains(it) }
+        -> R.drawable.osyaberi_yasasiiegao
+    else -> R.drawable.osyaberi_smile
 }
 
 suspend fun callGeminiApi(
