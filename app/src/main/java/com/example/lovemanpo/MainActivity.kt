@@ -2728,7 +2728,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var deleteProgress by remember { mutableFloatStateOf(0f) }
-    var hikariExpression by remember { mutableIntStateOf(R.drawable.hikari_smile) }
+    var hikariExpression by remember { mutableIntStateOf(R.drawable.osyaberi_smile) }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
@@ -2984,7 +2984,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var odekakeMessageCount by remember { mutableIntStateOf(0) }
-    var hikariExpression by remember { mutableIntStateOf(R.drawable.hikari_smile) }
+    var hikariExpression by remember { mutableIntStateOf(R.drawable.osyaberi_smile) }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
