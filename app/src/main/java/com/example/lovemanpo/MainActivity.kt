@@ -179,6 +179,10 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getString("GEMINI_API_KEY", "") ?: ""
         set(value) = prefs.edit { putString("GEMINI_API_KEY", value) }
 
+    var freeChatHistoryJson: String
+        get() = prefs.getString("FREE_CHAT_HISTORY", "[]") ?: "[]"
+        set(value) = prefs.edit { putString("FREE_CHAT_HISTORY", value) }
+
     var heightCm: Float
         get() = prefs.getFloat("HEIGHT_CM", 170f)
         set(value) = prefs.edit { putFloat("HEIGHT_CM", value) }
@@ -299,6 +303,32 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     var geminiApiKey: String
         get() = repository.geminiApiKey
         set(value) { repository.geminiApiKey = value }
+
+    val freeChatMessages = mutableStateListOf<ChatMessage>().also { list ->
+        try {
+            val json = org.json.JSONArray(repository.freeChatHistoryJson)
+            repeat(json.length()) { i ->
+                val obj = json.getJSONObject(i)
+                list.add(ChatMessage(obj.getString("role"), obj.getString("content")))
+            }
+        } catch (_: Exception) {}
+    }
+
+    fun saveFreeChatHistory() {
+        val json = org.json.JSONArray()
+        freeChatMessages.forEach { msg ->
+            json.put(org.json.JSONObject().apply {
+                put("role", msg.role)
+                put("content", msg.content)
+            })
+        }
+        repository.freeChatHistoryJson = json.toString()
+    }
+
+    fun clearFreeChatHistory() {
+        freeChatMessages.clear()
+        repository.freeChatHistoryJson = "[]"
+    }
 
     fun spendPointForChat(): Boolean {
         if (currentActionPoints.value > 0) {
@@ -2480,12 +2510,13 @@ fun PermissionRequestScreen(onRequestPermission: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopAppBarWithBack(title: String, onBack: () -> Unit) {
+fun TopAppBarWithBack(title: String, onBack: () -> Unit, actions: @Composable () -> Unit = {}) {
     CenterAlignedTopAppBar(
         title = { Text(text = title) },
         navigationIcon = { IconButton(onClick = onBack) { Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る") } },
+        actions = { actions() },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
-        modifier = Modifier.statusBarsPadding() // ★ これを追加！
+        modifier = Modifier.statusBarsPadding()
     )
 }
 
@@ -2650,7 +2681,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     val loveCount by viewModel.loveCount
     val actionPoints by viewModel.currentActionPoints
     val playerName by viewModel.playerName
-    val messages = remember { mutableStateListOf<ChatMessage>() }
+    val messages = viewModel.freeChatMessages
     var inputText by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -2662,7 +2693,15 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     }
 
     Scaffold(topBar = {
-        TopAppBarWithBack(title = "自由会話 (${actionPoints}pt)", onBack = { navController.popBackStack() })
+        TopAppBarWithBack(
+            title = "自由会話 (${actionPoints}pt)",
+            onBack = { navController.popBackStack() },
+            actions = {
+                IconButton(onClick = { viewModel.clearFreeChatHistory() }) {
+                    Icon(Icons.Default.DeleteOutline, contentDescription = "履歴削除", tint = Color.Gray)
+                }
+            }
+        )
     }) { padding ->
         Column(modifier = Modifier
             .fillMaxSize()
@@ -2742,6 +2781,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName)
                                 val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
                                 messages.add(ChatMessage("assistant", reply))
+                                viewModel.saveFreeChatHistory()
                             } catch (e: Exception) {
                                 errorMessage = "エラーが発生しました: ${e.message}"
                             } finally {
