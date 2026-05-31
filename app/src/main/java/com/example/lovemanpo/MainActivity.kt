@@ -175,9 +175,9 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getInt("TODAY_POINTS_EARNED", 0)
         set(value) = prefs.edit { putInt("TODAY_POINTS_EARNED", value) }
         
-    var openAiApiKey: String
-        get() = prefs.getString("OPENAI_API_KEY", "") ?: ""
-        set(value) = prefs.edit { putString("OPENAI_API_KEY", value) }
+    var geminiApiKey: String
+        get() = prefs.getString("GEMINI_API_KEY", "") ?: ""
+        set(value) = prefs.edit { putString("GEMINI_API_KEY", value) }
 
     var heightCm: Float
         get() = prefs.getFloat("HEIGHT_CM", 170f)
@@ -296,9 +296,9 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
         batterySetupDone.value = true
     }
 
-    var openAiApiKey: String
-        get() = repository.openAiApiKey
-        set(value) { repository.openAiApiKey = value }
+    var geminiApiKey: String
+        get() = repository.geminiApiKey
+        set(value) { repository.geminiApiKey = value }
 
     fun spendPointForChat(): Boolean {
         if (currentActionPoints.value > 0) {
@@ -2420,7 +2420,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
     var tempHeight by remember { mutableStateOf(viewModel.heightCm.floatValue.toString()) }
     var tempWeight by remember { mutableStateOf(viewModel.weightKg.floatValue.toString()) }
     var tempGender by remember { mutableStateOf(viewModel.userGender.value) }
-    var tempApiKey by remember { mutableStateOf(viewModel.openAiApiKey) }
+    var tempApiKey by remember { mutableStateOf(viewModel.geminiApiKey) }
     val pinkAccent = Color(0xFFFF6B9D)
 
     Scaffold(
@@ -2452,7 +2452,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
             OutlinedTextField(
                 value = tempApiKey,
                 onValueChange = { tempApiKey = it },
-                label = { Text("OpenAI APIキー") },
+                label = { Text("Gemini APIキー") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -2463,7 +2463,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                 viewModel.setPlayerName(tempName)
                 viewModel.setUserProfile(h, w)
                 viewModel.saveProfile(h, tempGender)
-                viewModel.openAiApiKey = tempApiKey
+                viewModel.geminiApiKey = tempApiKey
                 navController.popBackStack()
             }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = pinkAccent)) { Text("保存して戻る") }
         }
@@ -2540,39 +2540,53 @@ fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName:
     return "$base 今は${playerName}と一緒に${location}に来ています。その場の雰囲気で会話してください。"
 }
 
-suspend fun callOpenAiApi(
+suspend fun callGeminiApi(
     apiKey: String,
     systemPrompt: String,
     history: List<ChatMessage>,
     userMessage: String
 ): String = withContext(Dispatchers.IO) {
-    val url = URL("https://api.openai.com/v1/chat/completions")
+    val url = URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey")
     val conn = url.openConnection() as HttpURLConnection
     conn.requestMethod = "POST"
     conn.setRequestProperty("Content-Type", "application/json")
-    conn.setRequestProperty("Authorization", "Bearer $apiKey")
     conn.doOutput = true
 
-    val messages = JSONArray()
-    messages.put(JSONObject().apply { put("role", "system"); put("content", systemPrompt) })
+    val contents = JSONArray()
     history.forEach { msg ->
-        messages.put(JSONObject().apply { put("role", msg.role); put("content", msg.content) })
+        val role = if (msg.role == "assistant") "model" else "user"
+        contents.put(JSONObject().apply {
+            put("role", role)
+            put("parts", JSONArray().put(JSONObject().apply { put("text", msg.content) }))
+        })
     }
-    messages.put(JSONObject().apply { put("role", "user"); put("content", userMessage) })
+    contents.put(JSONObject().apply {
+        put("role", "user")
+        put("parts", JSONArray().put(JSONObject().apply { put("text", userMessage) }))
+    })
 
     val body = JSONObject().apply {
-        put("model", "gpt-4o-mini")
-        put("max_tokens", 512)
-        put("messages", messages)
+        put("systemInstruction", JSONObject().apply {
+            put("parts", JSONArray().put(JSONObject().apply { put("text", systemPrompt) }))
+        })
+        put("contents", contents)
+        put("generationConfig", JSONObject().apply { put("maxOutputTokens", 512) })
     }.toString()
 
     conn.outputStream.write(body.toByteArray(Charsets.UTF_8))
-    val response = conn.inputStream.bufferedReader(Charsets.UTF_8).readText()
+    val responseCode = conn.responseCode
+    val response = if (responseCode == 200) {
+        conn.inputStream.bufferedReader(Charsets.UTF_8).readText()
+    } else {
+        conn.errorStream?.bufferedReader(Charsets.UTF_8)?.readText() ?: "Unknown error"
+    }
     JSONObject(response)
-        .getJSONArray("choices")
+        .getJSONArray("candidates")
         .getJSONObject(0)
-        .getJSONObject("message")
-        .getString("content")
+        .getJSONObject("content")
+        .getJSONArray("parts")
+        .getJSONObject(0)
+        .getString("text")
 }
 
 // ---- おしゃべり選択画面 ----
@@ -2708,9 +2722,9 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                     onClick = {
                         val text = inputText.trim()
                         if (text.isEmpty() || isLoading) return@IconButton
-                        val apiKey = viewModel.openAiApiKey
+                        val apiKey = viewModel.geminiApiKey
                         if (apiKey.isEmpty()) {
-                            errorMessage = "設定からOpenAI APIキーを入力してください"
+                            errorMessage = "設定からGemini APIキーを入力してください"
                             return@IconButton
                         }
                         if (!viewModel.spendPointForChat()) {
@@ -2726,7 +2740,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                         scope.launch {
                             try {
                                 val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName)
-                                val reply = callOpenAiApi(apiKey, systemPrompt, historySnapshot, text)
+                                val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
                                 messages.add(ChatMessage("assistant", reply))
                             } catch (e: Exception) {
                                 errorMessage = "エラーが発生しました: ${e.message}"
@@ -2865,9 +2879,9 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                     onClick = {
                         val text = inputText.trim()
                         if (text.isEmpty() || isLoading) return@IconButton
-                        val apiKey = viewModel.openAiApiKey
+                        val apiKey = viewModel.geminiApiKey
                         if (apiKey.isEmpty()) {
-                            errorMessage = "設定からOpenAI APIキーを入力してください"
+                            errorMessage = "設定からGemini APIキーを入力してください"
                             return@IconButton
                         }
                         if (!viewModel.spendPointForChat()) {
@@ -2887,7 +2901,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                         scope.launch {
                             try {
                                 val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName)
-                                val reply = callOpenAiApi(apiKey, systemPrompt, historySnapshot, text)
+                                val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
                                 messages.add(ChatMessage("assistant", reply))
                             } catch (e: Exception) {
                                 errorMessage = "エラーが発生しました: ${e.message}"
