@@ -2574,7 +2574,7 @@ fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String): String {
         loveCount <= 5 -> "友達のような自然な話し方をしてください。敬語は少し崩れ、「〜だよ」「〜だね」なども使います。"
         else -> "とても仲が良くなった甘えた話し方をしてください。「〜だよ」「〜じゃん」「○○さんってば」などを使い、積極的に絡んできます。"
     }
-    return "$personality\n【関係性】${intimacy}\n返答は4〜6文程度を目安にしてください。"
+    return "$personality\n【関係性】${intimacy}\n返答は6〜10文程度を目安にしてください。ひかりらしい観察眼や食べ物ネタ、面白い例え話なども交えながら、会話が弾むように返してください。"
 }
 
 fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String): String {
@@ -2622,6 +2622,8 @@ fun detectHikariExpression(text: String): Int = when {
         -> R.drawable.osyaberi_yasasiiegao
     listOf("どう？", "でしょ", "だから言った", "すごいでしょ", "ほらね").any { text.contains(it) }
         -> R.drawable.osyaberi_doyagao
+    listOf("え？", "どういう意味", "わからない", "困惑", "意味が", "何それ").any { text.contains(it) }
+        -> R.drawable.osyaberi_konwaku
     listOf("任せて", "おまかせ", "大丈夫だよ", "ふふっ").any { text.contains(it) }
         -> R.drawable.osyaberi_uinnku
     listOf("笑", "ウケる", "おもしろ", "くすっ", "あはは").any { text.contains(it) }
@@ -2663,7 +2665,7 @@ suspend fun callGeminiApi(
             put("parts", JSONArray().put(JSONObject().apply { put("text", systemPrompt) }))
         })
         put("contents", contents)
-        put("generationConfig", JSONObject().apply { put("maxOutputTokens", 1024) })
+        put("generationConfig", JSONObject().apply { put("maxOutputTokens", 2048) })
     }.toString()
 
     conn.outputStream.write(body.toByteArray(Charsets.UTF_8))
