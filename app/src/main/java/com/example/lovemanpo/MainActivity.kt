@@ -2639,7 +2639,7 @@ suspend fun callGeminiApi(
     history: List<ChatMessage>,
     userMessage: String
 ): String = withContext(Dispatchers.IO) {
-    val url = URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$apiKey")
+    val url = URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey")
     val conn = url.openConnection() as HttpURLConnection
     conn.requestMethod = "POST"
     conn.setRequestProperty("Content-Type", "application/json")
