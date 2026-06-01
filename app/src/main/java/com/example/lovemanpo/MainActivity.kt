@@ -2574,7 +2574,7 @@ fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String): String {
         loveCount <= 5 -> "友達のような自然な話し方をしてください。敬語は少し崩れ、「〜だよ」「〜だね」なども使います。"
         else -> "とても仲が良くなった甘えた話し方をしてください。「〜だよ」「〜じゃん」「○○さんってば」などを使い、積極的に絡んできます。"
     }
-    return "$personality\n【関係性】${intimacy}\n返答は2〜3文以内に収めてください。"
+    return "$personality\n【関係性】${intimacy}\n返答は4〜6文程度を目安にしてください。"
 }
 
 fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String): String {
@@ -2663,7 +2663,7 @@ suspend fun callGeminiApi(
             put("parts", JSONArray().put(JSONObject().apply { put("text", systemPrompt) }))
         })
         put("contents", contents)
-        put("generationConfig", JSONObject().apply { put("maxOutputTokens", 512) })
+        put("generationConfig", JSONObject().apply { put("maxOutputTokens", 1024) })
     }.toString()
 
     conn.outputStream.write(body.toByteArray(Charsets.UTF_8))
