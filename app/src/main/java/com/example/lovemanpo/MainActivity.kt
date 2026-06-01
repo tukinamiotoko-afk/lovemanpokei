@@ -2662,8 +2662,12 @@ suspend fun callGeminiApi(
     } else {
         conn.errorStream?.bufferedReader(Charsets.UTF_8)?.readText() ?: "Unknown error"
     }
-    JSONObject(response)
-        .getJSONArray("candidates")
+    val json = JSONObject(response)
+    if (json.has("error")) {
+        val msg = json.getJSONObject("error").optString("message", "APIエラーが発生しました")
+        throw Exception(msg)
+    }
+    json.getJSONArray("candidates")
         .getJSONObject(0)
         .getJSONObject("content")
         .getJSONArray("parts")
