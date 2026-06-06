@@ -183,6 +183,12 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getString("FREE_CHAT_HISTORY", "[]") ?: "[]"
         set(value) = prefs.edit { putString("FREE_CHAT_HISTORY", value) }
 
+    fun getOdekakeHistoryJson(locationId: String): String =
+        prefs.getString("ODEKAKE_HISTORY_$locationId", "[]") ?: "[]"
+
+    fun setOdekakeHistoryJson(locationId: String, value: String) =
+        prefs.edit { putString("ODEKAKE_HISTORY_$locationId", value) }
+
     var heightCm: Float
         get() = prefs.getFloat("HEIGHT_CM", 170f)
         set(value) = prefs.edit { putFloat("HEIGHT_CM", value) }
@@ -318,8 +324,27 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
 
     fun getOdekakeMessages(locationId: String): androidx.compose.runtime.snapshots.SnapshotStateList<ChatMessage> {
         return odekakeChatMessagesMap.getOrPut(locationId) {
-            androidx.compose.runtime.mutableStateListOf()
+            androidx.compose.runtime.mutableStateListOf<ChatMessage>().also { list ->
+                try {
+                    val json = org.json.JSONArray(repository.getOdekakeHistoryJson(locationId))
+                    repeat(json.length()) { i ->
+                        val obj = json.getJSONObject(i)
+                        list.add(ChatMessage(obj.getString("role"), obj.getString("content"), null))
+                    }
+                } catch (_: Exception) {}
+            }
         }
+    }
+
+    fun saveOdekakeHistory(locationId: String) {
+        val json = org.json.JSONArray()
+        odekakeChatMessagesMap[locationId]?.forEach { msg ->
+            json.put(org.json.JSONObject().apply {
+                put("role", msg.role)
+                put("content", msg.content)
+            })
+        }
+        repository.setOdekakeHistoryJson(locationId, json.toString())
     }
 
     fun saveFreeChatHistory() {
@@ -3185,6 +3210,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                         errorMessage = null
                         val userMsg = ChatMessage("user", text)
                         messages.add(userMsg)
+                        viewModel.saveOdekakeHistory(locationId)
                         inputText = ""
                         isLoading = true
                         odekakeMessageCount++
@@ -3195,6 +3221,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                                 val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
                                 val expr = detectHikariExpression(reply, loveCount)
                                 messages.add(ChatMessage("assistant", reply, expr))
+                                viewModel.saveOdekakeHistory(locationId)
                             } catch (e: Exception) {
                                 errorMessage = "エラーが発生しました: ${e.message}"
                             } finally {
