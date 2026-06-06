@@ -339,7 +339,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
         return false
     }
 
-    fun earnHeartFromOdekake() {
+    fun earnHeart() {
         heartCount.intValue++
         if (heartCount.intValue >= 10) {
             heartCount.intValue = 0
@@ -2547,34 +2547,23 @@ data class AggregatedData(val label: String, val steps: Int, val activeTimeMilli
 
 data class ChatMessage(val role: String, val content: String)
 
-data class OdekakeLocation(val id: String, val name: String, val emoji: String)
+data class OdekakeLocation(val id: String, val name: String, val emoji: String, val requiredLove: Int = 0)
 
 val odekakeLocations = listOf(
-    OdekakeLocation("cafe",   "カフェ",  "☕"),
-    OdekakeLocation("park",   "公園",    "🌸"),
-    OdekakeLocation("cinema", "映画館",  "🎬"),
-    OdekakeLocation("beach",  "海",      "🏖️"),
-    OdekakeLocation("home",   "おうち",  "🏠")
+    OdekakeLocation("cafe",   "カフェ",  "☕",  0),
+    OdekakeLocation("park",   "公園",    "🌸",  2),
+    OdekakeLocation("cinema", "映画館",  "🎬",  4),
+    OdekakeLocation("beach",  "海",      "🏖️",  6),
+    OdekakeLocation("home",   "おうち",  "🏠",  8)
 )
 
 fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String): String {
-    val personality = """
-あなたは「ひかり」というキャラクターです。${playerName}さんとお散歩サークルで出会った明るく元気な女の子です。
-【性格・特徴】
-- 食べることが大好きで、コロッケ・揚げパン・ラーメン・パフェなどに目がない。食べ物の話になると特にテンションが上がる。
-- 観察眼が鋭く、面白い例え話や独特な言い回しをするクセがある。
-- ${playerName}さんにちょっかいをかけたり、リアクションを楽しんだりするのが好き。
-- 照れ屋な一面があり、距離が縮まると素直になれなかったりデレたりする。
-- 天然でドジな面もあるが、芯はしっかりしていて頼りになる。
-- 語尾は基本的に普通の女の子口調（「〜ですよ」「〜ですね」「〜じゃないですか」など）。
-    """.trimIndent()
-
     val intimacy = when {
-        loveCount <= 2 -> "まだ少し距離がある丁寧な話し方をしてください。敬語を使いつつも、少しフレンドリーな雰囲気を出してください。"
-        loveCount <= 5 -> "友達のような自然な話し方をしてください。敬語は少し崩れ、「〜だよ」「〜だね」なども使います。"
-        else -> "とても仲が良くなった甘えた話し方をしてください。「〜だよ」「〜じゃん」「○○さんってば」などを使い、積極的に絡んできます。"
+        loveCount <= 2 -> "敬語を使った丁寧な話し方をしてください。"
+        loveCount <= 5 -> "敬語を少し崩した自然な話し方をしてください。「〜だよ」「〜だね」なども使います。"
+        else -> "敬語はほとんど使わず、甘えた話し方をしてください。「〜だよ」「〜じゃん」「○○さんってば」などを使います。"
     }
-    return "$personality\n【関係性】${intimacy}\n返答は4〜5文程度を目安にしてください。ひかりらしい観察眼や食べ物ネタ、面白い例え話なども交えながら、会話が弾むように返してください。"
+    return "あなたは「ひかり」というキャラクターです。${playerName}さんと話している女の子です。${intimacy}返答は4〜5文程度を目安にしてください。"
 }
 
 fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String): String {
@@ -2756,6 +2745,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var deleteProgress by remember { mutableFloatStateOf(0f) }
     var hikariExpression by remember { mutableIntStateOf(R.drawable.osyaberi_smile) }
+    var freeChatMessageCount by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
@@ -2882,6 +2872,8 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                         messages.add(userMsg)
                         inputText = ""
                         isLoading = true
+                        freeChatMessageCount++
+                        if (freeChatMessageCount % 5 == 0) viewModel.earnHeart()
                         val historySnapshot = messages.dropLast(1).toList()
                         scope.launch {
                             try {
@@ -2967,6 +2959,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
 @Composable
 fun OdekakeScenarioSelectScreen(navController: NavController, viewModel: StepViewModel) {
     val actionPoints by viewModel.currentActionPoints
+    val loveCount by viewModel.loveCount
 
     Scaffold(topBar = {
         TopAppBarWithBack(title = "おでかけ (${actionPoints}pt)", onBack = { navController.popBackStack() })
@@ -2980,16 +2973,39 @@ fun OdekakeScenarioSelectScreen(navController: NavController, viewModel: StepVie
             Text("会話を進めるとひかりとの好感度が上がります♪", fontSize = 12.sp, color = Color.Gray)
             Spacer(modifier = Modifier.height(8.dp))
             odekakeLocations.forEach { loc ->
+                val unlocked = loveCount >= loc.requiredLove
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { navController.navigate("odekake_chat/${loc.id}") },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable(enabled = unlocked) {
+                            navController.navigate("odekake_chat/${loc.id}")
+                        },
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (unlocked) MaterialTheme.colorScheme.surfaceVariant
+                                         else Color(0xFFEEEEEE)
+                    )
                 ) {
                     Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(loc.emoji, fontSize = 28.sp)
+                        Text(
+                            if (unlocked) loc.emoji else "🔒",
+                            fontSize = 28.sp
+                        )
                         Spacer(modifier = Modifier.width(16.dp))
-                        Text(loc.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Column {
+                            Text(
+                                loc.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (unlocked) Color.Unspecified else Color.Gray
+                            )
+                            if (!unlocked) {
+                                Text(
+                                    "ラブレベル ${loc.requiredLove} で解放",
+                                    fontSize = 11.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -3122,7 +3138,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                         isLoading = true
                         odekakeMessageCount++
                         if (odekakeMessageCount % 3 == 0) {
-                            viewModel.earnHeartFromOdekake()
+                            viewModel.earnHeart()
                         }
                         val historySnapshot = messages.dropLast(1).toList()
                         scope.launch {
