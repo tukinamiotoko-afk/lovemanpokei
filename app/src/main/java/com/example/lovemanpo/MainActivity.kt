@@ -2572,56 +2572,59 @@ fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName:
     return "$base\n今は${playerName}さんと一緒に${location}に来ています。その場所らしい話題や雰囲気で会話してください。食べ物や観察ネタがあれば積極的に絡めてください。"
 }
 
-fun detectHikariExpression(text: String): Int = when {
-    listOf("キス", "ちゅ").any { text.contains(it) }
-        -> R.drawable.osyaberi_kiss
-    listOf("ハグ", "抱きし", "ぎゅっ").any { text.contains(it) }
-        -> R.drawable.osyaberi_hagu
-    listOf("添い寝", "眠い", "ねむ", "おやすみ", "寝よ", "寝てる").any { text.contains(it) }
-        -> R.drawable.osyaberi_soine
-    listOf("見つめ", "じっと").any { text.contains(it) }
-        -> R.drawable.osyaberi_mitumeau
-    listOf("好き", "愛し", "恋", "♡", "❤", "💕").any { text.contains(it) }
-        -> R.drawable.osyaberi_koigokoro
-    listOf("照れ", "恥ずかし", "ドキ", "はずかし").any { text.contains(it) }
-        -> R.drawable.osyaberi_tereru
-    listOf("ごめん", "すまな", "申し訳", "悪かっ").any { text.contains(it) }
-        -> R.drawable.osyaberi_nakigao_mousiwakenai
-    listOf("泣", "悲し", "つらい", "涙", "なみだ").any { text.contains(it) }
-        -> R.drawable.osyaberi_namida
-    listOf("落ち込", "しょんぼり", "へこん").any { text.contains(it) }
-        -> R.drawable.osyaberi_otikomu
-    listOf("怒", "ムカ", "ふざけ", "許さな").any { text.contains(it) }
-        -> R.drawable.osyaberi_okoru
-    listOf("不機嫌", "むすっ", "機嫌が").any { text.contains(it) }
-        -> R.drawable.osyaberi_hukigenn
-    listOf("もう", "ちゃんと", "だめ", "しっかり").any { text.contains(it) }
-        -> R.drawable.osyaberi_sukoshiokoru
-    listOf("嫉妬", "やきもち", "誰と", "誰と話").any { text.contains(it) }
-        -> R.drawable.osyaberi_sitto
-    listOf("冷たい", "別に", "関係な", "どうでも").any { text.contains(it) }
-        -> R.drawable.osyaberi_tumetaime
-    listOf("不安", "心配", "どうしよ", "こわい").any { text.contains(it) }
-        -> R.drawable.osyaberi_huan
-    listOf("びっくり", "驚", "え！", "まじ", "うそ", "嘘").any { text.contains(it) }
-        -> R.drawable.osyaberi_odoroki
-    listOf("えーと", "うーん", "考え", "どうかな", "むずかし").any { text.contains(it) }
-        -> R.drawable.osyaberi_kangaeru
-    listOf("ありがとう", "よかった", "うれしい", "嬉し").any { text.contains(it) }
-        -> R.drawable.osyaberi_yasasiiegao
-    listOf("どう？", "でしょ", "だから言った", "すごいでしょ", "ほらね").any { text.contains(it) }
-        -> R.drawable.osyaberi_doyagao
-    listOf("え？", "どういう意味", "わからない", "困惑", "意味が", "何それ").any { text.contains(it) }
-        -> R.drawable.osyaberi_konwaku
-    listOf("任せて", "おまかせ", "大丈夫だよ", "ふふっ").any { text.contains(it) }
-        -> R.drawable.osyaberi_uinnku
-    listOf("笑", "ウケる", "おもしろ", "くすっ", "あはは").any { text.contains(it) }
-        -> R.drawable.osyaberi_omowazuwarau
-    listOf("行こう", "来て", "一緒に", "こっち").any { text.contains(it) }
-        -> R.drawable.osyaberi_yuuwaku
-    listOf("退屈", "つまらない", "暇", "たいくつ").any { text.contains(it) }
-        -> R.drawable.osyaberi_taikutu
-    else -> R.drawable.osyaberi_smile
+fun detectHikariExpression(text: String, loveCount: Int): Int {
+    fun ifLove(required: Int, res: Int) = if (loveCount >= required) res else R.drawable.osyaberi_smile
+    return when {
+        listOf("キス", "ちゅ").any { text.contains(it) }
+            -> ifLove(8, R.drawable.osyaberi_kiss)
+        listOf("添い寝", "おやすみ", "寝よ", "寝てる").any { text.contains(it) }
+            -> ifLove(8, R.drawable.osyaberi_soine)
+        listOf("ハグ", "抱きし", "ぎゅっ").any { text.contains(it) }
+            -> ifLove(6, R.drawable.osyaberi_hagu)
+        listOf("好き", "愛し", "恋", "♡", "❤", "💕").any { text.contains(it) }
+            -> ifLove(4, R.drawable.osyaberi_koigokoro)
+        listOf("見つめ", "じっと").any { text.contains(it) }
+            -> ifLove(4, R.drawable.osyaberi_mitumeau)
+        listOf("嫉妬", "やきもち", "誰と", "誰と話").any { text.contains(it) }
+            -> ifLove(4, R.drawable.osyaberi_sitto)
+        listOf("行こう", "来て", "一緒に", "こっち").any { text.contains(it) }
+            -> ifLove(4, R.drawable.osyaberi_yuuwaku)
+        listOf("照れ", "恥ずかし", "ドキ", "はずかし").any { text.contains(it) }
+            -> ifLove(2, R.drawable.osyaberi_tereru)
+        listOf("任せて", "おまかせ", "大丈夫だよ", "ふふっ").any { text.contains(it) }
+            -> ifLove(2, R.drawable.osyaberi_uinnku)
+        listOf("どう？", "でしょ", "だから言った", "すごいでしょ", "ほらね").any { text.contains(it) }
+            -> ifLove(2, R.drawable.osyaberi_doyagao)
+        listOf("ごめん", "すまな", "申し訳", "悪かっ").any { text.contains(it) }
+            -> R.drawable.osyaberi_nakigao_mousiwakenai
+        listOf("泣", "悲し", "つらい", "涙", "なみだ").any { text.contains(it) }
+            -> R.drawable.osyaberi_namida
+        listOf("落ち込", "しょんぼり", "へこん").any { text.contains(it) }
+            -> R.drawable.osyaberi_otikomu
+        listOf("怒", "ムカ", "ふざけ", "許さな").any { text.contains(it) }
+            -> R.drawable.osyaberi_okoru
+        listOf("不機嫌", "むすっ", "機嫌が").any { text.contains(it) }
+            -> R.drawable.osyaberi_hukigenn
+        listOf("もう", "ちゃんと", "だめ", "しっかり").any { text.contains(it) }
+            -> R.drawable.osyaberi_sukoshiokoru
+        listOf("冷たい", "別に", "関係な", "どうでも").any { text.contains(it) }
+            -> R.drawable.osyaberi_tumetaime
+        listOf("不安", "心配", "どうしよ", "こわい").any { text.contains(it) }
+            -> R.drawable.osyaberi_huan
+        listOf("びっくり", "驚", "え！", "まじ", "うそ", "嘘").any { text.contains(it) }
+            -> R.drawable.osyaberi_odoroki
+        listOf("えーと", "うーん", "考え", "どうかな", "むずかし").any { text.contains(it) }
+            -> R.drawable.osyaberi_kangaeru
+        listOf("ありがとう", "よかった", "うれしい", "嬉し").any { text.contains(it) }
+            -> R.drawable.osyaberi_yasasiiegao
+        listOf("え？", "どういう意味", "わからない", "困惑", "意味が", "何それ").any { text.contains(it) }
+            -> R.drawable.osyaberi_konwaku
+        listOf("笑", "ウケる", "おもしろ", "くすっ", "あはは").any { text.contains(it) }
+            -> R.drawable.osyaberi_omowazuwarau
+        listOf("退屈", "つまらない", "暇", "たいくつ").any { text.contains(it) }
+            -> R.drawable.osyaberi_taikutu
+        else -> R.drawable.osyaberi_smile
+    }
 }
 
 suspend fun callGeminiApi(
@@ -2880,7 +2883,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName)
                                 val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
                                 messages.add(ChatMessage("assistant", reply))
-                                hikariExpression = detectHikariExpression(reply)
+                                hikariExpression = detectHikariExpression(reply, loveCount)
                                 viewModel.saveFreeChatHistory()
                             } catch (e: Exception) {
                                 errorMessage = "エラーが発生しました: ${e.message}"
@@ -3146,7 +3149,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                                 val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName)
                                 val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
                                 messages.add(ChatMessage("assistant", reply))
-                                hikariExpression = detectHikariExpression(reply)
+                                hikariExpression = detectHikariExpression(reply, loveCount)
                             } catch (e: Exception) {
                                 errorMessage = "エラーが発生しました: ${e.message}"
                             } finally {
