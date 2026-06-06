@@ -349,6 +349,17 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
         repository.loveCount = loveCount.intValue
     }
 
+    fun loseHeart() {
+        if (heartCount.intValue > 0) {
+            heartCount.intValue--
+        } else if (loveCount.intValue > 0) {
+            loveCount.intValue--
+            heartCount.intValue = 9
+        }
+        repository.heartCount = heartCount.intValue
+        repository.loveCount = loveCount.intValue
+    }
+
     fun loadAllRecords() {
         viewModelScope.launch {
             allStepRecords.value = repository.getAllStepRecords().sortedBy { it.date }
@@ -2575,6 +2586,26 @@ fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName:
     return "$base\n今は${playerName}さんと一緒に${location}に来ています。その場所らしい話題や雰囲気で会話してください。食べ物や観察ネタがあれば積極的に絡めてください。"
 }
 
+val positiveExpressions = setOf(
+    R.drawable.osyaberi_tereru,
+    R.drawable.osyaberi_koigokoro,
+    R.drawable.osyaberi_yasasiiegao,
+    R.drawable.osyaberi_hagu,
+    R.drawable.osyaberi_kiss,
+    R.drawable.osyaberi_soine,
+    R.drawable.osyaberi_omowazuwarau,
+    R.drawable.osyaberi_uinnku,
+    R.drawable.osyaberi_yuuwaku,
+    R.drawable.osyaberi_mitumeau
+)
+
+val negativeExpressions = setOf(
+    R.drawable.osyaberi_okoru,
+    R.drawable.osyaberi_hukigenn,
+    R.drawable.osyaberi_tumetaime,
+    R.drawable.osyaberi_sitto
+)
+
 fun buildNarrationAnnotatedString(text: String): androidx.compose.ui.text.AnnotatedString {
     val builder = androidx.compose.ui.text.AnnotatedString.Builder()
     val regex = Regex("""（[^）]*）""")
@@ -2787,7 +2818,6 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var deleteProgress by remember { mutableFloatStateOf(0f) }
     var hikariExpression by remember { mutableIntStateOf(R.drawable.osyaberi_smile) }
-    var freeChatMessageCount by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
@@ -2922,15 +2952,18 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                         messages.add(userMsg)
                         inputText = ""
                         isLoading = true
-                        freeChatMessageCount++
-                        if (freeChatMessageCount % 5 == 0) viewModel.earnHeart()
                         val historySnapshot = messages.dropLast(1).toList()
                         scope.launch {
                             try {
                                 val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName)
                                 val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
                                 messages.add(ChatMessage("assistant", reply))
-                                hikariExpression = detectHikariExpression(reply, loveCount)
+                                val expr = detectHikariExpression(reply, loveCount)
+                                hikariExpression = expr
+                                when {
+                                    expr in positiveExpressions -> viewModel.earnHeart()
+                                    expr in negativeExpressions -> viewModel.loseHeart()
+                                }
                                 viewModel.saveFreeChatHistory()
                             } catch (e: Exception) {
                                 errorMessage = "エラーが発生しました: ${e.message}"
@@ -3195,9 +3228,6 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                         inputText = ""
                         isLoading = true
                         odekakeMessageCount++
-                        if (odekakeMessageCount % 3 == 0) {
-                            viewModel.earnHeart()
-                        }
                         val historySnapshot = messages.dropLast(1).toList()
                         scope.launch {
                             try {
