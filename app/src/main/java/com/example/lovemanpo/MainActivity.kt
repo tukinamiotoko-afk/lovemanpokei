@@ -2578,6 +2578,27 @@ val negativeExpressions = setOf(
     R.drawable.osyaberi_sitto
 )
 
+data class MessageSegment(val text: String, val isNarration: Boolean)
+
+fun parseMessageSegments(text: String): List<MessageSegment> {
+    val segments = mutableListOf<MessageSegment>()
+    val regex = Regex("""（[^）]*）""")
+    var last = 0
+    for (match in regex.findAll(text)) {
+        if (match.range.first > last) {
+            val dialogue = text.substring(last, match.range.first).trim()
+            if (dialogue.isNotEmpty()) segments.add(MessageSegment(dialogue, false))
+        }
+        segments.add(MessageSegment(match.value, true))
+        last = match.range.last + 1
+    }
+    if (last < text.length) {
+        val dialogue = text.substring(last).trim()
+        if (dialogue.isNotEmpty()) segments.add(MessageSegment(dialogue, false))
+    }
+    return segments
+}
+
 fun buildNarrationAnnotatedString(text: String): androidx.compose.ui.text.AnnotatedString {
     val builder = androidx.compose.ui.text.AnnotatedString.Builder()
     val regex = Regex("""（[^）]*）""")
@@ -2860,19 +2881,42 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             }
                         }
                     } else {
-                        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.Start
+                        ) {
                             Image(
                                 painter = painterResource(msg.expressionRes ?: R.drawable.osyaberi_smile),
                                 contentDescription = "ひかり",
                                 modifier = Modifier.height(220.dp),
                                 contentScale = ContentScale.Fit
                             )
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFFF0F0F0),
-                                modifier = Modifier.widthIn(max = 280.dp)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Column(
+                                modifier = Modifier.padding(horizontal = 4.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text(buildNarrationAnnotatedString(msg.content), modifier = Modifier.padding(10.dp), fontSize = 14.sp)
+                                parseMessageSegments(msg.content).forEach { segment ->
+                                    if (segment.isNarration) {
+                                        Text(
+                                            text = segment.text,
+                                            color = Color(0xFF9E8B75),
+                                            fontSize = 12.sp,
+                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                            lineHeight = 19.sp
+                                        )
+                                    } else {
+                                        Text(
+                                            text = segment.text,
+                                            color = Color(0xFF2C2C2C),
+                                            fontSize = 15.sp,
+                                            lineHeight = 26.sp,
+                                            modifier = Modifier
+                                                .background(Color(0xFFF5F0EB), RoundedCornerShape(8.dp))
+                                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -3147,19 +3191,42 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                             }
                         }
                     } else {
-                        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.Start
+                        ) {
                             Image(
                                 painter = painterResource(msg.expressionRes ?: R.drawable.osyaberi_smile),
                                 contentDescription = "ひかり",
                                 modifier = Modifier.height(220.dp),
                                 contentScale = ContentScale.Fit
                             )
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFFF0F0F0),
-                                modifier = Modifier.widthIn(max = 280.dp)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Column(
+                                modifier = Modifier.padding(horizontal = 4.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text(buildNarrationAnnotatedString(msg.content), modifier = Modifier.padding(10.dp), fontSize = 14.sp)
+                                parseMessageSegments(msg.content).forEach { segment ->
+                                    if (segment.isNarration) {
+                                        Text(
+                                            text = segment.text,
+                                            color = Color(0xFF9E8B75),
+                                            fontSize = 12.sp,
+                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                            lineHeight = 19.sp
+                                        )
+                                    } else {
+                                        Text(
+                                            text = segment.text,
+                                            color = Color(0xFF2C2C2C),
+                                            fontSize = 15.sp,
+                                            lineHeight = 26.sp,
+                                            modifier = Modifier
+                                                .background(Color(0xFFF5F0EB), RoundedCornerShape(8.dp))
+                                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
