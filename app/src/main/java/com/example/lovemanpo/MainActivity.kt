@@ -2563,13 +2563,52 @@ fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String): String {
         loveCount <= 5 -> "敬語を少し崩した自然な話し方をしてください。「〜だよ」「〜だね」なども使います。"
         else -> "敬語はほとんど使わず、甘えた話し方をしてください。「〜だよ」「〜じゃん」「○○さんってば」などを使います。"
     }
-    return "あなたは「ひかり」というキャラクターです。${playerName}さんと話している女の子です。${intimacy}返答は4〜5文程度を目安にしてください。"
+    return """あなたは「ひかり」というキャラクターです。${playerName}さんと話している女の子です。${intimacy}
+返答は地の文とセリフを混ぜた形式で書いてください。地の文は（）で囲み、状況・表情・動作の変化を短く描写してください。セリフは鉤括弧なしでそのまま書いてください。
+例：（少し顔が赤くなりながら）え、そんなこと急に言われても…！（目をそらして）も、もう、からかわないでください。
+全体で4〜5文程度を目安にしてください。""".trimIndent()
 }
 
 fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String): String {
     val location = odekakeLocations.find { it.id == locationId }?.name ?: "カフェ"
     val base = buildFreeChatSystemPrompt(loveCount, playerName)
     return "$base\n今は${playerName}さんと一緒に${location}に来ています。その場所らしい話題や雰囲気で会話してください。食べ物や観察ネタがあれば積極的に絡めてください。"
+}
+
+fun buildNarrationAnnotatedString(text: String): androidx.compose.ui.text.AnnotatedString {
+    val builder = androidx.compose.ui.text.AnnotatedString.Builder()
+    val regex = Regex("""（[^）]*）""")
+    var last = 0
+    for (match in regex.findAll(text)) {
+        if (match.range.first > last) {
+            builder.append(
+                androidx.compose.ui.text.AnnotatedString(
+                    text.substring(last, match.range.first),
+                    androidx.compose.ui.text.SpanStyle(color = androidx.compose.ui.graphics.Color(0xFF333333))
+                )
+            )
+        }
+        builder.append(
+            androidx.compose.ui.text.AnnotatedString(
+                match.value,
+                androidx.compose.ui.text.SpanStyle(
+                    color = androidx.compose.ui.graphics.Color(0xFF999999),
+                    fontSize = 12.sp,
+                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                )
+            )
+        )
+        last = match.range.last + 1
+    }
+    if (last < text.length) {
+        builder.append(
+            androidx.compose.ui.text.AnnotatedString(
+                text.substring(last),
+                androidx.compose.ui.text.SpanStyle(color = androidx.compose.ui.graphics.Color(0xFF333333))
+            )
+        )
+    }
+    return builder.toAnnotatedString()
 }
 
 fun detectHikariExpression(text: String, loveCount: Int): Int {
@@ -2824,12 +2863,20 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             color = if (isUser) Color(0xFF4A90E2) else Color(0xFFF0F0F0),
                             modifier = Modifier.widthIn(max = 280.dp)
                         ) {
-                            Text(
-                                msg.content,
-                                modifier = Modifier.padding(10.dp),
-                                color = if (isUser) Color.White else Color.DarkGray,
-                                fontSize = 14.sp
-                            )
+                            if (isUser) {
+                                Text(
+                                    msg.content,
+                                    modifier = Modifier.padding(10.dp),
+                                    color = Color.White,
+                                    fontSize = 14.sp
+                                )
+                            } else {
+                                Text(
+                                    buildNarrationAnnotatedString(msg.content),
+                                    modifier = Modifier.padding(10.dp),
+                                    fontSize = 14.sp
+                                )
+                            }
                         }
                     }
                 }
@@ -3088,12 +3135,20 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                             color = if (isUser) Color(0xFF4A90E2) else Color(0xFFF0F0F0),
                             modifier = Modifier.widthIn(max = 280.dp)
                         ) {
-                            Text(
-                                msg.content,
-                                modifier = Modifier.padding(10.dp),
-                                color = if (isUser) Color.White else Color.DarkGray,
-                                fontSize = 14.sp
-                            )
+                            if (isUser) {
+                                Text(
+                                    msg.content,
+                                    modifier = Modifier.padding(10.dp),
+                                    color = Color.White,
+                                    fontSize = 14.sp
+                                )
+                            } else {
+                                Text(
+                                    buildNarrationAnnotatedString(msg.content),
+                                    modifier = Modifier.padding(10.dp),
+                                    fontSize = 14.sp
+                                )
+                            }
                         }
                     }
                 }
