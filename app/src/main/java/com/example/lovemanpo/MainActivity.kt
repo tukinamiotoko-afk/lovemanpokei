@@ -586,13 +586,6 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                     val locationId = backStackEntry.arguments?.getString("locationId") ?: "cafe"
                     OdekakeChatScreen(navController, viewModel, locationId)
                 }
-                composable(
-                    route = "story/{episodeIndex}",
-                    arguments = listOf(navArgument("episodeIndex") { type = NavType.IntType })
-                ) { backStackEntry ->
-                    val episodeIndex = backStackEntry.arguments?.getInt("episodeIndex") ?: 0
-                    StoryScreen(navController, viewModel, episodeIndex)
-                }
                 composable("records") { RecordsScreen(navController, viewModel) }
                 composable("settings") { SettingsScreen(navController, viewModel) }
                 composable("debug") { DebugScreen(navController, viewModel) }
@@ -966,13 +959,13 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     val minutes = (activeTimeMillis % 3600000) / 60000
     val activeTimeStr = "${hours}時間 ${minutes}分"
 
-    val currentLoveContent = loveContents.find { it.thresholdLove == loveCount } ?: loveContents.first()
-    val stepDialogue = currentLoveContent.stepDialogues
+    val stepDialogue = homeStepDialogues
         .filter { it.thresholdSteps <= todaySteps }
         .maxByOrNull { it.thresholdSteps }
-        ?: currentLoveContent.stepDialogues.first()
+        ?: homeStepDialogues.first()
 
-    var touchedDialogue by remember { mutableStateOf<TouchDialogue?>(null) }
+    val touchDialogues = homeTouchDialogues(loveCount)
+    var touchedDialogue by remember { mutableStateOf<Pair<String, Int>?>(null) }
     LaunchedEffect(touchedDialogue) {
         if (touchedDialogue != null) {
             delay(5000)
@@ -980,8 +973,8 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         }
     }
 
-    val displayMessage = touchedDialogue?.message ?: stepDialogue.message
-    val displayExpression = touchedDialogue?.expressionRes ?: stepDialogue.expressionRes ?: currentLoveContent.expressionRes
+    val displayMessage = touchedDialogue?.first ?: stepDialogue.text
+    val displayExpression = touchedDialogue?.second ?: stepDialogue.expr
 
     HomeScreenContent(
         todaySteps = todaySteps,
@@ -999,7 +992,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         distanceStr = distanceStr,
         caloriesStr = caloriesStr,
         onCharacterClick = {
-            touchedDialogue = currentLoveContent.touchDialogues.randomOrNull()
+            touchedDialogue = touchDialogues.randomOrNull()
         },
         onFreeChatClick = { navController.navigate("chatmenu") },
         onOdekakeClick = { navController.navigate("odekake") },
@@ -1648,137 +1641,6 @@ fun DebugScreen(navController: NavController, viewModel: StepViewModel) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(text = "データリセット", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
                     Button(onClick = { viewModel.debugResetData(); navController.navigate("name_input") { popUpTo(0) } }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("全データを初期化する") }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun StoryScreen(navController: NavController, viewModel: StepViewModel, episodeIndex: Int) {
-    val episode = mainStoryEpisodes[episodeIndex]
-    val playerName = viewModel.playerName.value
-    val processedScript = remember(episode.script, playerName) {
-        val newList = mutableListOf<StoryLine>()
-        episode.script.forEach { line ->
-            val fullText = line.text.replace("○○", playerName)
-            val regex = "(?<=[。！？…])(?![。！？…])".toRegex()
-            val chunksByPunctuation = fullText.split(regex).filter { it.isNotBlank() }
-            chunksByPunctuation.forEach { chunk ->
-                var remainingText = chunk.trim()
-                while (remainingText.length > 48) { newList.add(line.copy(text = remainingText.substring(0, 48))); remainingText = remainingText.substring(48) }
-                if (remainingText.isNotEmpty()) { newList.add(line.copy(text = remainingText)) }
-            }
-        }
-        newList
-    }
-    VisualNovelScreen(episodeKey = episodeIndex, script = processedScript, backgroundRes = episode.backgroundRes, playerName = playerName) {
-        navController.popBackStack()
-    }
-}
-
-@Composable
-fun VisualNovelScreen(episodeKey: Int, script: List<StoryLine>, backgroundRes: Int, playerName: String, onComplete: () -> Unit) {
-    var lineIndex by remember(episodeKey) { mutableIntStateOf(0) }
-    val currentLine = script[lineIndex]
-
-    // 背景リソースの決定：行ごとの指定があればそれを優先
-    val currentBackground = currentLine.backgroundRes ?: backgroundRes
-
-    // 背景が切り替わるときに操作をロックするためのステート
-    var isLocked by remember { mutableStateOf(false) }
-
-    LaunchedEffect(currentBackground) {
-        if (lineIndex > 0) { // 最初の行以外で背景が変わった場合
-            isLocked = true
-            delay(1500) // フェードイン時間(1000ms)より少し長めに設定して操作を不能にする
-            isLocked = false
-        }
-    }
-
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .background(MaterialTheme.colorScheme.background)
-        // ★ ここにステータスバーを避ける設定を追加しました
-        .statusBarsPadding()
-        // ★ 下のナビゲーションバーも避ける設定を追加しました
-        .navigationBarsPadding()
-        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-            if (!isLocked) {
-                if (lineIndex < script.size - 1) {
-                    lineIndex++
-                } else {
-                    onComplete()
-                }
-            }
-        }) {
-        // 画像が表示されるエリア（枠付き）
-        Surface(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(24.dp),
-            border = BorderStroke(3.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
-            shadowElevation = 8.dp
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                // 背景のフェード切り替え
-                AnimatedContent(
-                    targetState = currentBackground,
-                    transitionSpec = { fadeIn(animationSpec = tween(1000)) togetherWith fadeOut(animationSpec = tween(1000)) },
-                    label = "BackgroundTransition"
-                ) { targetBg ->
-                    Image(
-                        painter = painterResource(id = targetBg),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-
-                val context = LocalContext.current
-                val isCG = remember(currentBackground) {
-                    try {
-                        context.resources.getResourceEntryName(currentBackground).endsWith("cg_")
-                    } catch (e: Exception) {
-                        false
-                    }
-                }
-                if (!isCG && currentLine.expressionRes != null) {
-                    Image(
-                        painter = painterResource(id = currentLine.expressionRes),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxHeight(0.7f)
-                            .align(Alignment.BottomCenter),
-                        contentScale = ContentScale.Fit
-                    )
-                }
-            }
-        }
-
-        // テキストウィンドウ（下部）
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-                .padding(horizontal = 16.dp)
-                .padding(bottom = 16.dp),
-            shape = RoundedCornerShape(16.dp),
-            color = Color.Black.copy(alpha = 0.8f)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                val label = when (currentLine.speaker) { Speaker.HIKARI -> "ひかり"; Speaker.PROTAGONIST -> playerName; Speaker.NARRATION -> "" }
-                if (label.isNotEmpty()) {
-                    Text(text = label, color = Color.Cyan, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.padding(bottom = 4.dp))
-                }
-                Box(modifier = Modifier.weight(1f)) {
-                    Text(text = currentLine.text, color = Color.White, fontSize = 16.sp, lineHeight = 24.sp)
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "${lineIndex + 1} / ${script.size}", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
-                    Text(text = "▼ タップして次へ", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
                 }
             }
         }
@@ -2557,6 +2419,42 @@ data class AggregatedData(val label: String, val steps: Int, val activeTimeMilli
 // ---- AI チャット共通 ----
 
 data class ChatMessage(val role: String, val content: String)
+
+data class HomeStepMsg(val thresholdSteps: Int, val text: String, val expr: Int)
+
+val homeStepDialogues = listOf(
+    HomeStepMsg(0,     "今日も一緒にお散歩しましょう！",              R.drawable.hikari_smile),
+    HomeStepMsg(1000,  "1000歩ですね！順調ですよ！",                  R.drawable.hikari_smile),
+    HomeStepMsg(3000,  "3000歩！いい感じです！",                      R.drawable.hikari_celebrate),
+    HomeStepMsg(5000,  "5000歩達成！休憩しませんか？",                R.drawable.hikari_smile),
+    HomeStepMsg(8000,  "8000歩！今日はぐっすり眠れそうですね。",      R.drawable.hikari_blush),
+    HomeStepMsg(10000, "10000歩突破！すごいです！",                    R.drawable.hikari_celebrate),
+    HomeStepMsg(20000, "20000歩！？アスリートですか…！尊敬します！",   R.drawable.hikari_celebrate),
+    HomeStepMsg(30000, "30000歩…！今日はゆっくり休んでくださいね。",  R.drawable.hikari_smile),
+)
+
+fun homeTouchDialogues(loveCount: Int): List<Pair<String, Int>> = when {
+    loveCount >= 7 -> listOf(
+        Pair("ねえ、ずっと一緒にいてくれる？", R.drawable.hikari_blush),
+        Pair("もう、○○さんのことが好きなんだけど！", R.drawable.hikari_blush),
+        Pair("ふふ、幸せだな。", R.drawable.hikari_smile),
+    )
+    loveCount >= 4 -> listOf(
+        Pair("○○さんといると、時間があっという間ですね。", R.drawable.hikari_smile),
+        Pair("次はどこに行きましょうか？楽しみです！", R.drawable.hikari_celebrate),
+        Pair("私、○○さんのことをもっと知りたいです。", R.drawable.hikari_blush),
+    )
+    loveCount >= 2 -> listOf(
+        Pair("○○さん、なにか御用ですか？", R.drawable.hikari_smile),
+        Pair("えへへ、なんだか照れちゃいますね。", R.drawable.hikari_blush),
+        Pair("今日もいい天気ですね！", R.drawable.hikari_smile),
+    )
+    else -> listOf(
+        Pair("あ、どうかしましたか？", R.drawable.hikari_smile),
+        Pair("何かお探しですか？", R.drawable.hikari_smile),
+        Pair("お散歩、楽しいですね！", R.drawable.hikari_smile),
+    )
+}
 
 data class OdekakeLocation(val id: String, val name: String, val emoji: String, val requiredLove: Int = 0)
 
