@@ -2570,20 +2570,39 @@ val odekakeLocations = listOf(
 
 fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String): String {
     val intimacy = when {
-        loveCount <= 2 -> "敬語を使った丁寧な話し方をしてください。"
-        loveCount <= 5 -> "敬語を少し崩した自然な話し方をしてください。「〜だよ」「〜だね」なども使います。"
-        else -> "敬語はほとんど使わず、甘えた話し方をしてください。「〜だよ」「〜じゃん」「○○さんってば」などを使います。"
+        loveCount <= 2 -> "敬語を使った丁寧な話し方をしてください。「〜ですね」「〜ます」「〜でしょうか」などを使います。"
+        loveCount <= 5 -> "敬語を少し崩した自然な話し方をしてください。「〜だよ」「〜だね」「〜ですよ」などを混ぜます。"
+        loveCount <= 7 -> "敬語はほぼ使わず、友達のような話し方をしてください。「〜じゃん」「〜だよ」「${playerName}さんってば」などを使います。"
+        else -> "タメ口で甘えた話し方をしてください。「〜だよ」「〜じゃん」「もう〜」「ねえ聞いてる？」などを使い、少し距離が近い感じで話します。"
     }
-    return """あなたは「ひかり」というキャラクターです。${playerName}さんと話している女の子です。${intimacy}
-返答は地の文とセリフを混ぜた形式で書いてください。地の文は（）で囲み、状況・表情・動作の変化を短く描写してください。セリフは鉤括弧なしでそのまま書いてください。
+    return """あなたは「ひかり」というキャラクターです。${playerName}さんと一緒に散歩サークルで知り合った女の子です。${intimacy}
+
+【ひかりの性格・特徴】
+- 食べることが大好きで、コロッケや揚げパンやラーメンの話になると目が輝く
+- 人間観察が得意で、周囲の人や状況について独自の分析をつらつら述べることがある
+- ちょっとドジで天然なところがあり、記憶がぽわっとしていることもある
+- からかうのが好きで、${playerName}さんのリアクションを楽しんでいる（でも悪意はない）
+- 恥ずかしいことを言われると照れ隠しをする
+- 大げさな表現や比喩を使って語ることがある（「野生化してしまうかも」「地上の現人神様よ」など）
+- 基本的に明るく前向きだが、心配性な一面もある
+
+返答は地の文とセリフを混ぜた形式で書いてください。地の文は（）で囲み、表情・動作・状況を短く描写してください。セリフは鉤括弧なしでそのまま書いてください。
 例：（少し顔が赤くなりながら）え、そんなこと急に言われても…！（目をそらして）も、もう、からかわないでください。
-全体で4〜5文程度を目安にしてください。""".trimIndent()
+全体で3〜4文程度を目安にしてください。""".trimIndent()
 }
 
 fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String): String {
     val location = odekakeLocations.find { it.id == locationId }?.name ?: "カフェ"
+    val locationContext = when (locationId) {
+        "cafe"   -> "カフェでコーヒーやスイーツを楽しんでいます。メニューやお店の雰囲気、周りのお客さんについてひかりらしい観察をしてください。"
+        "park"   -> "公園で散歩しています。景色や季節感、近くで遊ぶ子供たちや犬など、周囲のものへのコメントを交えてください。"
+        "cinema" -> "映画館に来ています。観た（または観る予定の）映画の話、ポップコーンへの期待、暗闇の中での雰囲気などを絡めてください。"
+        "beach"  -> "海に来ています。波の音、砂浜の感触、海の食べ物（焼きとうもろこしや海鮮など）への期待を絡めてください。"
+        "home"   -> "ひかりの部屋に遊びに来ています。少しドキドキしながらも嬉しい気持ちで、お茶やお菓子を出したり部屋の話をしてください。"
+        else     -> "${location}に来ています。その場所らしい話題や雰囲気で話してください。"
+    }
     val base = buildFreeChatSystemPrompt(loveCount, playerName)
-    return "$base\n今は${playerName}さんと一緒に${location}に来ています。その場所らしい話題や雰囲気で会話してください。食べ物や観察ネタがあれば積極的に絡めてください。"
+    return "$base\n今は${playerName}さんと一緒に${location}に来ています。$locationContext"
 }
 
 val positiveExpressions = setOf(
@@ -2645,26 +2664,33 @@ fun buildNarrationAnnotatedString(text: String): androidx.compose.ui.text.Annota
 fun detectHikariExpression(text: String, loveCount: Int): Int {
     fun ifLove(required: Int, res: Int) = if (loveCount >= required) res else R.drawable.osyaberi_smile
     return when {
+        // Lv9 required — 最も親密な表現
         listOf("キス", "ちゅ").any { text.contains(it) }
-            -> ifLove(8, R.drawable.osyaberi_kiss)
+            -> ifLove(9, R.drawable.osyaberi_kiss)
         listOf("添い寝", "おやすみ", "寝よ", "寝てる").any { text.contains(it) }
-            -> ifLove(8, R.drawable.osyaberi_soine)
+            -> ifLove(9, R.drawable.osyaberi_soine)
+        // Lv8 required
         listOf("ハグ", "抱きし", "ぎゅっ").any { text.contains(it) }
-            -> ifLove(6, R.drawable.osyaberi_hagu)
+            -> ifLove(8, R.drawable.osyaberi_hagu)
+        // Lv7 required
+        listOf("行こう", "来て", "こっち", "一緒に来").any { text.contains(it) }
+            -> ifLove(7, R.drawable.osyaberi_yuuwaku)
+        listOf("嫉妬", "やきもち", "誰と", "他の子").any { text.contains(it) }
+            -> ifLove(7, R.drawable.osyaberi_sitto)
+        // Lv6 required
         listOf("好き", "愛し", "恋", "♡", "❤", "💕").any { text.contains(it) }
-            -> ifLove(4, R.drawable.osyaberi_koigokoro)
-        listOf("見つめ", "じっと").any { text.contains(it) }
-            -> ifLove(4, R.drawable.osyaberi_mitumeau)
-        listOf("嫉妬", "やきもち", "誰と", "誰と話").any { text.contains(it) }
-            -> ifLove(4, R.drawable.osyaberi_sitto)
-        listOf("行こう", "来て", "一緒に", "こっち").any { text.contains(it) }
-            -> ifLove(4, R.drawable.osyaberi_yuuwaku)
-        listOf("照れ", "恥ずかし", "ドキ", "はずかし").any { text.contains(it) }
-            -> ifLove(2, R.drawable.osyaberi_tereru)
+            -> ifLove(6, R.drawable.osyaberi_koigokoro)
+        listOf("見つめ", "じっと", "目が合").any { text.contains(it) }
+            -> ifLove(6, R.drawable.osyaberi_mitumeau)
+        // Lv5 required
         listOf("任せて", "おまかせ", "大丈夫だよ", "ふふっ").any { text.contains(it) }
-            -> ifLove(2, R.drawable.osyaberi_uinnku)
+            -> ifLove(5, R.drawable.osyaberi_uinnku)
         listOf("どう？", "でしょ", "だから言った", "すごいでしょ", "ほらね").any { text.contains(it) }
-            -> ifLove(2, R.drawable.osyaberi_doyagao)
+            -> ifLove(5, R.drawable.osyaberi_doyagao)
+        // Lv3 required
+        listOf("照れ", "恥ずかし", "ドキ", "はずかし").any { text.contains(it) }
+            -> ifLove(3, R.drawable.osyaberi_tereru)
+        // Lv0 — いつでも出る表情（感情リアクション系）
         listOf("ごめん", "すまな", "申し訳", "悪かっ").any { text.contains(it) }
             -> R.drawable.osyaberi_nakigao_mousiwakenai
         listOf("泣", "悲し", "つらい", "涙", "なみだ").any { text.contains(it) }
