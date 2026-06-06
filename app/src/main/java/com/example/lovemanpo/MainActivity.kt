@@ -2541,7 +2541,7 @@ ${intimacy}
 - コンプレックスや悩みは、聞かれたときや話の流れで自然に出す程度にしてください
 - 返答は地の文とセリフを混ぜた形式で書いてください。地の文は（）で囲み、表情・動作を短く描写してください。セリフは鉤括弧なしでそのまま書いてください
 - 例：（少し顔が赤くなりながら）え、そんなこと急に言われても…！（目をそらして）も、もう、からかわないでください。
-- 全体で3〜4文程度を目安にしてください""".trimIndent()
+- 全体で5〜7文程度を目安にしてください""".trimIndent()
 }
 
 fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String): String {
@@ -2888,8 +2888,11 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             Image(
                                 painter = painterResource(msg.expressionRes ?: R.drawable.osyaberi_smile),
                                 contentDescription = "ひかり",
-                                modifier = Modifier.height(220.dp),
-                                contentScale = ContentScale.Fit
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(300.dp)
+                                    .clip(RoundedCornerShape(20.dp)),
+                                contentScale = ContentScale.Crop
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Column(
@@ -2927,8 +2930,11 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             Image(
                                 painter = painterResource(R.drawable.osyaberi_smile),
                                 contentDescription = null,
-                                modifier = Modifier.height(220.dp),
-                                contentScale = ContentScale.Fit
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(300.dp)
+                                    .clip(RoundedCornerShape(20.dp)),
+                                contentScale = ContentScale.Crop
                             )
                             CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(start = 4.dp))
                         }
@@ -3198,8 +3204,11 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                             Image(
                                 painter = painterResource(msg.expressionRes ?: R.drawable.osyaberi_smile),
                                 contentDescription = "ひかり",
-                                modifier = Modifier.height(220.dp),
-                                contentScale = ContentScale.Fit
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(300.dp)
+                                    .clip(RoundedCornerShape(20.dp)),
+                                contentScale = ContentScale.Crop
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Column(
@@ -3237,8 +3246,11 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                             Image(
                                 painter = painterResource(R.drawable.osyaberi_smile),
                                 contentDescription = null,
-                                modifier = Modifier.height(220.dp),
-                                contentScale = ContentScale.Fit
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(300.dp)
+                                    .clip(RoundedCornerShape(20.dp)),
+                                contentScale = ContentScale.Crop
                             )
                             CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(start = 4.dp))
                         }
