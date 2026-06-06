@@ -309,9 +309,17 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
             val json = org.json.JSONArray(repository.freeChatHistoryJson)
             repeat(json.length()) { i ->
                 val obj = json.getJSONObject(i)
-                list.add(ChatMessage(obj.getString("role"), obj.getString("content")))
+                list.add(ChatMessage(obj.getString("role"), obj.getString("content"), null))
             }
         } catch (_: Exception) {}
+    }
+
+    private val odekakeChatMessagesMap = mutableMapOf<String, androidx.compose.runtime.snapshots.SnapshotStateList<ChatMessage>>()
+
+    fun getOdekakeMessages(locationId: String): androidx.compose.runtime.snapshots.SnapshotStateList<ChatMessage> {
+        return odekakeChatMessagesMap.getOrPut(locationId) {
+            androidx.compose.runtime.mutableStateListOf()
+        }
     }
 
     fun saveFreeChatHistory() {
@@ -3044,33 +3052,36 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
     val actionPoints by viewModel.currentActionPoints
     val playerName by viewModel.playerName
     val location = odekakeLocations.find { it.id == locationId } ?: odekakeLocations.first()
-    val openingMessage = remember(locationId) {
-        val (text, expr) = when (locationId) {
-            "cafe"   -> Pair(
-                "（メニューを広げながらきょろきょろしている）うわ、なんかいい雰囲気のお店ですね。何にしましょうか……甘いもの、気になります。",
-                R.drawable.osyaberi_smile
-            )
-            "park"   -> Pair(
-                "（少し先を歩きながら振り返る）今日、天気よくてよかったです。風も気持ちいいし、なんか気分上がりますね。",
-                R.drawable.osyaberi_smile
-            )
-            "cinema" -> Pair(
-                "（暗くなりかけたスクリーンをじっと見ながら）映画館って、なんかドキドキしません？始まる前のこの感じ、好きなんですよね。",
-                R.drawable.osyaberi_omowazuwarau
-            )
-            "beach"  -> Pair(
-                "（砂浜に足を踏み出しながら）わ、砂、思ったより温かい……！海って久しぶりに来たかもしれないです。",
-                R.drawable.osyaberi_odoroki
-            )
-            "home"   -> Pair(
-                "（部屋に入ってもらいながら、そわそわした様子で）あ、散らかってたらごめんなさい。来るって聞いてたんですけど、なんか緊張しちゃって……。",
-                R.drawable.osyaberi_smile
-            )
-            else     -> Pair("（あたりを見回しながら）来ましたね。どうぞ。", R.drawable.osyaberi_smile)
+    val messages = viewModel.getOdekakeMessages(locationId)
+
+    LaunchedEffect(locationId) {
+        if (messages.isEmpty()) {
+            val (text, expr) = when (locationId) {
+                "cafe"   -> Pair(
+                    "（メニューを広げながらきょろきょろしている）うわ、なんかいい雰囲気のお店ですね。何にしましょうか……甘いもの、気になります。",
+                    R.drawable.osyaberi_smile
+                )
+                "park"   -> Pair(
+                    "（少し先を歩きながら振り返る）今日、天気よくてよかったです。風も気持ちいいし、なんか気分上がりますね。",
+                    R.drawable.osyaberi_smile
+                )
+                "cinema" -> Pair(
+                    "（暗くなりかけたスクリーンをじっと見ながら）映画館って、なんかドキドキしません？始まる前のこの感じ、好きなんですよね。",
+                    R.drawable.osyaberi_omowazuwarau
+                )
+                "beach"  -> Pair(
+                    "（砂浜に足を踏み出しながら）わ、砂、思ったより温かい……！海って久しぶりに来たかもしれないです。",
+                    R.drawable.osyaberi_odoroki
+                )
+                "home"   -> Pair(
+                    "（部屋に入ってもらいながら、そわそわした様子で）あ、散らかってたらごめんなさい。来るって聞いてたんですけど、なんか緊張しちゃって……。",
+                    R.drawable.osyaberi_smile
+                )
+                else     -> Pair("（あたりを見回しながら）来ましたね。どうぞ。", R.drawable.osyaberi_smile)
+            }
+            messages.add(ChatMessage("assistant", text, expr))
         }
-        ChatMessage("assistant", text, expr)
     }
-    val messages = remember { mutableStateListOf(openingMessage) }
     var inputText by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
