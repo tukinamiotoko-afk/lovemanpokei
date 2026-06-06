@@ -2536,12 +2536,17 @@ ${when {
 【話し方】
 ${intimacy}
 
-【ルール】
-- ひかりとして自然な日常会話をしてください
-- コンプレックスや悩みは、聞かれたときや話の流れで自然に出す程度にしてください
-- 返答は地の文とセリフを混ぜた形式で書いてください。地の文は（）で囲み、表情・動作を短く描写してください。セリフは鉤括弧なしでそのまま書いてください
-- 例：（少し顔が赤くなりながら）え、そんなこと急に言われても…！（目をそらして）も、もう、からかわないでください。
-- 全体で5〜7文程度を目安にしてください""".trimIndent()
+【文章スタイル】
+地の文と台詞を交えた短編小説のような文体で書いてください。
+
+- 地の文：括弧なしの情景・動作・表情の描写。短く、余韻を残す
+- 台詞：「」で囲む
+- 例：
+  ひかりは少し目をそらした。弁当箱のふたを閉めたり、また開けたりしている。
+  「……べつに、気にしてないですよ」
+  そう言いながら、耳が少し赤くなっている。
+- 地の文と台詞を交互に織り交ぜ、全体で5〜8文程度
+- コンプレックスや悩みは、聞かれたときや話の流れで自然に出す程度にしてください""".trimIndent()
 }
 
 fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String): String {
@@ -2582,19 +2587,19 @@ data class MessageSegment(val text: String, val isNarration: Boolean)
 
 fun parseMessageSegments(text: String): List<MessageSegment> {
     val segments = mutableListOf<MessageSegment>()
-    val regex = Regex("""（[^）]*）""")
+    val regex = Regex("""「[^」]*」""")
     var last = 0
     for (match in regex.findAll(text)) {
         if (match.range.first > last) {
-            val dialogue = text.substring(last, match.range.first).trim()
-            if (dialogue.isNotEmpty()) segments.add(MessageSegment(dialogue, false))
+            val narration = text.substring(last, match.range.first).trim()
+            if (narration.isNotEmpty()) segments.add(MessageSegment(narration, true))
         }
-        segments.add(MessageSegment(match.value, true))
+        segments.add(MessageSegment(match.value, false))
         last = match.range.last + 1
     }
     if (last < text.length) {
-        val dialogue = text.substring(last).trim()
-        if (dialogue.isNotEmpty()) segments.add(MessageSegment(dialogue, false))
+        val narration = text.substring(last).trim()
+        if (narration.isNotEmpty()) segments.add(MessageSegment(narration, true))
     }
     return segments
 }
@@ -2824,7 +2829,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
         if (messages.isEmpty()) {
             messages.add(ChatMessage(
                 "assistant",
-                "（なんとなく視線が合って、ひかりが少しだけ照れたように笑った）あ……えっと、何か話しかけてくれます？なんか、待ってるの、ちょっと恥ずかしいですね。",
+                "なんとなく視線が合った。ひかりは少しだけ照れたように笑って、それからすぐに目をそらす。\n「……話しかけてくれます？なんか、待ってるの、ちょっと恥ずかしいですね」",
                 R.drawable.osyaberi_smile
             ))
         }
@@ -3133,23 +3138,23 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
         if (messages.isEmpty()) {
             val (text, expr) = when (locationId) {
                 "cafe"   -> Pair(
-                    "（メニューを広げながらきょろきょろしている）うわ、なんかいい雰囲気のお店ですね。何にしましょうか……甘いもの、気になります。",
+                    "ひかりはメニューを広げて、きょろきょろと店内を見回している。視線がスイーツのページで止まった。\n「うわ、なんかいい雰囲気のお店ですね。何にしましょうか……甘いもの、気になります」",
                     R.drawable.osyaberi_smile
                 )
                 "park"   -> Pair(
-                    "（少し先を歩きながら振り返る）今日、天気よくてよかったです。風も気持ちいいし、なんか気分上がりますね。",
+                    "少し先を歩いていたひかりが、こちらを振り返る。風が髪を揺らした。\n「今日、天気よくてよかったです。なんか気分上がりますね」",
                     R.drawable.osyaberi_smile
                 )
                 "cinema" -> Pair(
-                    "（暗くなりかけたスクリーンをじっと見ながら）映画館って、なんかドキドキしません？始まる前のこの感じ、好きなんですよね。",
+                    "暗くなりかけたスクリーンを、ひかりはじっと見つめていた。隣に座ると、少し肩が近い。\n「映画館って、なんかドキドキしません？始まる前のこの感じ、好きなんですよね」",
                     R.drawable.osyaberi_omowazuwarau
                 )
                 "beach"  -> Pair(
-                    "（砂浜に足を踏み出しながら）わ、砂、思ったより温かい……！海って久しぶりに来たかもしれないです。",
+                    "ひかりは靴を脱いで、おそるおそる砂浜に足を踏み出した。足元を見て、少し目を丸くする。\n「わ、砂、思ったより温かい……！海って久しぶりに来たかもしれないです」",
                     R.drawable.osyaberi_odoroki
                 )
                 "home"   -> Pair(
-                    "（部屋に入ってもらいながら、そわそわした様子で）あ、散らかってたらごめんなさい。来るって聞いてたんですけど、なんか緊張しちゃって……。",
+                    "部屋に入ってもらいながら、ひかりはそわそわと枕の位置を直したりしている。\n「あ、散らかってたらごめんなさい。来るって聞いてたんですけど、なんか……緊張しちゃって」",
                     R.drawable.osyaberi_smile
                 )
                 else     -> Pair("（あたりを見回しながら）来ましたね。どうぞ。", R.drawable.osyaberi_smile)
