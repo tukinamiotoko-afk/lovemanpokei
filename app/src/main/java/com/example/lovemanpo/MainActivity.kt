@@ -2418,7 +2418,7 @@ data class AggregatedData(val label: String, val steps: Int, val activeTimeMilli
 
 // ---- AI チャット共通 ----
 
-data class ChatMessage(val role: String, val content: String)
+data class ChatMessage(val role: String, val content: String, val expressionRes: Int? = null)
 
 data class HomeStepMsg(val thresholdSteps: Int, val text: String, val expr: Int)
 
@@ -2763,7 +2763,6 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var deleteProgress by remember { mutableFloatStateOf(0f) }
-    var hikariExpression by remember { mutableIntStateOf(R.drawable.osyaberi_smile) }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
@@ -2798,29 +2797,6 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
         Column(modifier = Modifier
             .fillMaxSize()
             .padding(padding)) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFFF0F5), Color(0xFFFAFAFA))))
-                    .padding(vertical = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                androidx.compose.animation.AnimatedContent(
-                    targetState = hikariExpression,
-                    transitionSpec = {
-                        androidx.compose.animation.fadeIn(animationSpec = tween(300)) togetherWith
-                        androidx.compose.animation.fadeOut(animationSpec = tween(200))
-                    },
-                    label = "hikari_expression"
-                ) { exprRes ->
-                    Image(
-                        painter = painterResource(exprRes),
-                        contentDescription = "ひかり",
-                        modifier = Modifier.height(140.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                }
-            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
@@ -2830,36 +2806,44 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 items(messages.size) { i ->
                     val msg = messages[i]
                     val isUser = msg.role == "user"
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isUser) Color(0xFF4A90E2) else Color(0xFFF0F0F0),
-                            modifier = Modifier.widthIn(max = 280.dp)
-                        ) {
-                            if (isUser) {
-                                Text(
-                                    msg.content,
-                                    modifier = Modifier.padding(10.dp),
-                                    color = Color.White,
-                                    fontSize = 14.sp
-                                )
-                            } else {
-                                Text(
-                                    buildNarrationAnnotatedString(msg.content),
-                                    modifier = Modifier.padding(10.dp),
-                                    fontSize = 14.sp
-                                )
+                    if (isUser) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFF4A90E2),
+                                modifier = Modifier.widthIn(max = 280.dp)
+                            ) {
+                                Text(msg.content, modifier = Modifier.padding(10.dp), color = Color.White, fontSize = 14.sp)
+                            }
+                        }
+                    } else {
+                        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+                            Image(
+                                painter = painterResource(msg.expressionRes ?: R.drawable.osyaberi_smile),
+                                contentDescription = "ひかり",
+                                modifier = Modifier.height(220.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFF0F0F0),
+                                modifier = Modifier.widthIn(max = 280.dp)
+                            ) {
+                                Text(buildNarrationAnnotatedString(msg.content), modifier = Modifier.padding(10.dp), fontSize = 14.sp)
                             }
                         }
                     }
                 }
                 if (isLoading) {
                     item {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+                            Image(
+                                painter = painterResource(R.drawable.osyaberi_smile),
+                                contentDescription = null,
+                                modifier = Modifier.height(220.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(start = 4.dp))
                         }
                     }
                 }
@@ -2903,9 +2887,8 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             try {
                                 val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName)
                                 val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
-                                messages.add(ChatMessage("assistant", reply))
                                 val expr = detectHikariExpression(reply, loveCount)
-                                hikariExpression = expr
+                                messages.add(ChatMessage("assistant", reply, expr))
                                 when {
                                     expr in positiveExpressions -> viewModel.earnHeart()
                                     expr in negativeExpressions -> viewModel.loseHeart()
@@ -3056,7 +3039,6 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var odekakeMessageCount by remember { mutableIntStateOf(0) }
-    var hikariExpression by remember { mutableIntStateOf(R.drawable.osyaberi_smile) }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
@@ -3073,29 +3055,6 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
         Column(modifier = Modifier
             .fillMaxSize()
             .padding(padding)) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFFF0F5), Color(0xFFFAFAFA))))
-                    .padding(vertical = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                androidx.compose.animation.AnimatedContent(
-                    targetState = hikariExpression,
-                    transitionSpec = {
-                        androidx.compose.animation.fadeIn(animationSpec = tween(300)) togetherWith
-                        androidx.compose.animation.fadeOut(animationSpec = tween(200))
-                    },
-                    label = "hikari_expression_odekake"
-                ) { exprRes ->
-                    Image(
-                        painter = painterResource(exprRes),
-                        contentDescription = "ひかり",
-                        modifier = Modifier.height(140.dp),
-                        contentScale = ContentScale.Fit
-                    )
-                }
-            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
@@ -3105,36 +3064,44 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                 items(messages.size) { i ->
                     val msg = messages[i]
                     val isUser = msg.role == "user"
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = if (isUser) Color(0xFF4A90E2) else Color(0xFFF0F0F0),
-                            modifier = Modifier.widthIn(max = 280.dp)
-                        ) {
-                            if (isUser) {
-                                Text(
-                                    msg.content,
-                                    modifier = Modifier.padding(10.dp),
-                                    color = Color.White,
-                                    fontSize = 14.sp
-                                )
-                            } else {
-                                Text(
-                                    buildNarrationAnnotatedString(msg.content),
-                                    modifier = Modifier.padding(10.dp),
-                                    fontSize = 14.sp
-                                )
+                    if (isUser) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFF4A90E2),
+                                modifier = Modifier.widthIn(max = 280.dp)
+                            ) {
+                                Text(msg.content, modifier = Modifier.padding(10.dp), color = Color.White, fontSize = 14.sp)
+                            }
+                        }
+                    } else {
+                        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+                            Image(
+                                painter = painterResource(msg.expressionRes ?: R.drawable.osyaberi_smile),
+                                contentDescription = "ひかり",
+                                modifier = Modifier.height(220.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFF0F0F0),
+                                modifier = Modifier.widthIn(max = 280.dp)
+                            ) {
+                                Text(buildNarrationAnnotatedString(msg.content), modifier = Modifier.padding(10.dp), fontSize = 14.sp)
                             }
                         }
                     }
                 }
                 if (isLoading) {
                     item {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
+                            Image(
+                                painter = painterResource(R.drawable.osyaberi_smile),
+                                contentDescription = null,
+                                modifier = Modifier.height(220.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(start = 4.dp))
                         }
                     }
                 }
@@ -3179,8 +3146,8 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                             try {
                                 val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName)
                                 val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
-                                messages.add(ChatMessage("assistant", reply))
-                                hikariExpression = detectHikariExpression(reply, loveCount)
+                                val expr = detectHikariExpression(reply, loveCount)
+                                messages.add(ChatMessage("assistant", reply, expr))
                             } catch (e: Exception) {
                                 errorMessage = "エラーが発生しました: ${e.message}"
                             } finally {
