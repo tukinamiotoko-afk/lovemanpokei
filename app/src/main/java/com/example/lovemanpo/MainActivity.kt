@@ -2667,7 +2667,7 @@ fun detectHikariExpression(text: String, loveCount: Int): Int {
         listOf("ありがとう", "よかった", "うれしい", "嬉し").any { text.contains(it) }
             -> R.drawable.osyaberi_yasasiiegao
         listOf("え？", "どういう意味", "わからない", "困惑", "意味が", "何それ").any { text.contains(it) }
-            -> R.drawable.osyaberi_konwaku
+            -> R.drawable.osyaberi_tomadoi
         listOf("笑", "ウケる", "おもしろ", "くすっ", "あはは").any { text.contains(it) }
             -> R.drawable.osyaberi_omowazuwarau
         listOf("退屈", "つまらない", "暇", "たいくつ").any { text.contains(it) }
