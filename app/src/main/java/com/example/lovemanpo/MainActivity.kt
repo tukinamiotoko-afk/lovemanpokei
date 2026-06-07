@@ -372,6 +372,13 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
         return false
     }
 
+    fun refundPointForChat() {
+        if (repository.spentActionPoints > 0) {
+            repository.spentActionPoints--
+            spentActionPoints.intValue = repository.spentActionPoints
+        }
+    }
+
     fun earnHeart() {
         heartCount.intValue++
         if (heartCount.intValue >= 10) {
@@ -3036,7 +3043,9 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 }
                                 viewModel.saveFreeChatHistory()
                             } catch (e: Exception) {
-                                errorMessage = "エラーが発生しました: ${e.message}"
+                                viewModel.refundPointForChat()
+                                messages.removeLastOrNull()
+                                errorMessage = "エラー: ${e.message}"
                             } finally {
                                 isLoading = false
                             }
@@ -3350,7 +3359,9 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                                 messages.add(ChatMessage("assistant", cleanReply, expr))
                                 viewModel.saveOdekakeHistory(locationId)
                             } catch (e: Exception) {
-                                errorMessage = "エラーが発生しました: ${e.message}"
+                                viewModel.refundPointForChat()
+                                messages.removeLastOrNull()
+                                errorMessage = "エラー: ${e.message}"
                             } finally {
                                 isLoading = false
                             }
