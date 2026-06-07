@@ -249,7 +249,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     val currentActionPoints =
         derivedStateOf { totalEarnedPoints.intValue - spentActionPoints.intValue }
     val stepGaugeProgress = derivedStateOf { (todaySteps.intValue.toFloat() / 10000f).coerceAtMost(1f) }
-    val heartGaugeProgress = derivedStateOf { heartCount.intValue.toFloat() / 10f }
+    val heartGaugeProgress = derivedStateOf { heartCount.intValue.toFloat() / 15f }
 
     val strideLength: Float
         get() {
@@ -388,7 +388,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
 
     fun earnHeart() {
         heartCount.intValue++
-        if (heartCount.intValue >= 10) {
+        if (heartCount.intValue >= 15) {
             heartCount.intValue = 0
             if (loveCount.intValue < 10) loveCount.intValue++
         }
@@ -1329,10 +1329,7 @@ fun HomeLoveLevelCard(modifier: Modifier = Modifier, lv: Int, progress: Float, h
                     verticalAlignment = Alignment.Bottom
                 ) {
                     Text("Lv. $lv", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray, fontFamily = MplusRoundedFontFamily)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("$hearts / 10 ", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF6B9D), fontFamily = MplusRoundedFontFamily)
-                        Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(8.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
-                    }
+                    Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(10.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
                 }
                 Canvas(
                     modifier = Modifier
@@ -2716,7 +2713,7 @@ fun ChatStatusCard(loveCount: Int, heartCount: Int, lastExprName: String?) {
             Column(modifier = Modifier.weight(1f)) {
                 Text("ハート", fontSize = 10.sp, color = Color(0xFF9E8B75))
                 Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    repeat(10) { i ->
+                    repeat(15) { i ->
                         Text(
                             if (i < heartCount) "♥" else "♡",
                             fontSize = 13.sp,
