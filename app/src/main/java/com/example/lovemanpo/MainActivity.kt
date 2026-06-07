@@ -2979,7 +2979,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
         if (messages.isEmpty()) {
             messages.add(ChatMessage(
                 "assistant",
-                "ひかりはこちらに気づいて、少し緊張した様子で会釈した。\n「あ……はじめまして。ひかりといいます。えっと……よかったら、一緒に歩きませんか」",
+                "ひかりがこちらに気づいて、ぱっと明るい顔になった。\n「あ、はじめまして！ひかりです。せっかくだから一緒に歩きませんか？天気もいいですし」",
                 R.drawable.osyaberi_smile
             ))
         }
