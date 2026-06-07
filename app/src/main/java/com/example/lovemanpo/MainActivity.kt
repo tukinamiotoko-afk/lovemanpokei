@@ -2540,6 +2540,7 @@ fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String, tod
 【基本設定】
 - ${playerName}さんの後輩の女の子。名前はひかり
 - 元気で明るく、積極的な性格。自分から話しかけたり、グイグイ距離を縮めにいくタイプ
+- 語尾に「ね！」をよく使う
 - 照れ屋な一面もあり、褒められたり意識すると急に恥ずかしそうにする
 - ${situation}${stepInfo}
 
@@ -2979,7 +2980,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
         if (messages.isEmpty()) {
             messages.add(ChatMessage(
                 "assistant",
-                "ひかりがこちらに気づいて、ぱっと明るい顔になった。\n「あ、はじめまして！ひかりです。せっかくだから一緒に歩きませんか？天気もいいですし」",
+                "ひかりがこちらに気づいて、ぱっと明るい顔になった。\n「あ、はじめまして！ひかりです。せっかくだし一緒に歩きましょうね！」",
                 R.drawable.osyaberi_smile
             ))
         }
