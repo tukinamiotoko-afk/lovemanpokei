@@ -2548,9 +2548,14 @@ ${intimacy}
 
 【重要】ひかりは自分の意志で動くキャラクターです。相手の言葉に反応するだけでなく、自分から話題を出したり、気になったことを聞いたり、唐突に別のことを言い出したりしていい。会話の主導権を持つこともある。
 
-【表情ステータス】
-返答の最後に必ず [EXPR:表情名] を1つ付けてください。今の場面に最も合うものを選んでください。
-使える表情：${availableExpressions(loveCount)}""".trimIndent()
+【表情・好感度ステータス】
+返答の最後に必ず以下の2つのタグを付けてください。
+
+[EXPR:表情名] ← 今の場面に最も合う表情を1つ。使える表情：${availableExpressions(loveCount)}
+
+[LOVE:up/down/none] ← この会話で好感度が上がるなら up、下がるなら down、変化なしなら none。
+好感度が上がる例：ひかりが嬉しい・照れる・心を開いた瞬間
+好感度が下がる例：ひかりが傷ついた・不機嫌になった・不信感が強まった""".trimIndent()
 }
 
 fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String): String {
@@ -2626,11 +2631,23 @@ fun exprNameToRes(name: String): Int = when (name) {
     else        -> R.drawable.osyaberi_smile
 }
 
-fun parseExprFromReply(reply: String): Pair<String, Int> {
-    val regex = Regex("""\[EXPR:(\w+)\]""")
-    val match = regex.find(reply) ?: return Pair(reply.trim(), R.drawable.osyaberi_smile)
-    val cleanText = reply.replace(match.value, "").trim()
-    return Pair(cleanText, exprNameToRes(match.groupValues[1]))
+data class ParsedReply(val text: String, val exprRes: Int, val loveChange: Int)
+
+fun parseReply(reply: String): ParsedReply {
+    var text = reply
+    val exprMatch = Regex("""\[EXPR:(\w+)\]""").find(text)
+    val exprRes = if (exprMatch != null) {
+        text = text.replace(exprMatch.value, "")
+        exprNameToRes(exprMatch.groupValues[1])
+    } else R.drawable.osyaberi_smile
+
+    val loveMatch = Regex("""\[LOVE:(up|down|none)\]""").find(text)
+    val loveChange = if (loveMatch != null) {
+        text = text.replace(loveMatch.value, "")
+        when (loveMatch.groupValues[1]) { "up" -> 1; "down" -> -1; else -> 0 }
+    } else 0
+
+    return ParsedReply(text.trim(), exprRes, loveChange)
 }
 
 data class MessageSegment(val text: String, val isNarration: Boolean)
@@ -3035,11 +3052,11 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             try {
                                 val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName)
                                 val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
-                                val (cleanReply, expr) = parseExprFromReply(reply)
-                                messages.add(ChatMessage("assistant", cleanReply, expr))
-                                when {
-                                    expr in positiveExpressions -> viewModel.earnHeart()
-                                    expr in negativeExpressions -> viewModel.loseHeart()
+                                val parsed = parseReply(reply)
+                                messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes))
+                                when (parsed.loveChange) {
+                                    1  -> viewModel.earnHeart()
+                                    -1 -> viewModel.loseHeart()
                                 }
                                 viewModel.saveFreeChatHistory()
                             } catch (e: Exception) {
@@ -3355,8 +3372,12 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                             try {
                                 val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName)
                                 val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
-                                val (cleanReply, expr) = parseExprFromReply(reply)
-                                messages.add(ChatMessage("assistant", cleanReply, expr))
+                                val parsed = parseReply(reply)
+                                messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes))
+                                when (parsed.loveChange) {
+                                    1  -> viewModel.earnHeart()
+                                    -1 -> viewModel.loseHeart()
+                                }
                                 viewModel.saveOdekakeHistory(locationId)
                             } catch (e: Exception) {
                                 viewModel.refundPointForChat()
