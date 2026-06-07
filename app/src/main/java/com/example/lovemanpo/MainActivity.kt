@@ -2363,7 +2363,6 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
     var tempHeight by remember { mutableStateOf(viewModel.heightCm.floatValue.toString()) }
     var tempWeight by remember { mutableStateOf(viewModel.weightKg.floatValue.toString()) }
     var tempGender by remember { mutableStateOf(viewModel.userGender.value) }
-    var tempApiKey by remember { mutableStateOf(viewModel.geminiApiKey) }
     val pinkAccent = Color(0xFFFF6B9D)
 
     Scaffold(
@@ -2390,15 +2389,6 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                 RadioButton(selected = tempGender == "女性", onClick = { tempGender = "女性" })
                 Text("女性", modifier = Modifier.clickable { tempGender = "女性" })
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("AI会話設定", fontWeight = FontWeight.Bold, color = pinkAccent, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(
-                value = tempApiKey,
-                onValueChange = { tempApiKey = it },
-                label = { Text("Gemini APIキー") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
             Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = {
                 val h = tempHeight.toFloatOrNull() ?: 170f
@@ -2406,7 +2396,6 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                 viewModel.setPlayerName(tempName)
                 viewModel.setUserProfile(h, w)
                 viewModel.saveProfile(h, tempGender)
-                viewModel.geminiApiKey = tempApiKey
                 navController.popBackStack()
             }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = pinkAccent)) { Text("保存して戻る") }
         }
@@ -2849,15 +2838,15 @@ fun detectHikariExpression(text: String, loveCount: Int): Int {
 }
 
 suspend fun callGeminiApi(
-    apiKey: String,
     systemPrompt: String,
     history: List<ChatMessage>,
     userMessage: String
 ): String = withContext(Dispatchers.IO) {
-    val url = URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey")
+    val url = URL("https://lovemanpokei.tukinamiotoko.workers.dev")
     val conn = url.openConnection() as HttpURLConnection
     conn.requestMethod = "POST"
     conn.setRequestProperty("Content-Type", "application/json")
+    conn.setRequestProperty("X-App-Secret", "loveman2025secret")
     conn.doOutput = true
 
     val contents = JSONArray()
@@ -3117,11 +3106,6 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                     onClick = {
                         val text = inputText.trim()
                         if (text.isEmpty() || isLoading) return@IconButton
-                        val apiKey = viewModel.geminiApiKey
-                        if (apiKey.isEmpty()) {
-                            errorMessage = "設定からGemini APIキーを入力してください"
-                            return@IconButton
-                        }
                         if (!viewModel.spendPointForChat()) {
                             errorMessage = "ポイントが足りません（2000歩で1ポイント）"
                             return@IconButton
@@ -3135,7 +3119,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                         scope.launch {
                             try {
                                 val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName)
-                                val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
+                                val reply = callGeminiApi(systemPrompt, historySnapshot, text)
                                 val parsed = parseReply(reply)
                                 messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName))
                                 when (parsed.loveChange) {
@@ -3440,11 +3424,6 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                     onClick = {
                         val text = inputText.trim()
                         if (text.isEmpty() || isLoading) return@IconButton
-                        val apiKey = viewModel.geminiApiKey
-                        if (apiKey.isEmpty()) {
-                            errorMessage = "設定からGemini APIキーを入力してください"
-                            return@IconButton
-                        }
                         if (!viewModel.spendPointForChat()) {
                             errorMessage = "ポイントが足りません（2000歩で1ポイント）"
                             return@IconButton
@@ -3460,7 +3439,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                         scope.launch {
                             try {
                                 val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName)
-                                val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
+                                val reply = callGeminiApi(systemPrompt, historySnapshot, text)
                                 val parsed = parseReply(reply)
                                 messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName))
                                 when (parsed.loveChange) {
