@@ -2458,7 +2458,7 @@ data class AggregatedData(val label: String, val steps: Int, val activeTimeMilli
 
 // ---- AI チャット共通 ----
 
-data class ChatMessage(val role: String, val content: String, val expressionRes: Int? = null)
+data class ChatMessage(val role: String, val content: String, val expressionRes: Int? = null, val exprName: String? = null)
 
 data class HomeStepMsg(val thresholdSteps: Int, val text: String, val expr: Int)
 
@@ -2631,15 +2631,16 @@ fun exprNameToRes(name: String): Int = when (name) {
     else        -> R.drawable.osyaberi_smile
 }
 
-data class ParsedReply(val text: String, val exprRes: Int, val loveChange: Int)
+data class ParsedReply(val text: String, val exprRes: Int, val exprName: String, val loveChange: Int)
 
 fun parseReply(reply: String): ParsedReply {
     var text = reply
     val exprMatch = Regex("""\[EXPR:(\w+)\]""").find(text)
-    val exprRes = if (exprMatch != null) {
+    val (exprRes, exprName) = if (exprMatch != null) {
         text = text.replace(exprMatch.value, "")
-        exprNameToRes(exprMatch.groupValues[1])
-    } else R.drawable.osyaberi_smile
+        val name = exprMatch.groupValues[1]
+        Pair(exprNameToRes(name), name)
+    } else Pair(R.drawable.osyaberi_smile, "smile")
 
     val loveMatch = Regex("""\[LOVE:(up|down|none)\]""").find(text)
     val loveChange = if (loveMatch != null) {
@@ -2647,10 +2648,88 @@ fun parseReply(reply: String): ParsedReply {
         when (loveMatch.groupValues[1]) { "up" -> 1; "down" -> -1; else -> 0 }
     } else 0
 
-    return ParsedReply(text.trim(), exprRes, loveChange)
+    return ParsedReply(text.trim(), exprRes, exprName, loveChange)
 }
 
 data class MessageSegment(val text: String, val isNarration: Boolean)
+
+@Composable
+fun ChatStatusCard(loveCount: Int, heartCount: Int, lastExprName: String?) {
+    val loveLabel = when {
+        loveCount >= 9 -> "深愛"
+        loveCount >= 7 -> "恋愛中"
+        loveCount >= 5 -> "好き"
+        loveCount >= 3 -> "仲良し"
+        loveCount >= 1 -> "知り合い"
+        else           -> "はじめまして"
+    }
+    val exprLabel = when (lastExprName) {
+        "smile"        -> "にこにこ"
+        "tereru"       -> "照れてる"
+        "koigokoro"    -> "恋心"
+        "yasasiiegao"  -> "やさしい"
+        "hagu"         -> "ハグ"
+        "kiss"         -> "キス"
+        "soine"        -> "添い寝"
+        "omowazuwarau" -> "思わず笑う"
+        "uinnku"       -> "ウィンク"
+        "yuuwaku"      -> "誘惑"
+        "mitumeau"     -> "見つめ合い"
+        "okoru"        -> "怒り"
+        "hukigenn"     -> "不機嫌"
+        "tumetaime"    -> "冷たい"
+        "sitto"        -> "嫉妬"
+        "nakigao"      -> "泣き顔"
+        "namida"       -> "涙"
+        "otikomu"      -> "落ち込み"
+        "sukoshiokoru" -> "少し怒り"
+        "huan"         -> "不安"
+        "odoroki"      -> "驚き"
+        "kangaeru"     -> "考え中"
+        "tomadoi"      -> "戸惑い"
+        "taikutu"      -> "退屈"
+        "doyagao"      -> "ドヤ顔"
+        else           -> null
+    }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = Color(0xFFFDF6EE),
+        border = BorderStroke(1.dp, Color(0xFFE8D5C0))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("好感度", fontSize = 10.sp, color = Color(0xFF9E8B75))
+                Text("Lv.$loveCount", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7B5C3E))
+                Text(loveLabel, fontSize = 10.sp, color = Color(0xFFB08060))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text("ハート", fontSize = 10.sp, color = Color(0xFF9E8B75))
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    repeat(10) { i ->
+                        Text(
+                            if (i < heartCount) "♥" else "♡",
+                            fontSize = 13.sp,
+                            color = if (i < heartCount) Color(0xFFE87C9A) else Color(0xFFDDC8B8)
+                        )
+                    }
+                }
+            }
+            if (exprLabel != null) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("表情", fontSize = 10.sp, color = Color(0xFF9E8B75))
+                    Text(exprLabel, fontSize = 11.sp, color = Color(0xFF7B5C3E))
+                }
+            }
+        }
+    }
+}
 
 fun parseMessageSegments(text: String): List<MessageSegment> {
     val segments = mutableListOf<MessageSegment>()
@@ -2881,6 +2960,7 @@ fun ChatMenuScreen(navController: NavController, viewModel: StepViewModel) {
 @Composable
 fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     val loveCount by viewModel.loveCount
+    val heartCount by viewModel.heartCount
     val actionPoints by viewModel.currentActionPoints
     val playerName by viewModel.playerName
     val messages = viewModel.freeChatMessages
@@ -3012,6 +3092,10 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                         }
                     }
                 }
+                item {
+                    val lastExpr = messages.lastOrNull { it.role == "assistant" }?.exprName
+                    ChatStatusCard(loveCount = loveCount, heartCount = heartCount, lastExprName = lastExpr)
+                }
             }
 
             errorMessage?.let {
@@ -3053,7 +3137,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName)
                                 val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
                                 val parsed = parseReply(reply)
-                                messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes))
+                                messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName))
                                 when (parsed.loveChange) {
                                     1  -> viewModel.earnHeart()
                                     -1 -> viewModel.loseHeart()
@@ -3198,6 +3282,7 @@ fun OdekakeScenarioSelectScreen(navController: NavController, viewModel: StepVie
 @Composable
 fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, locationId: String) {
     val loveCount by viewModel.loveCount
+    val heartCount by viewModel.heartCount
     val actionPoints by viewModel.currentActionPoints
     val playerName by viewModel.playerName
     val location = odekakeLocations.find { it.id == locationId } ?: odekakeLocations.first()
@@ -3330,6 +3415,10 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                         }
                     }
                 }
+                item {
+                    val lastExpr = messages.lastOrNull { it.role == "assistant" }?.exprName
+                    ChatStatusCard(loveCount = loveCount, heartCount = heartCount, lastExprName = lastExpr)
+                }
             }
 
             errorMessage?.let {
@@ -3373,7 +3462,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                                 val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName)
                                 val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
                                 val parsed = parseReply(reply)
-                                messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes))
+                                messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName))
                                 when (parsed.loveChange) {
                                     1  -> viewModel.earnHeart()
                                     -1 -> viewModel.loseHeart()
