@@ -2970,32 +2970,42 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
 
     LaunchedEffect(Unit) {
         if (messages.isEmpty()) {
-            val (text, expr) = when {
-                todaySteps >= 10000 -> Pair(
-                    "ひかりがぱっと顔を輝かせた。\n「一万歩達成じゃないですか！すごいです、本当に……！わたし、なんか自分のことみたいに嬉しくなってきました。今日、全力で褒めていいですか」",
-                    R.drawable.osyaberi_omowazuwarau
+            val candidates: List<Pair<String, Int>> = when {
+                todaySteps >= 10000 -> listOf(
+                    Pair("ひかりがぱっと顔を輝かせた。\n「一万歩達成じゃないですか！すごいです、本当に……！今日、全力で褒めていいですか」", R.drawable.osyaberi_omowazuwarau),
+                    Pair("ひかりが目をまるくして、それからにっこりした。\n「一万歩……！やりましたね。わたし、なんか自分のことみたいに嬉しいです」", R.drawable.osyaberi_omowazuwarau),
+                    Pair("ひかりが少し声を弾ませた。\n「今日、一万歩超えてるじゃないですか。毎日続けてるの、ちゃんと見てましたよ。えらいです」", R.drawable.osyaberi_smile),
+                    Pair("ひかりがこちらを見て、静かに微笑んだ。\n「一万歩、達成したんですね。……おつかれさまでした、本当に」", R.drawable.osyaberi_yasasiiegao),
                 )
-                todaySteps >= 8000 -> Pair(
-                    "ひかりが目を細めて、少し弾んだ声で言った。\n「8000歩ですよ？あと少しで一万歩じゃないですか。ここまで来たら、絶対いけますよ。一緒に頑張りましょう」",
-                    R.drawable.osyaberi_smile
+                todaySteps >= 8000 -> listOf(
+                    Pair("ひかりが目を細めて、少し弾んだ声で言った。\n「8000歩ですよ？あと少しで一万歩じゃないですか。ここまで来たら、絶対いけますよ」", R.drawable.osyaberi_smile),
+                    Pair("ひかりがこちらを見て、ぐっと拳を握った。\n「もうあと2000歩です。今日いけますよ、絶対。わたしも応援してます」", R.drawable.osyaberi_smile),
+                    Pair("ひかりが少し前のめりになって言った。\n「8000歩……！あとちょっとじゃないですか。諦めないでくださいね、一緒に頑張りましょう」", R.drawable.osyaberi_omowazuwarau),
+                    Pair("ひかりが歩調を早めながら振り返った。\n「残り2000歩ですよ。せっかくここまで来たんだから、今日は絶対達成してほしいです」", R.drawable.osyaberi_smile),
                 )
-                todaySteps >= 5000 -> Pair(
-                    "ひかりが歩調を合わせながら、穏やかに笑う。\n「5000歩ですね。折り返し地点、一緒に歩けてよかったです」",
-                    R.drawable.osyaberi_smile
+                todaySteps >= 5000 -> listOf(
+                    Pair("ひかりが歩調を合わせながら、穏やかに笑う。\n「5000歩ですね。折り返し地点、一緒に来れてよかったです」", R.drawable.osyaberi_smile),
+                    Pair("ひかりがこちらをちらりと見た。\n「半分来ましたね。このペースなら一万歩、十分いけると思います」", R.drawable.osyaberi_yasasiiegao),
+                    Pair("ひかりが少し得意げに言った。\n「5000歩突破です。あとは気持ちの問題ですよ、きっと」", R.drawable.osyaberi_smile),
+                    Pair("ひかりが隣を歩きながら、ふと口を開いた。\n「折り返しですね。後半も一緒に歩きましょう」", R.drawable.osyaberi_yasasiiegao),
                 )
-                todaySteps >= 3000 -> Pair(
-                    "ひかりが隣を歩きながら、静かに口を開いた。\n「3000歩……いいペースだと思います。あと少し、一緒に歩きましょうか」",
-                    R.drawable.osyaberi_yasasiiegao
+                todaySteps >= 3000 -> listOf(
+                    Pair("ひかりが隣を歩きながら、静かに口を開いた。\n「3000歩……いいペースだと思います。あと少し、一緒に歩きましょうか」", R.drawable.osyaberi_yasasiiegao),
+                    Pair("ひかりがこちらを見て、小さくうなずいた。\n「3000歩来ましたね。この調子ですよ、焦らなくていいです」", R.drawable.osyaberi_smile),
+                    Pair("ひかりが少し笑って言った。\n「3000歩か……順調じゃないですか。目標まで、まだまだ一緒に行きますよ」", R.drawable.osyaberi_smile),
                 )
-                todaySteps >= 1000 -> Pair(
-                    "ひかりがこちらに気づいて、小さく会釈した。\n「あ……話しかけてくれたんですね。ちょうどよかったです、一緒に歩きませんか」",
-                    R.drawable.osyaberi_smile
+                todaySteps >= 1000 -> listOf(
+                    Pair("ひかりがこちらに気づいて、小さく会釈した。\n「あ……話しかけてくれたんですね。ちょうどよかったです、一緒に歩きませんか」", R.drawable.osyaberi_smile),
+                    Pair("ひかりが隣に並んで、ちょっと声をかけてきた。\n「1000歩、スタートできてますね。まずはそこからです、えらいと思います」", R.drawable.osyaberi_smile),
+                    Pair("ひかりがこちらをちらりと見た。\n「動き始めてるじゃないですか。その調子です、少しずつで大丈夫ですよ」", R.drawable.osyaberi_yasasiiegao),
                 )
-                else -> Pair(
-                    "なんとなく視線が合った。ひかりは少しだけ照れたように笑って、それからすぐに目をそらす。\n「……話しかけてくれます？なんか、待ってるの、ちょっと恥ずかしいですね」",
-                    R.drawable.osyaberi_smile
+                else -> listOf(
+                    Pair("なんとなく視線が合った。ひかりは少しだけ照れたように笑って、それからすぐに目をそらす。\n「……話しかけてくれます？なんか、待ってるの、ちょっと恥ずかしいですね」", R.drawable.osyaberi_smile),
+                    Pair("ひかりがぽつりと言った。\n「今日、まだあんまり歩いてないですよね。……一緒に少し歩いてみませんか」", R.drawable.osyaberi_yasasiiegao),
+                    Pair("ひかりがこちらを見て、少し遠慮がちに声をかけてきた。\n「あの……よかったら、今日一緒に歩きませんか。目標まで、応援しますので」", R.drawable.osyaberi_smile),
                 )
             }
+            val (text, expr) = candidates.random()
             messages.add(ChatMessage("assistant", text, expr))
         }
     }
