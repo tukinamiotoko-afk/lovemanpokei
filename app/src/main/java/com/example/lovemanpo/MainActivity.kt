@@ -1234,7 +1234,7 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
                 }
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(Icons.AutoMirrored.Filled.DirectionsWalk, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(18.dp))
+                Icon(Icons.AutoMirrored.Filled.DirectionsWalk, null, tint = Color(0xFFE87C9A), modifier = Modifier.size(18.dp))
                 Text("今日の歩数", fontSize = 10.sp, color = Color.Gray)
                 Text(String.format(java.util.Locale.US, "%,d", animatedSteps), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray)
                 Text("歩 / 10,000 歩", fontSize = 9.sp, color = Color.Gray)
@@ -1499,7 +1499,7 @@ fun HomeWeeklySection() {
                 val data = listOf(6315, 7102, 4803, 6540, 8765, 7842, 0)
                 data.forEachIndexed { i, steps ->
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        if (steps > 0) Text(String.format(java.util.Locale.US, "%,d", steps), fontSize = 6.sp, color = Color(0xFF4A90E2))
+                        if (steps > 0) Text(String.format(java.util.Locale.US, "%,d", steps), fontSize = 6.sp, color = Color(0xFFE87C9A))
                         Box(modifier = Modifier
                             .width(12.dp)
                             .height((steps / 150).dp.coerceAtLeast(4.dp))
@@ -1515,11 +1515,11 @@ fun HomeWeeklySection() {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.size(70.dp)) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     drawArc(Color.LightGray.copy(alpha = 0.2f), -90f, 360f, false, style = Stroke(5.dp.toPx()))
-                    drawArc(Color(0xFF4A90E2), -90f, 360f * 0.86f, false, style = Stroke(5.dp.toPx(), cap = StrokeCap.Round))
+                    drawArc(Color(0xFFE87C9A), -90f, 360f * 0.86f, false, style = Stroke(5.dp.toPx(), cap = StrokeCap.Round))
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.EmojiEvents, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(14.dp))
-                    Text("達成度 86%", fontSize = 8.sp, color = Color(0xFF4A90E2), fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.EmojiEvents, null, tint = Color(0xFFE87C9A), modifier = Modifier.size(14.dp))
+                    Text("達成度 86%", fontSize = 8.sp, color = Color(0xFFE87C9A), fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1579,14 +1579,14 @@ fun HomeCustomBottomNav(modifier: Modifier = Modifier, onFreeChat: () -> Unit, o
             Box(contentAlignment = Alignment.Center, modifier = Modifier
                 .offset(y = (-12).dp)
                 .clickable { onFreeChat() }) {
-                Surface(shape = CircleShape, color = Color(0xFF4A90E2), modifier = Modifier
+                Surface(shape = CircleShape, color = Color(0xFFE87C9A), modifier = Modifier
                     .size(56.dp)
                     .shadow(4.dp, CircleShape)) {
                     Icon(Icons.Default.Chat, null, tint = Color.White, modifier = Modifier.padding(14.dp))
                 }
                 Text("おしゃべり", modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .offset(y = 22.dp), fontSize = 10.sp, color = Color(0xFF4A90E2), fontWeight = FontWeight.Bold)
+                    .offset(y = 22.dp), fontSize = 10.sp, color = Color(0xFFE87C9A), fontWeight = FontWeight.Bold)
             }
 
             HomeNavItem(Icons.Default.EditNote, "日記", false) {}
@@ -1598,8 +1598,8 @@ fun HomeCustomBottomNav(modifier: Modifier = Modifier, onFreeChat: () -> Unit, o
 @Composable
 fun HomeNavItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, sel: Boolean, onClick: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onClick() }) {
-        Icon(icon, null, tint = if (sel) Color(0xFF4A90E2) else Color.Gray, modifier = Modifier.size(24.dp))
-        Text(label, fontSize = 9.sp, color = if (sel) Color(0xFF4A90E2) else Color.Gray)
+        Icon(icon, null, tint = if (sel) Color(0xFFE87C9A) else Color.Gray, modifier = Modifier.size(24.dp))
+        Text(label, fontSize = 9.sp, color = if (sel) Color(0xFFE87C9A) else Color.Gray)
     }
 }
 
@@ -2685,8 +2685,8 @@ fun ChatStatusCard(loveCount: Int, heartCount: Int, lastExprName: String?) {
             .fillMaxWidth()
             .padding(top = 8.dp),
         shape = RoundedCornerShape(16.dp),
-        color = Color(0xFFFDF6EE),
-        border = BorderStroke(1.dp, Color(0xFFE8D5C0))
+        color = Color(0xFFFFF0F5),
+        border = BorderStroke(1.dp, Color(0xFFEFB8CC))
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
@@ -2909,12 +2909,12 @@ fun ChatMenuScreen(navController: NavController, viewModel: StepViewModel) {
             Surface(
                 modifier = Modifier.fillMaxWidth().clickable { navController.navigate("freechat") },
                 shape = RoundedCornerShape(20.dp),
-                color = Color(0xFFF0F8FF),
+                color = Color(0xFFFFF0F5),
                 shadowElevation = 8.dp,
-                border = BorderStroke(1.dp, Color(0xFF4A90E2).copy(alpha = 0.4f))
+                border = BorderStroke(1.dp, Color(0xFFE87C9A).copy(alpha = 0.4f))
             ) {
                 Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Chat, null, tint = Color(0xFF4A90E2), modifier = Modifier.size(36.dp))
+                    Icon(Icons.Default.Chat, null, tint = Color(0xFFE87C9A), modifier = Modifier.size(36.dp))
                     Spacer(modifier = Modifier.width(16.dp))
                     Column {
                         Text("自由会話", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A), fontFamily = MplusRoundedFontFamily)
@@ -3001,6 +3001,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     }) { padding ->
         Column(modifier = Modifier
             .fillMaxSize()
+            .background(Color(0xFFFFF5F7))
             .padding(padding)) {
             LazyColumn(
                 state = listState,
@@ -3015,7 +3016,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFF4A90E2),
+                                color = Color(0xFFE87C9A),
                                 modifier = Modifier.widthIn(max = 280.dp)
                             ) {
                                 Text(msg.content, modifier = Modifier.padding(10.dp), color = Color.White, fontSize = 14.sp)
@@ -3056,7 +3057,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                             fontSize = 15.sp,
                                             lineHeight = 26.sp,
                                             modifier = Modifier
-                                                .background(Color(0xFFF5F0EB), RoundedCornerShape(8.dp))
+                                                .background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp))
                                                 .padding(horizontal = 12.dp, vertical = 8.dp)
                                         )
                                     }
@@ -3129,7 +3130,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                     },
                     enabled = !isLoading && inputText.isNotBlank()
                 ) {
-                    Icon(Icons.Default.Send, contentDescription = "送信", tint = Color(0xFF4A90E2))
+                    Icon(Icons.Default.Send, contentDescription = "送信", tint = Color(0xFFE87C9A))
                 }
             }
 
@@ -3310,6 +3311,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
     }) { padding ->
         Column(modifier = Modifier
             .fillMaxSize()
+            .background(Color(0xFFFFF5F7))
             .padding(padding)) {
             LazyColumn(
                 state = listState,
@@ -3324,7 +3326,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFF4A90E2),
+                                color = Color(0xFFE87C9A),
                                 modifier = Modifier.widthIn(max = 280.dp)
                             ) {
                                 Text(msg.content, modifier = Modifier.padding(10.dp), color = Color.White, fontSize = 14.sp)
@@ -3365,7 +3367,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                                             fontSize = 15.sp,
                                             lineHeight = 26.sp,
                                             modifier = Modifier
-                                                .background(Color(0xFFF5F0EB), RoundedCornerShape(8.dp))
+                                                .background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp))
                                                 .padding(horizontal = 12.dp, vertical = 8.dp)
                                         )
                                     }
@@ -3440,7 +3442,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                     },
                     enabled = !isLoading && inputText.isNotBlank()
                 ) {
-                    Icon(Icons.Default.Send, contentDescription = "送信", tint = Color(0xFF4A90E2))
+                    Icon(Icons.Default.Send, contentDescription = "送信", tint = Color(0xFFE87C9A))
                 }
             }
         }
