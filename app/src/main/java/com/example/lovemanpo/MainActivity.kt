@@ -2548,7 +2548,7 @@ fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String, tod
 ${intimacy}
 
 【文章スタイル】
-ライトノベルの地の文のように書いてください。台詞は「」で囲み、地の文と交互に書く。感情は動作や視線で表現する。全体で4〜6文程度。
+セリフのみで返答してください。「」は不要で、普通に話しかけてくる感じで書く。3〜5文程度。
 
 【表情・好感度ステータス】
 返答の最後に必ず以下の2つのタグを付けてください。
@@ -2711,15 +2711,29 @@ fun ChatStatusCard(loveCount: Int, heartCount: Int, lastExprName: String?) {
                 Text(loveLabel, fontSize = 10.sp, color = Color(0xFFB08060))
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text("ハート", fontSize = 10.sp, color = Color(0xFF9E8B75))
-                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    repeat(15) { i ->
-                        Text(
-                            if (i < heartCount) "♥" else "♡",
-                            fontSize = 13.sp,
-                            color = if (i < heartCount) Color(0xFFE87C9A) else Color(0xFFDDC8B8)
-                        )
-                    }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("ハート", fontSize = 10.sp, color = Color(0xFF9E8B75))
+                    Text("$heartCount / 15", fontSize = 10.sp, color = Color(0xFFE87C9A))
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(10.dp)
+                        .clip(RoundedCornerShape(5.dp))
+                        .background(Color(0xFFDDC8B8))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(fraction = (heartCount / 15f).coerceIn(0f, 1f))
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(Color(0xFFE87C9A))
+                    )
                 }
             }
             if (exprLabel != null) {
@@ -3069,32 +3083,16 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 contentScale = ContentScale.Crop
                             )
                             Spacer(modifier = Modifier.height(6.dp))
-                            Column(
-                                modifier = Modifier.padding(horizontal = 4.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                parseMessageSegments(msg.content).forEach { segment ->
-                                    if (segment.isNarration) {
-                                        Text(
-                                            text = segment.text,
-                                            color = Color(0xFF9E8B75),
-                                            fontSize = 12.sp,
-                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                                            lineHeight = 19.sp
-                                        )
-                                    } else {
-                                        Text(
-                                            text = segment.text,
-                                            color = Color(0xFF2C2C2C),
-                                            fontSize = 15.sp,
-                                            lineHeight = 26.sp,
-                                            modifier = Modifier
-                                                .background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp))
-                                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                                        )
-                                    }
-                                }
-                            }
+                            Text(
+                                text = msg.content,
+                                color = Color(0xFF2C2C2C),
+                                fontSize = 15.sp,
+                                lineHeight = 26.sp,
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp)
+                                    .background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            )
                         }
                     }
                 }
@@ -3384,32 +3382,16 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                                 contentScale = ContentScale.Crop
                             )
                             Spacer(modifier = Modifier.height(6.dp))
-                            Column(
-                                modifier = Modifier.padding(horizontal = 4.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                parseMessageSegments(msg.content).forEach { segment ->
-                                    if (segment.isNarration) {
-                                        Text(
-                                            text = segment.text,
-                                            color = Color(0xFF9E8B75),
-                                            fontSize = 12.sp,
-                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                                            lineHeight = 19.sp
-                                        )
-                                    } else {
-                                        Text(
-                                            text = segment.text,
-                                            color = Color(0xFF2C2C2C),
-                                            fontSize = 15.sp,
-                                            lineHeight = 26.sp,
-                                            modifier = Modifier
-                                                .background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp))
-                                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                                        )
-                                    }
-                                }
-                            }
+                            Text(
+                                text = msg.content,
+                                color = Color(0xFF2C2C2C),
+                                fontSize = 15.sp,
+                                lineHeight = 26.sp,
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp)
+                                    .background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            )
                         }
                     }
                 }
