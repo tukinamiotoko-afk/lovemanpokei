@@ -3067,17 +3067,8 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 }
                 if (isLoading) {
                     item {
-                        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
-                            Image(
-                                painter = painterResource(R.drawable.osyaberi_smile),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(300.dp)
-                                    .clip(RoundedCornerShape(20.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(start = 4.dp))
+                        Box(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(modifier = Modifier.size(28.dp), color = Color(0xFFE87C9A), strokeWidth = 2.dp)
                         }
                     }
                 }
@@ -3385,17 +3376,8 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                 }
                 if (isLoading) {
                     item {
-                        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.Start) {
-                            Image(
-                                painter = painterResource(R.drawable.osyaberi_smile),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(300.dp)
-                                    .clip(RoundedCornerShape(20.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp).padding(start = 4.dp))
+                        Box(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(modifier = Modifier.size(28.dp), color = Color(0xFFE87C9A), strokeWidth = 2.dp)
                         }
                     }
                 }
