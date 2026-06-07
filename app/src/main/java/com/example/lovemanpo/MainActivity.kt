@@ -2970,19 +2970,11 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
 
     LaunchedEffect(Unit) {
         if (messages.isEmpty()) {
-            isLoading = true
-            scope.launch {
-                try {
-                    val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, todaySteps, activeDays)
-                    val reply = callGeminiApi(systemPrompt, emptyList(), "（最初の挨拶として、今日の歩数を踏まえたひとことを自然に話しかけてきてください）")
-                    val parsed = parseReply(reply)
-                    messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName))
-                } catch (_: Exception) {
-                    messages.add(ChatMessage("assistant", "なんとなく視線が合った。ひかりは少しだけ照れたように笑って、それからすぐに目をそらす。\n「……話しかけてくれます？」", R.drawable.osyaberi_smile))
-                } finally {
-                    isLoading = false
-                }
-            }
+            messages.add(ChatMessage(
+                "assistant",
+                "なんとなく視線が合った。ひかりは少しだけ照れたように笑って、それからすぐに目をそらす。\n「……話しかけてくれます？なんか、待ってるの、ちょっと恥ずかしいですね」",
+                R.drawable.osyaberi_smile
+            ))
         }
     }
 
