@@ -2413,9 +2413,9 @@ fun PermissionRequestScreen(onRequestPermission: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TopAppBarWithBack(title: String, onBack: () -> Unit, actions: @Composable () -> Unit = {}) {
+fun TopAppBarWithBack(title: String, onBack: () -> Unit, actions: @Composable () -> Unit = {}, titleColor: Color = Color.Unspecified, titleFontFamily: FontFamily? = null) {
     CenterAlignedTopAppBar(
-        title = { Text(text = title) },
+        title = { Text(text = title, color = titleColor, fontFamily = titleFontFamily) },
         navigationIcon = { IconButton(onClick = onBack) { Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る") } },
         actions = { actions() },
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
@@ -2969,9 +2969,11 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
         TopAppBarWithBack(
             title = "自由会話 (${actionPoints}pt)",
             onBack = { navController.popBackStack() },
+            titleColor = Color(0xFFE87C9A),
+            titleFontFamily = MplusRoundedFontFamily,
             actions = {
                 IconButton(onClick = { showDeleteConfirm = !showDeleteConfirm }) {
-                    Icon(Icons.Default.DeleteOutline, contentDescription = "履歴削除", tint = Color.Gray)
+                    Icon(Icons.Default.DeleteOutline, contentDescription = "履歴削除", tint = Color(0xFFE87C9A))
                 }
             }
         )
@@ -3178,7 +3180,7 @@ fun OdekakeScenarioSelectScreen(navController: NavController, viewModel: StepVie
     val loveCount by viewModel.loveCount
 
     Scaffold(topBar = {
-        TopAppBarWithBack(title = "おでかけ (${actionPoints}pt)", onBack = { navController.popBackStack() })
+        TopAppBarWithBack(title = "${location.emoji} ${location.name} (${actionPoints}pt)", onBack = { navController.popBackStack() }, titleColor = Color(0xFFE87C9A), titleFontFamily = MplusRoundedFontFamily)
     }) { padding ->
         Column(modifier = Modifier
             .fillMaxSize()
