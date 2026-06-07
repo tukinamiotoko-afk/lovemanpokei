@@ -2971,11 +2971,33 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
 
     LaunchedEffect(Unit) {
         if (messages.isEmpty()) {
-            messages.add(ChatMessage(
-                "assistant",
-                "なんとなく視線が合った。ひかりは少しだけ照れたように笑って、それからすぐに目をそらす。\n「……話しかけてくれます？なんか、待ってるの、ちょっと恥ずかしいですね」",
-                R.drawable.osyaberi_smile
-            ))
+            val (text, expr) = when {
+                todaySteps >= 10000 -> Pair(
+                    "ひかりが振り返って、目を丸くした。\n「……もう一万歩ですか？すごいです、本当に。えっと……お疲れ様でした」",
+                    R.drawable.osyaberi_odoroki
+                )
+                todaySteps >= 8000 -> Pair(
+                    "ひかりが少し前を歩きながら、ちらりとこちらを見た。\n「8000歩か……えへ、今日もちゃんと歩いてるんですね。なんか、嬉しいです」",
+                    R.drawable.osyaberi_tereru
+                )
+                todaySteps >= 5000 -> Pair(
+                    "ひかりが歩調を合わせながら、穏やかに笑う。\n「5000歩ですね。折り返し地点、一緒に歩けてよかったです」",
+                    R.drawable.osyaberi_smile
+                )
+                todaySteps >= 3000 -> Pair(
+                    "ひかりが隣を歩きながら、静かに口を開いた。\n「3000歩……いいペースだと思います。あと少し、一緒に歩きましょうか」",
+                    R.drawable.osyaberi_yasasiiegao
+                )
+                todaySteps >= 1000 -> Pair(
+                    "ひかりがこちらに気づいて、小さく会釈した。\n「あ……話しかけてくれたんですね。ちょうどよかったです、一緒に歩きませんか」",
+                    R.drawable.osyaberi_smile
+                )
+                else -> Pair(
+                    "なんとなく視線が合った。ひかりは少しだけ照れたように笑って、それからすぐに目をそらす。\n「……話しかけてくれます？なんか、待ってるの、ちょっと恥ずかしいですね」",
+                    R.drawable.osyaberi_smile
+                )
+            }
+            messages.add(ChatMessage("assistant", text, expr))
         }
     }
 
