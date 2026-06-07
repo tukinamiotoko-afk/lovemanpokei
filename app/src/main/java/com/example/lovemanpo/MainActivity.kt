@@ -2524,11 +2524,10 @@ fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String, tod
     }
     val stepInfo = if (todaySteps > 0 || activeDays > 0) """
 
-【${playerName}さんの今日の歩数・記録】
-- 今日の歩数：${todaySteps}歩（目標：10000歩）
-- 目標まで残り：${(10000 - todaySteps).coerceAtLeast(0)}歩
+【${playerName}さんの歩数情報】
+- 今日の歩数：${todaySteps}歩（目標：10000歩、残り${(10000 - todaySteps).coerceAtLeast(0)}歩）
 - これまでに1000歩以上歩いた日数：${activeDays}日
-この情報を会話の中で自然に触れてもいい。毎回言う必要はない。""" else ""
+ひかりはこの情報を把握していて、会話の流れに合わせて自発的に触れる。目標に近いときは後押しする、達成していたら一緒に喜ぶ、まだ少ないときはさりげなく背中を押すなど、状況に応じて臨機応変に言葉をかける。毎回言う必要はないが、タイミングが合えば自然に出す。""" else ""
     return """あなたは「ひかり」というキャラクターになりきってください。
 
 【基本設定】
