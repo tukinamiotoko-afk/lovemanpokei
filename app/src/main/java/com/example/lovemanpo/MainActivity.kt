@@ -1574,7 +1574,7 @@ fun HomeCustomBottomNav(modifier: Modifier = Modifier, onFreeChat: () -> Unit, o
         .fillMaxWidth()
         .height(80.dp), color = Color.White, shadowElevation = 10.dp) {
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically) {
-            HomeNavItem(Icons.Default.Home, "ホーム", true) {}
+            HomeNavItem(Icons.Default.ShoppingBag, "おでかけ", false, onOdekake)
 
             Box(contentAlignment = Alignment.Center, modifier = Modifier
                 .offset(y = (-12).dp)
@@ -1589,7 +1589,6 @@ fun HomeCustomBottomNav(modifier: Modifier = Modifier, onFreeChat: () -> Unit, o
                     .offset(y = 22.dp), fontSize = 10.sp, color = Color(0xFFE87C9A), fontWeight = FontWeight.Bold)
             }
 
-            HomeNavItem(Icons.Default.EditNote, "日記", false) {}
             HomeNavItem(Icons.Default.BarChart, "記録", false, onRecords)
         }
     }
