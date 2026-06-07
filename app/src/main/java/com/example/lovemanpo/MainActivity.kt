@@ -3019,6 +3019,21 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
+                item {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0xFFFFE4EE),
+                        border = BorderStroke(1.dp, Color(0xFFEFB8CC))
+                    ) {
+                        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("💬 ひかりとおしゃべり", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD4618A), fontFamily = MplusRoundedFontFamily)
+                            Text("・1メッセージ = 1ポイント消費（2000歩で1ポイント）", fontSize = 11.sp, color = Color(0xFF9E6070))
+                            Text("・歩いた日数や歩数でひかりのセリフが変わります", fontSize = 11.sp, color = Color(0xFF9E6070))
+                            Text("・好感度が上がると口調が変わっていきます", fontSize = 11.sp, color = Color(0xFF9E6070))
+                        }
+                    }
+                }
                 items(messages.size) { i ->
                     val msg = messages[i]
                     val isUser = msg.role == "user"
