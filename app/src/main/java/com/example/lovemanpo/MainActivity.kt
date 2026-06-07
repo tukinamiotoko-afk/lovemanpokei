@@ -3238,7 +3238,7 @@ fun OdekakeScenarioSelectScreen(navController: NavController, viewModel: StepVie
     val loveCount by viewModel.loveCount
 
     Scaffold(topBar = {
-        TopAppBarWithBack(title = "${location.emoji} ${location.name} (${actionPoints}pt)", onBack = { navController.popBackStack() }, titleColor = Color(0xFFE87C9A), titleFontFamily = MplusRoundedFontFamily)
+        TopAppBarWithBack(title = "おでかけ (${actionPoints}pt)", onBack = { navController.popBackStack() }, titleColor = Color(0xFFE87C9A), titleFontFamily = MplusRoundedFontFamily)
     }) { padding ->
         Column(modifier = Modifier
             .fillMaxSize()
