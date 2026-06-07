@@ -985,6 +985,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         allRecords.find { it.date == today }
     }
     val activeTimeMillis = todayRecord?.activeTimeMillis ?: 0L
+    val activeDays = remember(allRecords) { allRecords.count { it.stepCount >= 1000 } }
 
     // 距離の計算 (km)
     val distance = (todaySteps * viewModel.strideLength) / 1000.0
@@ -999,10 +1000,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     val minutes = (activeTimeMillis % 3600000) / 60000
     val activeTimeStr = "${hours}時間 ${minutes}分"
 
-    val stepDialogue = homeStepDialogues
-        .filter { it.thresholdSteps <= todaySteps }
-        .maxByOrNull { it.thresholdSteps }
-        ?: homeStepDialogues.first()
+    val stepDialogue = homeStepDialogue(todaySteps, activeDays)
 
     val touchDialogues = homeTouchDialogues(loveCount)
     var touchedDialogue by remember { mutableStateOf<Pair<String, Int>?>(null) }
@@ -2451,15 +2449,38 @@ data class ChatMessage(val role: String, val content: String, val expressionRes:
 data class HomeStepMsg(val thresholdSteps: Int, val text: String, val expr: Int)
 
 val homeStepDialogues = listOf(
-    HomeStepMsg(0,     "今日も一緒にお散歩しましょう！",              R.drawable.hikari_smile),
-    HomeStepMsg(1000,  "1000歩ですね！順調ですよ！",                  R.drawable.hikari_smile),
-    HomeStepMsg(3000,  "3000歩！いい感じです！",                      R.drawable.hikari_celebrate),
-    HomeStepMsg(5000,  "5000歩達成！休憩しませんか？",                R.drawable.hikari_smile),
-    HomeStepMsg(8000,  "8000歩！今日はぐっすり眠れそうですね。",      R.drawable.hikari_blush),
-    HomeStepMsg(10000, "10000歩突破！すごいです！",                    R.drawable.hikari_celebrate),
-    HomeStepMsg(20000, "20000歩！？アスリートですか…！尊敬します！",   R.drawable.hikari_celebrate),
-    HomeStepMsg(30000, "30000歩…！今日はゆっくり休んでくださいね。",  R.drawable.hikari_smile),
+    HomeStepMsg(0,     "今日もいっぱい歩こうね",                        R.drawable.hikari_smile),
+    HomeStepMsg(1000,  "1000歩！ちょっとずつだけど、ちゃんと進んでるよ", R.drawable.hikari_smile),
+    HomeStepMsg(3000,  "3000歩か……えへ、わたしも一緒に歩いてる気分",    R.drawable.hikari_blush),
+    HomeStepMsg(5000,  "5000歩！半分来たね。もう少し、がんばろ",         R.drawable.hikari_smile),
+    HomeStepMsg(8000,  "8000歩……すごい。今日、かなり動いたじゃん",       R.drawable.hikari_celebrate),
+    HomeStepMsg(10000, "10000歩！一緒に歩いてくれてありがとう……えへ",    R.drawable.hikari_blush),
+    HomeStepMsg(20000, "20000歩……！もう、どこまで行く気なの",            R.drawable.hikari_celebrate),
+    HomeStepMsg(30000, "30000歩は流石に心配になるよ……ちゃんと休んでね",  R.drawable.hikari_smile),
 )
+
+val homeDaysDialogues = listOf(
+    HomeStepMsg(1,   "一緒に歩いてくれるの、嬉しいな",                    R.drawable.hikari_smile),
+    HomeStepMsg(3,   "3日続いてる！わたし、ちゃんと見てたよ",             R.drawable.hikari_blush),
+    HomeStepMsg(7,   "一週間か……なんか照れるな、毎日会ってるみたいで",    R.drawable.hikari_blush),
+    HomeStepMsg(14,  "2週間続いてる。もう習慣になってきたんじゃない？",   R.drawable.hikari_smile),
+    HomeStepMsg(30,  "30日……！一緒にいてくれてありがとう、本当に",        R.drawable.hikari_celebrate),
+    HomeStepMsg(60,  "2ヶ月か。ずっと一緒にいてくれてるんだね",           R.drawable.hikari_blush),
+    HomeStepMsg(100, "100日……もう、わたしのこと好きじゃないと無理でしょ", R.drawable.hikari_blush),
+)
+
+fun homeStepDialogue(todaySteps: Int, activeDays: Int): HomeStepMsg {
+    // 節目の日数のときは日数セリフを優先
+    val daysMilestone = listOf(100, 60, 30, 14, 7, 3, 1)
+    val matchedDay = daysMilestone.firstOrNull { activeDays == it }
+    if (matchedDay != null) {
+        return homeDaysDialogues.find { it.thresholdSteps == matchedDay } ?: homeDaysDialogues.first()
+    }
+    return homeStepDialogues
+        .filter { it.thresholdSteps <= todaySteps }
+        .maxByOrNull { it.thresholdSteps }
+        ?: homeStepDialogues.first()
+}
 
 fun homeTouchDialogues(loveCount: Int): List<Pair<String, Int>> = when {
     loveCount >= 7 -> listOf(
