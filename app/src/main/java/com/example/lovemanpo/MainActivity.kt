@@ -2515,19 +2515,25 @@ val odekakeLocations = listOf(
     OdekakeLocation("home",   "おうち",  "🏠",  8)
 )
 
-fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String): String {
+fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String, todaySteps: Int = 0, activeDays: Int = 0): String {
     val intimacy = when {
         loveCount <= 2 -> "敬語を使った丁寧な話し方をしてください。"
         loveCount <= 5 -> "敬語を少し崩した自然な話し方をしてください。"
         loveCount <= 7 -> "タメ口で友達のような話し方をしてください。"
         else           -> "タメ口で甘えた話し方をしてください。"
     }
+    val stepInfo = if (todaySteps > 0 || activeDays > 0) """
+
+【${playerName}さんの今日の歩数・記録】
+- 今日の歩数：${todaySteps}歩
+- これまでに1000歩以上歩いた日数：${activeDays}日
+この情報を会話の中で自然に触れてもいい。毎回言う必要はない。""" else ""
     return """あなたは「ひかり」というキャラクターになりきってください。
 
 【基本設定】
 - 優しくて穏やかな女の子
 - 少し照れ屋で、褒められたり距離が縮まると恥ずかしそうにする
-- ${situation}
+- ${situation}${stepInfo}
 
 【話し方】
 ${intimacy}
@@ -2543,10 +2549,10 @@ ${intimacy}
 [LOVE:up/down/none] ← 好感度の変化。嬉しい・照れた・心を開いた瞬間はup、傷ついた・不機嫌になったはdown、それ以外はnone。""".trimIndent()
 }
 
-fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String) =
-    buildSystemPrompt(loveCount, playerName, "${playerName}さんと一緒に散歩しています")
+fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0) =
+    buildSystemPrompt(loveCount, playerName, "${playerName}さんと一緒に散歩しています", todaySteps, activeDays)
 
-fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String): String {
+fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0): String {
     val situation = when (locationId) {
         "cafe"   -> "${playerName}さんと一緒にカフェでお茶をしています"
         "park"   -> "${playerName}さんと一緒に公園を散歩しています"
@@ -2555,7 +2561,7 @@ fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName:
         "home"   -> "${playerName}さんがひかりの部屋に遊びに来ています"
         else     -> "${playerName}さんと一緒にいます"
     }
-    return buildSystemPrompt(loveCount, playerName, situation)
+    return buildSystemPrompt(loveCount, playerName, situation, todaySteps, activeDays)
 }
 
 val positiveExpressions = setOf(
@@ -2949,6 +2955,9 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     val heartCount by viewModel.heartCount
     val actionPoints by viewModel.currentActionPoints
     val playerName by viewModel.playerName
+    val todaySteps by viewModel.todaySteps
+    val allRecords by viewModel.allStepRecords
+    val activeDays = remember(allRecords) { allRecords.count { it.stepCount >= 1000 } }
     val messages = viewModel.freeChatMessages
     var inputText by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -3109,7 +3118,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                         val historySnapshot = messages.dropLast(1).toList()
                         scope.launch {
                             try {
-                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName)
+                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, todaySteps, activeDays)
                                 val reply = callGeminiApi(systemPrompt, historySnapshot, text)
                                 val parsed = parseReply(reply)
                                 messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName))
@@ -3260,6 +3269,9 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
     val heartCount by viewModel.heartCount
     val actionPoints by viewModel.currentActionPoints
     val playerName by viewModel.playerName
+    val todaySteps by viewModel.todaySteps
+    val allRecords by viewModel.allStepRecords
+    val activeDays = remember(allRecords) { allRecords.count { it.stepCount >= 1000 } }
     val location = odekakeLocations.find { it.id == locationId } ?: odekakeLocations.first()
     val messages = viewModel.getOdekakeMessages(locationId)
 
@@ -3421,7 +3433,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                         val historySnapshot = messages.dropLast(1).toList()
                         scope.launch {
                             try {
-                                val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName)
+                                val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName, todaySteps, activeDays)
                                 val reply = callGeminiApi(systemPrompt, historySnapshot, text)
                                 val parsed = parseReply(reply)
                                 messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName))
