@@ -2539,7 +2539,11 @@ ${intimacy}
 【文章スタイル】
 ライトノベルの地の文のような文体で書いてください。台詞は「」で囲み、地の文と交互に書く。感情は直接書かず、動作や視線で表現する。全体で5〜8文程度。
 
-【重要】ひかりは自分の意志で動くキャラクターです。相手の言葉に反応するだけでなく、自分から話題を出したり、気になったことを聞いたり、唐突に別のことを言い出したりしていい。会話の主導権を持つこともある。""".trimIndent()
+【重要】ひかりは自分の意志で動くキャラクターです。相手の言葉に反応するだけでなく、自分から話題を出したり、気になったことを聞いたり、唐突に別のことを言い出したりしていい。会話の主導権を持つこともある。
+
+【表情ステータス】
+返答の最後に必ず [EXPR:表情名] を1つ付けてください。今の場面に最も合うものを選んでください。
+使える表情：${availableExpressions(loveCount)}""".trimIndent()
 }
 
 fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String): String {
@@ -2575,6 +2579,52 @@ val negativeExpressions = setOf(
     R.drawable.osyaberi_tumetaime,
     R.drawable.osyaberi_sitto
 )
+
+fun availableExpressions(loveCount: Int): String {
+    val base = "smile, okoru, hukigenn, tumetaime, nakigao, namida, otikomu, sukoshiokoru, huan, odoroki, kangaeru, tomadoi, taikutu, yasasiiegao, omowazuwarau"
+    val lv3  = if (loveCount >= 3) ", tereru" else ""
+    val lv5  = if (loveCount >= 5) ", uinnku, doyagao" else ""
+    val lv6  = if (loveCount >= 6) ", koigokoro, mitumeau" else ""
+    val lv7  = if (loveCount >= 7) ", yuuwaku, sitto" else ""
+    val lv8  = if (loveCount >= 8) ", hagu" else ""
+    val lv9  = if (loveCount >= 9) ", kiss, soine" else ""
+    return base + lv3 + lv5 + lv6 + lv7 + lv8 + lv9
+}
+
+fun exprNameToRes(name: String): Int = when (name) {
+    "tereru"    -> R.drawable.osyaberi_tereru
+    "koigokoro" -> R.drawable.osyaberi_koigokoro
+    "yasasiiegao" -> R.drawable.osyaberi_yasasiiegao
+    "hagu"      -> R.drawable.osyaberi_hagu
+    "kiss"      -> R.drawable.osyaberi_kiss
+    "soine"     -> R.drawable.osyaberi_soine
+    "omowazuwarau" -> R.drawable.osyaberi_omowazuwarau
+    "uinnku"    -> R.drawable.osyaberi_uinnku
+    "yuuwaku"   -> R.drawable.osyaberi_yuuwaku
+    "mitumeau"  -> R.drawable.osyaberi_mitumeau
+    "okoru"     -> R.drawable.osyaberi_okoru
+    "hukigenn"  -> R.drawable.osyaberi_hukigenn
+    "tumetaime" -> R.drawable.osyaberi_tumetaime
+    "sitto"     -> R.drawable.osyaberi_sitto
+    "nakigao"   -> R.drawable.osyaberi_nakigao_mousiwakenai
+    "namida"    -> R.drawable.osyaberi_namida
+    "otikomu"   -> R.drawable.osyaberi_otikomu
+    "sukoshiokoru" -> R.drawable.osyaberi_sukoshiokoru
+    "huan"      -> R.drawable.osyaberi_huan
+    "odoroki"   -> R.drawable.osyaberi_odoroki
+    "kangaeru"  -> R.drawable.osyaberi_kangaeru
+    "tomadoi"   -> R.drawable.osyaberi_tomadoi
+    "taikutu"   -> R.drawable.osyaberi_taikutu
+    "doyagao"   -> R.drawable.osyaberi_doyagao
+    else        -> R.drawable.osyaberi_smile
+}
+
+fun parseExprFromReply(reply: String): Pair<String, Int> {
+    val regex = Regex("""\[EXPR:(\w+)\]""")
+    val match = regex.find(reply) ?: return Pair(reply.trim(), R.drawable.osyaberi_smile)
+    val cleanText = reply.replace(match.value, "").trim()
+    return Pair(cleanText, exprNameToRes(match.groupValues[1]))
+}
 
 data class MessageSegment(val text: String, val isNarration: Boolean)
 
@@ -2978,8 +3028,8 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             try {
                                 val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName)
                                 val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
-                                val expr = detectHikariExpression(reply, loveCount)
-                                messages.add(ChatMessage("assistant", reply, expr))
+                                val (cleanReply, expr) = parseExprFromReply(reply)
+                                messages.add(ChatMessage("assistant", cleanReply, expr))
                                 when {
                                     expr in positiveExpressions -> viewModel.earnHeart()
                                     expr in negativeExpressions -> viewModel.loseHeart()
@@ -3296,8 +3346,8 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                             try {
                                 val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName)
                                 val reply = callGeminiApi(apiKey, systemPrompt, historySnapshot, text)
-                                val expr = detectHikariExpression(reply, loveCount)
-                                messages.add(ChatMessage("assistant", reply, expr))
+                                val (cleanReply, expr) = parseExprFromReply(reply)
+                                messages.add(ChatMessage("assistant", cleanReply, expr))
                                 viewModel.saveOdekakeHistory(locationId)
                             } catch (e: Exception) {
                                 errorMessage = "エラーが発生しました: ${e.message}"
