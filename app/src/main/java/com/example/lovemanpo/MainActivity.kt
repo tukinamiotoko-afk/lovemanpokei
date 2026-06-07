@@ -2973,12 +2973,12 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
         if (messages.isEmpty()) {
             val (text, expr) = when {
                 todaySteps >= 10000 -> Pair(
-                    "ひかりが振り返って、目を丸くした。\n「……もう一万歩ですか？すごいです、本当に。えっと……お疲れ様でした」",
-                    R.drawable.osyaberi_odoroki
+                    "ひかりが振り返った。その目が、少しだけ揺れているように見えた。\n「……一万歩、ちゃんと歩いてくれてたんですね。ずっと一緒にいてくれてたみたいで……なんか、嬉しくなっちゃいました」",
+                    R.drawable.osyaberi_tereru
                 )
                 todaySteps >= 8000 -> Pair(
-                    "ひかりが少し前を歩きながら、ちらりとこちらを見た。\n「8000歩か……えへ、今日もちゃんと歩いてるんですね。なんか、嬉しいです」",
-                    R.drawable.osyaberi_tereru
+                    "ひかりがそっと隣に並んで、小声で言った。\n「……今日、すごく歩いてますよね。無理してないですか？……ちょっと、心配になっちゃいました」",
+                    R.drawable.osyaberi_yasasiiegao
                 )
                 todaySteps >= 5000 -> Pair(
                     "ひかりが歩調を合わせながら、穏やかに笑う。\n「5000歩ですね。折り返し地点、一緒に歩けてよかったです」",
