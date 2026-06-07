@@ -183,6 +183,10 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getString("FREE_CHAT_HISTORY", "[]") ?: "[]"
         set(value) = prefs.edit { putString("FREE_CHAT_HISTORY", value) }
 
+    var hasEverChatted: Boolean
+        get() = prefs.getBoolean("HAS_EVER_CHATTED", false)
+        set(value) = prefs.edit { putBoolean("HAS_EVER_CHATTED", value) }
+
     fun getOdekakeHistoryJson(locationId: String): String =
         prefs.getString("ODEKAKE_HISTORY_$locationId", "[]") ?: "[]"
 
@@ -346,6 +350,9 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
         }
         repository.setOdekakeHistoryJson(locationId, json.toString())
     }
+
+    val hasEverChatted get() = repository.hasEverChatted
+    fun markHasEverChatted() { repository.hasEverChatted = true }
 
     fun saveFreeChatHistory() {
         val json = org.json.JSONArray()
@@ -3134,7 +3141,9 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                         val historySnapshot = messages.dropLast(1).toList()
                         scope.launch {
                             try {
-                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, todaySteps, activeDays)
+                                val hasChat = viewModel.hasEverChatted
+                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0)
+                                viewModel.markHasEverChatted()
                                 val reply = callGeminiApi(systemPrompt, historySnapshot, text)
                                 val parsed = parseReply(reply)
                                 messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName))
