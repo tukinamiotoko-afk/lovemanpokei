@@ -191,6 +191,10 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getString("CUSTOM_CHARACTER_NOTE", "") ?: ""
         set(value) = prefs.edit { putString("CUSTOM_CHARACTER_NOTE", value) }
 
+    var isPremium: Boolean
+        get() = prefs.getBoolean("IS_PREMIUM", false)
+        set(value) = prefs.edit { putBoolean("IS_PREMIUM", value) }
+
     fun getOdekakeHistoryJson(locationId: String): String =
         prefs.getString("ODEKAKE_HISTORY_$locationId", "[]") ?: "[]"
 
@@ -360,6 +364,9 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
 
     val customCharacterNote get() = repository.customCharacterNote
     fun saveCustomCharacterNote(note: String) { repository.customCharacterNote = note }
+
+    val isPremium get() = repository.isPremium
+    fun unlockPremium() { repository.isPremium = true }
 
     fun saveFreeChatHistory() {
         val json = org.json.JSONArray()
@@ -2372,6 +2379,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
     var tempWeight by remember { mutableStateOf(viewModel.weightKg.floatValue.toString()) }
     var tempGender by remember { mutableStateOf(viewModel.userGender.value) }
     var tempCustomNote by remember { mutableStateOf(viewModel.customCharacterNote) }
+    val isPremium by remember { derivedStateOf { viewModel.isPremium } }
     val pinkAccent = Color(0xFFFF6B9D)
 
     Scaffold(
@@ -2399,26 +2407,47 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                 Text("女性", modifier = Modifier.clickable { tempGender = "女性" })
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text("ひかりへの追加設定", fontWeight = FontWeight.Bold, color = pinkAccent, fontSize = 14.sp)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "ひかりのキャラクターに追加したい設定を自由に書いてください。\n例：「ねこが大好き」「料理が得意」「少し天然な一面がある」など",
-                    fontSize = 12.sp,
-                    color = Color(0xFF888888),
-                    lineHeight = 18.sp
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                OutlinedTextField(
-                    value = tempCustomNote,
-                    onValueChange = { tempCustomNote = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 100.dp),
-                    placeholder = { Text("追加設定を入力...", color = Color(0xFFBBBBBB)) },
-                    maxLines = 8,
-                    shape = RoundedCornerShape(12.dp)
-                )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = if (isPremium) Color(0xFFFFF0F5) else Color(0xFFF5F5F5),
+                border = BorderStroke(1.dp, if (isPremium) pinkAccent else Color(0xFFCCCCCC))
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("ひかりへの追加設定", fontWeight = FontWeight.Bold, color = if (isPremium) pinkAccent else Color(0xFF999999), fontSize = 14.sp)
+                        if (!isPremium) {
+                            Surface(shape = RoundedCornerShape(4.dp), color = Color(0xFFFFB300)) {
+                                Text("プレミアム", fontSize = 10.sp, color = Color.White, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    if (isPremium) {
+                        Text(
+                            "ひかりのキャラクターに追加したい設定を自由に書いてください。\n例：「ねこが大好き」「料理が得意」「少し天然な一面がある」など",
+                            fontSize = 12.sp, color = Color(0xFF888888), lineHeight = 18.sp
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        OutlinedTextField(
+                            value = tempCustomNote,
+                            onValueChange = { if (it.length <= 200) tempCustomNote = it },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp),
+                            placeholder = { Text("追加設定を入力...", color = Color(0xFFBBBBBB)) },
+                            maxLines = 8,
+                            shape = RoundedCornerShape(12.dp),
+                            supportingText = { Text("${tempCustomNote.length} / 200", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp) }
+                        )
+                    } else {
+                        Text("ひかりの性格や話し方をカスタマイズできます。\nプレミアムプランで利用可能です。", fontSize = 12.sp, color = Color(0xFF999999), lineHeight = 18.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = { /* TODO: 課金処理 */ },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300))
+                        ) { Text("プレミアムを購入する", color = Color.White) }
+                    }
+                }
             }
             Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = {
@@ -2427,7 +2456,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                 viewModel.setPlayerName(tempName)
                 viewModel.setUserProfile(h, w)
                 viewModel.saveProfile(h, tempGender)
-                viewModel.saveCustomCharacterNote(tempCustomNote)
+                if (isPremium) viewModel.saveCustomCharacterNote(tempCustomNote)
                 navController.popBackStack()
             }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = pinkAccent)) { Text("保存して戻る") }
         }
@@ -3161,10 +3190,13 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 .padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = inputText,
-                    onValueChange = { inputText = it },
+                    onValueChange = { if (it.length <= 100) inputText = it },
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("メッセージを入力...") },
-                    maxLines = 3
+                    maxLines = 3,
+                    supportingText = {
+                        Text("${inputText.length} / 100", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp, color = if (inputText.length >= 100) Color.Red else Color(0xFF999999))
+                    }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 IconButton(
@@ -3180,7 +3212,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                         messages.add(userMsg)
                         inputText = ""
                         isLoading = true
-                        val historySnapshot = messages.dropLast(1).toList()
+                        val historySnapshot = messages.dropLast(1).takeLast(20)
                         scope.launch {
                             try {
                                 val hasChat = viewModel.hasEverChatted
@@ -3461,10 +3493,13 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                 .padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = inputText,
-                    onValueChange = { inputText = it },
+                    onValueChange = { if (it.length <= 100) inputText = it },
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("メッセージを入力...") },
-                    maxLines = 3
+                    maxLines = 3,
+                    supportingText = {
+                        Text("${inputText.length} / 100", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp, color = if (inputText.length >= 100) Color.Red else Color(0xFF999999))
+                    }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 IconButton(
@@ -3482,7 +3517,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                         inputText = ""
                         isLoading = true
                         odekakeMessageCount++
-                        val historySnapshot = messages.dropLast(1).toList()
+                        val historySnapshot = messages.dropLast(1).takeLast(20)
                         scope.launch {
                             try {
                                 val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName, todaySteps, activeDays, viewModel.customCharacterNote)
