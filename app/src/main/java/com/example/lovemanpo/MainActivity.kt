@@ -3228,8 +3228,8 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             Text(
                                 text = msg.content,
                                 color = Color(0xFF2C2C2C),
-                                fontSize = 15.sp,
-                                lineHeight = 26.sp,
+                                fontSize = 13.sp,
+                                lineHeight = 22.sp,
                                 modifier = Modifier
                                     .padding(horizontal = 4.dp)
                                     .background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp))
@@ -3537,8 +3537,8 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                             Text(
                                 text = msg.content,
                                 color = Color(0xFF2C2C2C),
-                                fontSize = 15.sp,
-                                lineHeight = 26.sp,
+                                fontSize = 13.sp,
+                                lineHeight = 22.sp,
                                 modifier = Modifier
                                     .padding(horizontal = 4.dp)
                                     .background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp))
