@@ -3283,7 +3283,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             Column(modifier = Modifier.padding(horizontal = 4.dp)) {
                                 parseMessageSegments(msg.content).forEach { seg ->
                                     if (seg.isNarration) {
-                                        Text(seg.text, color = Color(0xFF888888), fontSize = 11.sp, lineHeight = 18.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, modifier = Modifier.padding(vertical = 2.dp))
+                                        Text(seg.text, color = Color(0xFF888888), fontSize = 13.sp, lineHeight = 22.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, modifier = Modifier.padding(vertical = 2.dp))
                                     } else {
                                         Text(seg.text, color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = Modifier.padding(vertical = 2.dp).background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
                                     }
@@ -3600,7 +3600,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                             Column(modifier = Modifier.padding(horizontal = 4.dp)) {
                                 parseMessageSegments(msg.content).forEach { seg ->
                                     if (seg.isNarration) {
-                                        Text(seg.text, color = Color(0xFF888888), fontSize = 11.sp, lineHeight = 18.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, modifier = Modifier.padding(vertical = 2.dp))
+                                        Text(seg.text, color = Color(0xFF888888), fontSize = 13.sp, lineHeight = 22.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, modifier = Modifier.padding(vertical = 2.dp))
                                     } else {
                                         Text(seg.text, color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = Modifier.padding(vertical = 2.dp).background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
                                     }
