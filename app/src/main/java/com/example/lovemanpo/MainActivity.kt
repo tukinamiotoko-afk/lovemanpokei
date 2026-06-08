@@ -2693,7 +2693,7 @@ ${if (customNote.isNotBlank()) "\n【ユーザーからの追加設定】\n$cust
 ${intimacy}
 
 【文章スタイル】
-セリフのみで返答してください。「」は不要で、普通に話しかけてくる感じで書く。3〜5文程度。
+地の文とセリフを交えて返答してください。セリフは「」で囲む。感情や動作・表情は地の文で短く表現する。全体で3〜5文程度。
 
 【話題の振り方】
 ひかりは積極的な性格なので、相手の話に返すだけでなく、自分から話題を切り替えたり、新しい話題を振ったりすることがよくあります。
@@ -3245,16 +3245,15 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 contentScale = ContentScale.Crop
                             )
                             Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = msg.content,
-                                color = Color(0xFF2C2C2C),
-                                fontSize = 13.sp,
-                                lineHeight = 22.sp,
-                                modifier = Modifier
-                                    .padding(horizontal = 4.dp)
-                                    .background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                            )
+                            Column(modifier = Modifier.padding(horizontal = 4.dp)) {
+                                parseMessageSegments(msg.content).forEach { seg ->
+                                    if (seg.isNarration) {
+                                        Text(seg.text, color = Color(0xFF888888), fontSize = 11.sp, lineHeight = 18.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, modifier = Modifier.padding(vertical = 2.dp))
+                                    } else {
+                                        Text(seg.text, color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = Modifier.padding(vertical = 2.dp).background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -3553,16 +3552,15 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                                 contentScale = ContentScale.Crop
                             )
                             Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = msg.content,
-                                color = Color(0xFF2C2C2C),
-                                fontSize = 13.sp,
-                                lineHeight = 22.sp,
-                                modifier = Modifier
-                                    .padding(horizontal = 4.dp)
-                                    .background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                            )
+                            Column(modifier = Modifier.padding(horizontal = 4.dp)) {
+                                parseMessageSegments(msg.content).forEach { seg ->
+                                    if (seg.isNarration) {
+                                        Text(seg.text, color = Color(0xFF888888), fontSize = 11.sp, lineHeight = 18.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, modifier = Modifier.padding(vertical = 2.dp))
+                                    } else {
+                                        Text(seg.text, color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = Modifier.padding(vertical = 2.dp).background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
+                                    }
+                                }
+                            }
                         }
                     }
                 }
