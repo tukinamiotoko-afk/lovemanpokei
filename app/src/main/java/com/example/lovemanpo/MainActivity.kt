@@ -3262,11 +3262,10 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                     value = inputText,
                     onValueChange = { if (it.length <= 250) inputText = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("メッセージを入力...") },
-                    maxLines = 3,
-                    supportingText = {
-                        Text("${inputText.length} / 250", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp, color = if (inputText.length >= 250) Color.Red else Color(0xFF999999))
-                    }
+                    placeholder = { Text("メッセージを入力...", fontSize = 13.sp) },
+                    maxLines = 1,
+                    singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 IconButton(
@@ -3571,11 +3570,10 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                     value = inputText,
                     onValueChange = { if (it.length <= 250) inputText = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("メッセージを入力...") },
-                    maxLines = 3,
-                    supportingText = {
-                        Text("${inputText.length} / 250", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp, color = if (inputText.length >= 250) Color.Red else Color(0xFF999999))
-                    }
+                    placeholder = { Text("メッセージを入力...", fontSize = 13.sp) },
+                    maxLines = 1,
+                    singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 IconButton(
