@@ -652,6 +652,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                     OdekakeChatScreen(navController, viewModel, locationId)
                 }
                 composable("records") { RecordsScreen(navController, viewModel) }
+                composable("diary")   { DiaryScreen(navController, viewModel) }
                 composable("settings") { SettingsScreen(navController, viewModel) }
                 composable("debug") { DebugScreen(navController, viewModel) }
             }
@@ -1066,7 +1067,6 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             touchedDialogue = touchDialogues.randomOrNull()
         },
         onFreeChatClick = { navController.navigate("chatmenu") },
-        onOdekakeClick = { navController.navigate("odekake") },
         onRecordsClick = { navController.navigate("records") },
         onDebugClick = { navController.navigate("debug") }
     )
@@ -1090,7 +1090,6 @@ fun HomeScreenContent(
     caloriesStr: String,
     onCharacterClick: () -> Unit,
     onFreeChatClick: () -> Unit,
-    onOdekakeClick: () -> Unit,
     onRecordsClick: () -> Unit,
     onDebugClick: () -> Unit
 ) {
@@ -1198,7 +1197,7 @@ fun HomeScreenContent(
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding(),
             onFreeChat = onFreeChatClick,
-            onOdekake = onOdekakeClick,
+            onDiary = { navController.navigate("diary") },
             onRecords = onRecordsClick
         )
     }
@@ -1597,12 +1596,12 @@ fun HomeAdPlaceholder() {
 }
 
 @Composable
-fun HomeCustomBottomNav(modifier: Modifier = Modifier, onFreeChat: () -> Unit, onOdekake: () -> Unit, onRecords: () -> Unit) {
+fun HomeCustomBottomNav(modifier: Modifier = Modifier, onFreeChat: () -> Unit, onDiary: () -> Unit, onRecords: () -> Unit) {
     Surface(modifier = modifier
         .fillMaxWidth()
         .height(80.dp), color = Color.White, shadowElevation = 10.dp) {
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically) {
-            HomeNavItem(Icons.Default.ShoppingBag, "おでかけ", false, onOdekake)
+            HomeNavItem(Icons.Default.Book, "日記", false, onDiary)
 
             Box(contentAlignment = Alignment.Center, modifier = Modifier
                 .offset(y = (-12).dp)
@@ -1652,7 +1651,6 @@ fun HomeScreenPreview() {
             caloriesStr = "238 kcal",
             onCharacterClick = {},
             onFreeChatClick = {},
-            onOdekakeClick = {},
             onRecordsClick = {},
             onDebugClick = {}
         )
@@ -2381,6 +2379,28 @@ private fun formatDate(date: LocalDate, period: DisplayPeriod): String = when(pe
 private fun formatMillis(millis: Long): String {
     val h = millis / 3600000; val m = (millis % 3600000) / 60000; val s = (millis % 60000) / 1000
     return String.format(Locale.US, "%02d:%02d:%02d", h, m, s)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
+    val pinkAccent = Color(0xFFFF6B9D)
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("日記", color = pinkAccent, fontWeight = FontWeight.Bold) },
+                navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = pinkAccent) } }
+            )
+        }
+    ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Default.Book, contentDescription = null, tint = Color(0xFFDDC0C8), modifier = Modifier.size(64.dp))
+                Text("日記機能は近日公開予定です", color = Color(0xFF999999), fontSize = 14.sp)
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
