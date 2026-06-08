@@ -3084,7 +3084,7 @@ suspend fun callGeminiApi(
             put("parts", JSONArray().put(JSONObject().apply { put("text", systemPrompt) }))
         })
         put("contents", contents)
-        put("generationConfig", JSONObject().apply { put("maxOutputTokens", 600) })
+        put("generationConfig", JSONObject().apply { put("maxOutputTokens", 2048) })
     }.toString()
 
     conn.outputStream.write(body.toByteArray(Charsets.UTF_8))
@@ -3281,7 +3281,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Column(modifier = Modifier.padding(horizontal = 4.dp)) {
-                                parseMessageSegments(msg.content).forEach { seg ->
+                                parseMessageSegments(msg.content.take(400)).forEach { seg ->
                                     if (seg.isNarration) {
                                         Text(seg.text, color = Color(0xFF888888), fontSize = 13.sp, lineHeight = 22.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, modifier = Modifier.padding(vertical = 2.dp))
                                     } else {
@@ -3598,7 +3598,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             Column(modifier = Modifier.padding(horizontal = 4.dp)) {
-                                parseMessageSegments(msg.content).forEach { seg ->
+                                parseMessageSegments(msg.content.take(400)).forEach { seg ->
                                     if (seg.isNarration) {
                                         Text(seg.text, color = Color(0xFF888888), fontSize = 13.sp, lineHeight = 22.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, modifier = Modifier.padding(vertical = 2.dp))
                                     } else {
