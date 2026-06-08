@@ -2774,7 +2774,7 @@ val negativeExpressions = setOf(
 )
 
 fun availableExpressions(loveCount: Int): String {
-    val base = "smile, okoru, hukigenn, tumetaime, nakigao, namida, otikomu, sukoshiokoru, huan, odoroki, kangaeru, tomadoi, taikutu, yasasiiegao, omowazuwarau"
+    val base = "smile, okoru, hukigenn, tumetaime, nakigao, namida, otikomu, sukoshiokoru, huan, odoroki, kangaeru, tomadoi, konwaku, taikutu, yasasiiegao, omowazuwarau"
     val lv3  = if (loveCount >= 3) ", tereru" else ""
     val lv5  = if (loveCount >= 5) ", uinnku, doyagao" else ""
     val lv6  = if (loveCount >= 6) ", koigokoro, mitumeau" else ""
@@ -2807,6 +2807,7 @@ fun exprNameToRes(name: String): Int = when (name) {
     "odoroki"   -> R.drawable.osyaberi_odoroki
     "kangaeru"  -> R.drawable.osyaberi_kangaeru
     "tomadoi"   -> R.drawable.osyaberi_tomadoi
+    "konwaku"   -> R.drawable.osyaberi_konwaku
     "taikutu"   -> R.drawable.osyaberi_taikutu
     "doyagao"   -> R.drawable.osyaberi_doyagao
     else        -> R.drawable.osyaberi_smile
@@ -2868,6 +2869,7 @@ fun ChatStatusCard(loveCount: Int, heartCount: Int, lastExprName: String?) {
         "odoroki"      -> "驚き"
         "kangaeru"     -> "考え中"
         "tomadoi"      -> "戸惑い"
+        "konwaku"      -> "困惑"
         "taikutu"      -> "退屈"
         "doyagao"      -> "ドヤ顔"
         else           -> null
