@@ -2711,7 +2711,7 @@ fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String, tod
 - いろんな場所に歩いて行くことが好きで、カフェ・公園・海・映画館など行きたい場所がたくさんある。「今度○○まで歩いて行きましょうね！」と自分から提案することもある
 - 照れ屋な一面もあり、褒められたり意識すると急に恥ずかしそうにする
 - ${situation}${stepInfo}
-${if (customNote.isNotBlank()) "\n【ユーザーからの追加設定】\n$customNote\n上記の追加設定を基本設定より優先して反映してください。" else ""}
+${if (customNote.isNotBlank()) "\n【ユーザーからの追加設定】\n${customNote.take(150)}\n上記の追加設定を基本設定より優先して反映してください。" else ""}
 
 ${if (conversationSummary.isNotBlank()) "【これまでの会話の要約】\n$conversationSummary\n（上記は直近より前のやり取りのまとめ。この内容を踏まえて会話を続けてください。）\n\n" else ""}【話し方】
 ${intimacy}
