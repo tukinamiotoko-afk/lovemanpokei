@@ -363,7 +363,11 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     fun markHasEverChatted() { repository.hasEverChatted = true }
 
     val customCharacterNote get() = repository.customCharacterNote
-    fun saveCustomCharacterNote(note: String) { repository.customCharacterNote = note }
+    val customCharacterItems get() = repository.customCharacterNote
+        .split("\n").filter { it.isNotBlank() }
+    fun saveCustomCharacterItems(items: List<String>) {
+        repository.customCharacterNote = items.joinToString("\n")
+    }
 
     val isPremium get() = repository.isPremium
     fun unlockPremium() { repository.isPremium = true }
@@ -2378,7 +2382,8 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
     var tempHeight by remember { mutableStateOf(viewModel.heightCm.floatValue.toString()) }
     var tempWeight by remember { mutableStateOf(viewModel.weightKg.floatValue.toString()) }
     var tempGender by remember { mutableStateOf(viewModel.userGender.value) }
-    var tempCustomNote by remember { mutableStateOf(viewModel.customCharacterNote) }
+    var customItems by remember { mutableStateOf(viewModel.customCharacterItems) }
+    var newItemText by remember { mutableStateOf("") }
     val isPremium by remember { derivedStateOf { viewModel.isPremium } }
     val pinkAccent = Color(0xFFFF6B9D)
 
@@ -2425,19 +2430,59 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                     Spacer(modifier = Modifier.height(6.dp))
                     if (isPremium) {
                         Text(
-                            "ひかりのキャラクターに追加したい設定を自由に書いてください。\n例：「ねこが大好き」「料理が得意」「少し天然な一面がある」など",
+                            "ひかりの設定を追加できます（最大5個・1項目30文字）\n例：「ねこが大好き」「料理が得意」「天然な一面がある」",
                             fontSize = 12.sp, color = Color(0xFF888888), lineHeight = 18.sp
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        OutlinedTextField(
-                            value = tempCustomNote,
-                            onValueChange = { if (it.length <= 200) tempCustomNote = it },
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp),
-                            placeholder = { Text("追加設定を入力...", color = Color(0xFFBBBBBB)) },
-                            maxLines = 8,
-                            shape = RoundedCornerShape(12.dp),
-                            supportingText = { Text("${tempCustomNote.length} / 200", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp) }
-                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        customItems.forEachIndexed { index, item ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Surface(
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0xFFFFE4EF)
+                                ) {
+                                    Text(item, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, color = Color(0xFF7B3F5E))
+                                }
+                                IconButton(onClick = { customItems = customItems.toMutableList().also { it.removeAt(index) } }, modifier = Modifier.size(32.dp)) {
+                                    Icon(Icons.Default.Close, contentDescription = "削除", tint = Color(0xFFBB8888), modifier = Modifier.size(16.dp))
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
+                        if (customItems.size < 5) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = newItemText,
+                                    onValueChange = { if (it.length <= 30) newItemText = it },
+                                    modifier = Modifier.weight(1f),
+                                    placeholder = { Text("新しい設定を入力...", color = Color(0xFFBBBBBB), fontSize = 13.sp) },
+                                    maxLines = 1,
+                                    shape = RoundedCornerShape(8.dp),
+                                    supportingText = { Text("${newItemText.length} / 30", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp, color = if (newItemText.length >= 30) Color.Red else Color(0xFF999999)) }
+                                )
+                                IconButton(
+                                    onClick = {
+                                        val t = newItemText.trim()
+                                        if (t.isNotBlank()) { customItems = customItems + t; newItemText = "" }
+                                    },
+                                    enabled = newItemText.isNotBlank()
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = "追加", tint = pinkAccent)
+                                }
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text("最大5個まで追加できます", fontSize = 11.sp, color = Color(0xFFBB8888))
+                        }
                     } else {
                         Text("ひかりの性格や話し方をカスタマイズできます。\nプレミアムプランで利用可能です。", fontSize = 12.sp, color = Color(0xFF999999), lineHeight = 18.sp)
                         Spacer(modifier = Modifier.height(8.dp))
@@ -2456,7 +2501,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                 viewModel.setPlayerName(tempName)
                 viewModel.setUserProfile(h, w)
                 viewModel.saveProfile(h, tempGender)
-                if (isPremium) viewModel.saveCustomCharacterNote(tempCustomNote)
+                if (isPremium) viewModel.saveCustomCharacterItems(customItems)
                 navController.popBackStack()
             }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = pinkAccent)) { Text("保存して戻る") }
         }
@@ -2597,7 +2642,6 @@ fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String, tod
 【基本設定】
 - ${playerName}さんが所属するお散歩サークルに入ったばかりの後輩の女の子。名前はひかり
 - 元気で明るく、積極的な性格。自分から話しかけたり、グイグイ距離を縮めにいくタイプ
-- 語尾に「ね！」をよく使う
 - ダイエットがしたくて、そのために歩くことに燃えている。サークルに入ったのもそれが理由
 - 歩数や消費カロリーを気にしていて、たくさん歩けると素直に嬉しそうにする
 - いろんな場所に歩いて行くことが好きで、カフェ・公園・海・映画館など行きたい場所がたくさんある。「今度○○まで歩いて行きましょうね！」と自分から提案することもある
