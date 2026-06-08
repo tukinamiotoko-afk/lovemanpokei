@@ -201,6 +201,22 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
     fun setOdekakeHistoryJson(locationId: String, value: String) =
         prefs.edit { putString("ODEKAKE_HISTORY_$locationId", value) }
 
+    var freeChatSummary: String
+        get() = prefs.getString("FREE_CHAT_SUMMARY", "") ?: ""
+        set(value) = prefs.edit { putString("FREE_CHAT_SUMMARY", value) }
+    var freeChatSummarizedCount: Int
+        get() = prefs.getInt("FREE_CHAT_SUMMARIZED_COUNT", 0)
+        set(value) = prefs.edit { putInt("FREE_CHAT_SUMMARIZED_COUNT", value) }
+
+    fun getOdekakeSummary(locationId: String): String =
+        prefs.getString("ODEKAKE_SUMMARY_$locationId", "") ?: ""
+    fun setOdekakeSummary(locationId: String, value: String) =
+        prefs.edit { putString("ODEKAKE_SUMMARY_$locationId", value) }
+    fun getOdekakeSummarizedCount(locationId: String): Int =
+        prefs.getInt("ODEKAKE_SUMMARIZED_COUNT_$locationId", 0)
+    fun setOdekakeSummarizedCount(locationId: String, value: Int) =
+        prefs.edit { putInt("ODEKAKE_SUMMARIZED_COUNT_$locationId", value) }
+
     var heightCm: Float
         get() = prefs.getFloat("HEIGHT_CM", 170f)
         set(value) = prefs.edit { putFloat("HEIGHT_CM", value) }
@@ -358,6 +374,14 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
         }
         repository.setOdekakeHistoryJson(locationId, json.toString())
     }
+
+    fun getFreeChatSummary() = repository.freeChatSummary
+    fun needsFreeChatSummaryUpdate(total: Int) = total > 10 && repository.freeChatSummarizedCount < total - 10
+    fun updateFreeChatSummary(summary: String, count: Int) { repository.freeChatSummary = summary; repository.freeChatSummarizedCount = count }
+
+    fun getOdekakeSummary(locationId: String) = repository.getOdekakeSummary(locationId)
+    fun needsOdekakeSummaryUpdate(locationId: String, total: Int) = total > 10 && repository.getOdekakeSummarizedCount(locationId) < total - 10
+    fun updateOdekakeSummary(locationId: String, summary: String, count: Int) { repository.setOdekakeSummary(locationId, summary); repository.setOdekakeSummarizedCount(locationId, count) }
 
     val hasEverChatted get() = repository.hasEverChatted
     fun markHasEverChatted() { repository.hasEverChatted = true }
@@ -2662,7 +2686,7 @@ val odekakeLocations = listOf(
     OdekakeLocation("home",   "おうち",  "🏠",  8)
 )
 
-fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "", daysSinceLastActive: Int = 0): String {
+fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "", daysSinceLastActive: Int = 0, conversationSummary: String = ""): String {
     val intimacy = when {
         loveCount <= 3 -> "後輩なので、ちゃんとした敬語で話してください。「〜です」「〜ます」「〜ですよね」など。まだ少し緊張気味。"
         loveCount <= 6 -> "だいぶ慣れてきて、敬語が少し崩れてきています。「〜ですよ」「〜じゃないですか」「〜だったりして」など、やわらかい敬語。"
@@ -2689,7 +2713,7 @@ fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String, tod
 - ${situation}${stepInfo}
 ${if (customNote.isNotBlank()) "\n【ユーザーからの追加設定】\n$customNote\n上記の追加設定を基本設定より優先して反映してください。" else ""}
 
-【話し方】
+${if (conversationSummary.isNotBlank()) "【これまでの会話の要約】\n$conversationSummary\n（上記は直近より前のやり取りのまとめ。この内容を踏まえて会話を続けてください。）\n\n" else ""}【話し方】
 ${intimacy}
 
 【文章スタイル】
@@ -2714,10 +2738,10 @@ ${intimacy}
 [LOVE:up/down/none] ← 好感度の変化。嬉しい・照れた・心を開いた瞬間はup、傷ついた・不機嫌になったはdown、それ以外はnone。""".trimIndent()
 }
 
-fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "", daysSinceLastActive: Int = 0) =
-    buildSystemPrompt(loveCount, playerName, "${playerName}さんと一緒に散歩しています", todaySteps, activeDays, customNote, daysSinceLastActive)
+fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "", daysSinceLastActive: Int = 0, conversationSummary: String = "") =
+    buildSystemPrompt(loveCount, playerName, "${playerName}さんと一緒に散歩しています", todaySteps, activeDays, customNote, daysSinceLastActive, conversationSummary)
 
-fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "", daysSinceLastActive: Int = 0): String {
+fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "", daysSinceLastActive: Int = 0, conversationSummary: String = ""): String {
     val situation = when (locationId) {
         "cafe"   -> "${playerName}さんと一緒にカフェでお茶をしています"
         "park"   -> "${playerName}さんと一緒に公園を散歩しています"
@@ -2726,7 +2750,7 @@ fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName:
         "home"   -> "${playerName}さんがひかりの部屋に遊びに来ています"
         else     -> "${playerName}さんと一緒にいます"
     }
-    return buildSystemPrompt(loveCount, playerName, situation, todaySteps, activeDays, customNote, daysSinceLastActive)
+    return buildSystemPrompt(loveCount, playerName, situation, todaySteps, activeDays, customNote, daysSinceLastActive, conversationSummary)
 }
 
 val positiveExpressions = setOf(
@@ -3019,6 +3043,17 @@ fun detectHikariExpression(text: String, loveCount: Int): Int {
     }
 }
 
+suspend fun callGeminiApiForSummary(messages: List<ChatMessage>): String {
+    val content = messages.joinToString("\n") {
+        "${if (it.role == "user") "ユーザー" else "ひかり"}: ${it.content}"
+    }
+    return callGeminiApi(
+        systemPrompt = "以下はひかりとユーザーの会話記録です。重要な話題・約束・出来事・ひかりの発言を2〜3文の日本語で簡潔に要約してください。要約のみ返してください。",
+        history = emptyList(),
+        userMessage = content
+    )
+}
+
 suspend fun callGeminiApi(
     systemPrompt: String,
     history: List<ChatMessage>,
@@ -3300,12 +3335,14 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                         messages.add(userMsg)
                         inputText = ""
                         isLoading = true
-                        val historySnapshot = messages.dropLast(1).takeLast(20)
+                        val allHistory = messages.dropLast(1)
+                        val historySnapshot = allHistory.takeLast(10)
                         scope.launch {
                             try {
                                 val hasChat = viewModel.hasEverChatted
                                 val customNote = viewModel.customCharacterNote
-                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0)
+                                val summary = if (hasChat) viewModel.getFreeChatSummary() else ""
+                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary)
                                 viewModel.markHasEverChatted()
                                 val reply = callGeminiApi(systemPrompt, historySnapshot, text)
                                 val parsed = parseReply(reply)
@@ -3315,6 +3352,14 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                     -1 -> viewModel.loseHeart()
                                 }
                                 viewModel.saveFreeChatHistory()
+                                // バックグラウンドでサマリー更新
+                                if (viewModel.needsFreeChatSummaryUpdate(messages.size)) {
+                                    try {
+                                        val oldMsgs = messages.dropLast(10)
+                                        val newSummary = callGeminiApiForSummary(oldMsgs)
+                                        viewModel.updateFreeChatSummary(newSummary, oldMsgs.size)
+                                    } catch (_: Exception) {}
+                                }
                             } catch (e: Exception) {
                                 viewModel.refundPointForChat()
                                 messages.removeLastOrNull()
@@ -3609,10 +3654,12 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                         inputText = ""
                         isLoading = true
                         odekakeMessageCount++
-                        val historySnapshot = messages.dropLast(1).takeLast(20)
+                        val allHistory = messages.dropLast(1)
+                        val historySnapshot = allHistory.takeLast(10)
                         scope.launch {
                             try {
-                                val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName, todaySteps, activeDays, viewModel.customCharacterNote, daysSinceLastActive)
+                                val summary = viewModel.getOdekakeSummary(locationId)
+                                val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName, todaySteps, activeDays, viewModel.customCharacterNote, daysSinceLastActive, summary)
                                 val reply = callGeminiApi(systemPrompt, historySnapshot, text)
                                 val parsed = parseReply(reply)
                                 messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName))
@@ -3621,6 +3668,14 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                                     -1 -> viewModel.loseHeart()
                                 }
                                 viewModel.saveOdekakeHistory(locationId)
+                                // バックグラウンドでサマリー更新
+                                if (viewModel.needsOdekakeSummaryUpdate(locationId, messages.size)) {
+                                    try {
+                                        val oldMsgs = messages.dropLast(10)
+                                        val newSummary = callGeminiApiForSummary(oldMsgs)
+                                        viewModel.updateOdekakeSummary(locationId, newSummary, oldMsgs.size)
+                                    } catch (_: Exception) {}
+                                }
                             } catch (e: Exception) {
                                 viewModel.refundPointForChat()
                                 messages.removeLastOrNull()
