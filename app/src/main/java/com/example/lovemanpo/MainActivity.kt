@@ -3190,12 +3190,12 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 .padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = inputText,
-                    onValueChange = { if (it.length <= 100) inputText = it },
+                    onValueChange = { if (it.length <= 250) inputText = it },
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("メッセージを入力...") },
                     maxLines = 3,
                     supportingText = {
-                        Text("${inputText.length} / 100", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp, color = if (inputText.length >= 100) Color.Red else Color(0xFF999999))
+                        Text("${inputText.length} / 250", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp, color = if (inputText.length >= 250) Color.Red else Color(0xFF999999))
                     }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -3493,12 +3493,12 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                 .padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = inputText,
-                    onValueChange = { if (it.length <= 100) inputText = it },
+                    onValueChange = { if (it.length <= 250) inputText = it },
                     modifier = Modifier.weight(1f),
                     placeholder = { Text("メッセージを入力...") },
                     maxLines = 3,
                     supportingText = {
-                        Text("${inputText.length} / 100", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp, color = if (inputText.length >= 100) Color.Red else Color(0xFF999999))
+                        Text("${inputText.length} / 250", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp, color = if (inputText.length >= 250) Color.Red else Color(0xFF999999))
                     }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
