@@ -1025,7 +1025,15 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     val minutes = (activeTimeMillis % 3600000) / 60000
     val activeTimeStr = "${hours}時間 ${minutes}分"
 
-    val stepDialogue = homeStepDialogue(todaySteps, activeDays)
+    val daysSinceLastActive = remember(allRecords) {
+        val today = LocalDate.now()
+        val lastActiveDate = allRecords
+            .filter { it.stepCount >= 1000 }
+            .mapNotNull { runCatching { LocalDate.parse(it.date) }.getOrNull() }
+            .maxOrNull()
+        if (lastActiveDate != null) java.time.temporal.ChronoUnit.DAYS.between(lastActiveDate, today).toInt() else 0
+    }
+    val stepDialogue = homeStepDialogue(todaySteps, activeDays, daysSinceLastActive)
 
     val touchDialogues = homeTouchDialogues(loveCount)
     var touchedDialogue by remember { mutableStateOf<Pair<String, Int>?>(null) }
@@ -2557,8 +2565,14 @@ data class ChatMessage(val role: String, val content: String, val expressionRes:
 
 data class HomeStepMsg(val thresholdSteps: Int, val text: String, val expr: Int)
 
+val homeSaboriDialogues = listOf(
+    HomeStepMsg(0, "なんで来てくれなかったんですか……！ずっと待ってたのに", R.drawable.hikari_blush),
+    HomeStepMsg(0, "さぼりですか？もう、心配しちゃいましたよ",           R.drawable.hikari_blush),
+    HomeStepMsg(0, "今日はまだ歩いてないんですか……一緒に行きましょうよ！", R.drawable.hikari_smile),
+)
+
 val homeStepDialogues = listOf(
-    HomeStepMsg(0,     "今日もいっぱい歩こうね",                        R.drawable.hikari_smile),
+    HomeStepMsg(0,     "今日も一緒に歩きましょうね！",                   R.drawable.hikari_smile),
     HomeStepMsg(1000,  "1000歩！ちょっとずつだけど、ちゃんと進んでるよ", R.drawable.hikari_smile),
     HomeStepMsg(3000,  "3000歩か……えへ、わたしも一緒に歩いてる気分",    R.drawable.hikari_blush),
     HomeStepMsg(5000,  "5000歩！半分来たね。もう少し、がんばろ",         R.drawable.hikari_smile),
@@ -2578,7 +2592,11 @@ val homeDaysDialogues = listOf(
     HomeStepMsg(100, "100日……もう、わたしのこと好きじゃないと無理でしょ", R.drawable.hikari_blush),
 )
 
-fun homeStepDialogue(todaySteps: Int, activeDays: Int): HomeStepMsg {
+fun homeStepDialogue(todaySteps: Int, activeDays: Int, daysSinceLastActive: Int = 0): HomeStepMsg {
+    // さぼり判定：最後に歩いた日から2日以上経過
+    if (daysSinceLastActive >= 2 && activeDays > 0) {
+        return homeSaboriDialogues.random()
+    }
     // 節目の日数のときは日数セリフを優先
     val daysMilestone = listOf(100, 60, 30, 14, 7, 3, 1)
     val matchedDay = daysMilestone.firstOrNull { activeDays == it }
@@ -2624,18 +2642,20 @@ val odekakeLocations = listOf(
     OdekakeLocation("home",   "おうち",  "🏠",  8)
 )
 
-fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = ""): String {
+fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "", daysSinceLastActive: Int = 0): String {
     val intimacy = when {
         loveCount <= 3 -> "後輩なので、ちゃんとした敬語で話してください。「〜です」「〜ます」「〜ですよね」など。まだ少し緊張気味。"
         loveCount <= 6 -> "だいぶ慣れてきて、敬語が少し崩れてきています。「〜ですよ」「〜じゃないですか」「〜だったりして」など、やわらかい敬語。"
         loveCount <= 8 -> "親しくなってタメ口が出始めています。敬語とタメ口が混ざる感じ。照れながらもタメ口が増えてきている。"
         else           -> "すっかり打ち解けてタメ口で話しています。少し甘えた口調。"
     }
+    val saboriNote = if (daysSinceLastActive >= 2 && activeDays > 0)
+        "\n- ※${daysSinceLastActive}日間、歩きに来てくれていない（さぼり中）。会話の中で「なんで来てくれなかったんですか」「さぼりじゃないですか」など少し拗ねた口調で責めることがある。ただし責めすぎず、最後は一緒に歩こうと誘う。" else ""
     val stepInfo = if (todaySteps > 0 || activeDays > 0) """
 
 【${playerName}さんの歩数情報】
 - 今日の歩数：${todaySteps}歩（目標：10000歩、残り${(10000 - todaySteps).coerceAtLeast(0)}歩）
-- これまでに1000歩以上歩いた日数：${activeDays}日
+- これまでに1000歩以上歩いた日数：${activeDays}日${saboriNote}
 ひかりはこの情報を把握していて、会話の流れに合わせて自発的に触れる。目標に近いときは後押しする、達成していたら一緒に喜ぶ、まだ少ないときはさりげなく背中を押すなど、状況に応じて臨機応変に言葉をかける。毎回言う必要はないが、タイミングが合えば自然に出す。""" else ""
     return """あなたは「ひかり」というキャラクターになりきってください。
 
@@ -2674,10 +2694,10 @@ ${intimacy}
 [LOVE:up/down/none] ← 好感度の変化。嬉しい・照れた・心を開いた瞬間はup、傷ついた・不機嫌になったはdown、それ以外はnone。""".trimIndent()
 }
 
-fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "") =
-    buildSystemPrompt(loveCount, playerName, "${playerName}さんと一緒に散歩しています", todaySteps, activeDays, customNote)
+fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "", daysSinceLastActive: Int = 0) =
+    buildSystemPrompt(loveCount, playerName, "${playerName}さんと一緒に散歩しています", todaySteps, activeDays, customNote, daysSinceLastActive)
 
-fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = ""): String {
+fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "", daysSinceLastActive: Int = 0): String {
     val situation = when (locationId) {
         "cafe"   -> "${playerName}さんと一緒にカフェでお茶をしています"
         "park"   -> "${playerName}さんと一緒に公園を散歩しています"
@@ -2686,7 +2706,7 @@ fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName:
         "home"   -> "${playerName}さんがひかりの部屋に遊びに来ています"
         else     -> "${playerName}さんと一緒にいます"
     }
-    return buildSystemPrompt(loveCount, playerName, situation, todaySteps, activeDays, customNote)
+    return buildSystemPrompt(loveCount, playerName, situation, todaySteps, activeDays, customNote, daysSinceLastActive)
 }
 
 val positiveExpressions = setOf(
@@ -3097,6 +3117,12 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     val todaySteps by viewModel.todaySteps
     val allRecords by viewModel.allStepRecords
     val activeDays = remember(allRecords) { allRecords.count { it.stepCount >= 1000 } }
+    val daysSinceLastActive = remember(allRecords) {
+        val today = LocalDate.now()
+        val last = allRecords.filter { it.stepCount >= 1000 }
+            .mapNotNull { runCatching { LocalDate.parse(it.date) }.getOrNull() }.maxOrNull()
+        if (last != null) java.time.temporal.ChronoUnit.DAYS.between(last, today).toInt() else 0
+    }
     val messages = viewModel.freeChatMessages
     var inputText by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -3261,7 +3287,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             try {
                                 val hasChat = viewModel.hasEverChatted
                                 val customNote = viewModel.customCharacterNote
-                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote)
+                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0)
                                 viewModel.markHasEverChatted()
                                 val reply = callGeminiApi(systemPrompt, historySnapshot, text)
                                 val parsed = parseReply(reply)
@@ -3416,6 +3442,12 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
     val todaySteps by viewModel.todaySteps
     val allRecords by viewModel.allStepRecords
     val activeDays = remember(allRecords) { allRecords.count { it.stepCount >= 1000 } }
+    val daysSinceLastActive = remember(allRecords) {
+        val today = LocalDate.now()
+        val last = allRecords.filter { it.stepCount >= 1000 }
+            .mapNotNull { runCatching { LocalDate.parse(it.date) }.getOrNull() }.maxOrNull()
+        if (last != null) java.time.temporal.ChronoUnit.DAYS.between(last, today).toInt() else 0
+    }
     val location = odekakeLocations.find { it.id == locationId } ?: odekakeLocations.first()
     val messages = viewModel.getOdekakeMessages(locationId)
 
@@ -3564,7 +3596,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                         val historySnapshot = messages.dropLast(1).takeLast(20)
                         scope.launch {
                             try {
-                                val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName, todaySteps, activeDays, viewModel.customCharacterNote)
+                                val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName, todaySteps, activeDays, viewModel.customCharacterNote, daysSinceLastActive)
                                 val reply = callGeminiApi(systemPrompt, historySnapshot, text)
                                 val parsed = parseReply(reply)
                                 messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName))
