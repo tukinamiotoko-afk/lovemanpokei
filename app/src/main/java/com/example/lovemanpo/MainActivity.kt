@@ -187,6 +187,10 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getBoolean("HAS_EVER_CHATTED", false)
         set(value) = prefs.edit { putBoolean("HAS_EVER_CHATTED", value) }
 
+    var customCharacterNote: String
+        get() = prefs.getString("CUSTOM_CHARACTER_NOTE", "") ?: ""
+        set(value) = prefs.edit { putString("CUSTOM_CHARACTER_NOTE", value) }
+
     fun getOdekakeHistoryJson(locationId: String): String =
         prefs.getString("ODEKAKE_HISTORY_$locationId", "[]") ?: "[]"
 
@@ -353,6 +357,9 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
 
     val hasEverChatted get() = repository.hasEverChatted
     fun markHasEverChatted() { repository.hasEverChatted = true }
+
+    val customCharacterNote get() = repository.customCharacterNote
+    fun saveCustomCharacterNote(note: String) { repository.customCharacterNote = note }
 
     fun saveFreeChatHistory() {
         val json = org.json.JSONArray()
@@ -2364,6 +2371,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
     var tempHeight by remember { mutableStateOf(viewModel.heightCm.floatValue.toString()) }
     var tempWeight by remember { mutableStateOf(viewModel.weightKg.floatValue.toString()) }
     var tempGender by remember { mutableStateOf(viewModel.userGender.value) }
+    var tempCustomNote by remember { mutableStateOf(viewModel.customCharacterNote) }
     val pinkAccent = Color(0xFFFF6B9D)
 
     Scaffold(
@@ -2390,6 +2398,28 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                 RadioButton(selected = tempGender == "女性", onClick = { tempGender = "女性" })
                 Text("女性", modifier = Modifier.clickable { tempGender = "女性" })
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text("ひかりへの追加設定", fontWeight = FontWeight.Bold, color = pinkAccent, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "ひかりのキャラクターに追加したい設定を自由に書いてください。\n例：「ねこが大好き」「料理が得意」「少し天然な一面がある」など",
+                    fontSize = 12.sp,
+                    color = Color(0xFF888888),
+                    lineHeight = 18.sp
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                OutlinedTextField(
+                    value = tempCustomNote,
+                    onValueChange = { tempCustomNote = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 100.dp),
+                    placeholder = { Text("追加設定を入力...", color = Color(0xFFBBBBBB)) },
+                    maxLines = 8,
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = {
                 val h = tempHeight.toFloatOrNull() ?: 170f
@@ -2397,6 +2427,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                 viewModel.setPlayerName(tempName)
                 viewModel.setUserProfile(h, w)
                 viewModel.saveProfile(h, tempGender)
+                viewModel.saveCustomCharacterNote(tempCustomNote)
                 navController.popBackStack()
             }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = pinkAccent)) { Text("保存して戻る") }
         }
@@ -2519,7 +2550,7 @@ val odekakeLocations = listOf(
     OdekakeLocation("home",   "おうち",  "🏠",  8)
 )
 
-fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String, todaySteps: Int = 0, activeDays: Int = 0): String {
+fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = ""): String {
     val intimacy = when {
         loveCount <= 3 -> "後輩なので、ちゃんとした敬語で話してください。「〜です」「〜ます」「〜ですよね」など。まだ少し緊張気味。"
         loveCount <= 6 -> "だいぶ慣れてきて、敬語が少し崩れてきています。「〜ですよ」「〜じゃないですか」「〜だったりして」など、やわらかい敬語。"
@@ -2543,6 +2574,7 @@ fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String, tod
 - いろんな場所に歩いて行くことが好きで、カフェ・公園・海・映画館など行きたい場所がたくさんある。「今度○○まで歩いて行きましょうね！」と自分から提案することもある
 - 照れ屋な一面もあり、褒められたり意識すると急に恥ずかしそうにする
 - ${situation}${stepInfo}
+${if (customNote.isNotBlank()) "\n【ユーザーからの追加設定】\n$customNote\n上記の追加設定を基本設定より優先して反映してください。" else ""}
 
 【話し方】
 ${intimacy}
@@ -2569,10 +2601,10 @@ ${intimacy}
 [LOVE:up/down/none] ← 好感度の変化。嬉しい・照れた・心を開いた瞬間はup、傷ついた・不機嫌になったはdown、それ以外はnone。""".trimIndent()
 }
 
-fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0) =
-    buildSystemPrompt(loveCount, playerName, "${playerName}さんと一緒に散歩しています", todaySteps, activeDays)
+fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "") =
+    buildSystemPrompt(loveCount, playerName, "${playerName}さんと一緒に散歩しています", todaySteps, activeDays, customNote)
 
-fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0): String {
+fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = ""): String {
     val situation = when (locationId) {
         "cafe"   -> "${playerName}さんと一緒にカフェでお茶をしています"
         "park"   -> "${playerName}さんと一緒に公園を散歩しています"
@@ -2581,7 +2613,7 @@ fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName:
         "home"   -> "${playerName}さんがひかりの部屋に遊びに来ています"
         else     -> "${playerName}さんと一緒にいます"
     }
-    return buildSystemPrompt(loveCount, playerName, situation, todaySteps, activeDays)
+    return buildSystemPrompt(loveCount, playerName, situation, todaySteps, activeDays, customNote)
 }
 
 val positiveExpressions = setOf(
@@ -3152,7 +3184,8 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                         scope.launch {
                             try {
                                 val hasChat = viewModel.hasEverChatted
-                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0)
+                                val customNote = viewModel.customCharacterNote
+                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote)
                                 viewModel.markHasEverChatted()
                                 val reply = callGeminiApi(systemPrompt, historySnapshot, text)
                                 val parsed = parseReply(reply)
@@ -3452,7 +3485,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                         val historySnapshot = messages.dropLast(1).toList()
                         scope.launch {
                             try {
-                                val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName, todaySteps, activeDays)
+                                val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName, todaySteps, activeDays, viewModel.customCharacterNote)
                                 val reply = callGeminiApi(systemPrompt, historySnapshot, text)
                                 val parsed = parseReply(reply)
                                 messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName))
