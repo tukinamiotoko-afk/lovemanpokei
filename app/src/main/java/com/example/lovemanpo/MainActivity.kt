@@ -3084,7 +3084,7 @@ suspend fun callGeminiApi(
             put("parts", JSONArray().put(JSONObject().apply { put("text", systemPrompt) }))
         })
         put("contents", contents)
-        put("generationConfig", JSONObject().apply { put("maxOutputTokens", 2048) })
+        put("generationConfig", JSONObject().apply { put("maxOutputTokens", 512) })
     }.toString()
 
     conn.outputStream.write(body.toByteArray(Charsets.UTF_8))
