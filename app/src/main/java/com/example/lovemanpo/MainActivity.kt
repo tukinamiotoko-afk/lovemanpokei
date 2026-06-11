@@ -2776,7 +2776,7 @@ val negativeExpressions = setOf(
 )
 
 fun availableExpressions(loveCount: Int): String {
-    val base = "smile, okoru, hukigenn, tumetaime, nakigao, namida, otikomu, sukoshiokoru, huan, odoroki, kangaeru, tomadoi, konwaku, taikutu, yasasiiegao, omowazuwarau"
+    val base = "normal, smile, sugokuegao, okoru, hukigenn, tumetaime, nakigao, namida, otikomu, sukoshiokoru, huan, odoroki, kangaeru, tomadoi, taikutu, yasasiiegao, omowazuwarau"
     val lv3  = if (loveCount >= 3) ", tereru" else ""
     val lv5  = if (loveCount >= 5) ", uinnku, doyagao" else ""
     val lv6  = if (loveCount >= 6) ", koigokoro, mitumeau" else ""
@@ -2808,11 +2808,12 @@ fun exprNameToRes(name: String): Int = when (name) {
     "huan"      -> R.drawable.osyaberi_huan
     "odoroki"   -> R.drawable.osyaberi_odoroki
     "kangaeru"  -> R.drawable.osyaberi_kangaeru
-    "tomadoi"   -> R.drawable.osyaberi_tomadoi
-    "konwaku"   -> R.drawable.osyaberi_konwaku
-    "taikutu"   -> R.drawable.osyaberi_taikutu
-    "doyagao"   -> R.drawable.osyaberi_doyagao
-    else        -> R.drawable.osyaberi_smile
+    "tomadoi"      -> R.drawable.osyaberi_tomadoi
+    "taikutu"      -> R.drawable.osyaberi_taikutu
+    "doyagao"      -> R.drawable.osyaberi_doyagao
+    "normal"       -> R.drawable.osyaberi_normal
+    "sugokuegao"   -> R.drawable.osyaberi_sugokuegao
+    else           -> R.drawable.osyaberi_normal
 }
 
 data class ParsedReply(val text: String, val exprRes: Int, val exprName: String, val loveChange: Int)
@@ -2871,9 +2872,10 @@ fun ChatStatusCard(loveCount: Int, heartCount: Int, lastExprName: String?) {
         "odoroki"      -> "驚き"
         "kangaeru"     -> "考え中"
         "tomadoi"      -> "戸惑い"
-        "konwaku"      -> "困惑"
         "taikutu"      -> "退屈"
         "doyagao"      -> "ドヤ顔"
+        "normal"       -> "ノーマル"
+        "sugokuegao"   -> "すごく笑顔"
         else           -> null
     }
     Surface(
