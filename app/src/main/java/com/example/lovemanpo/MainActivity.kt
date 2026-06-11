@@ -1091,6 +1091,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             touchedDialogue = touchDialogues.randomOrNull()
         },
         onFreeChatClick = { navController.navigate("chatmenu") },
+        onDiaryClick = { navController.navigate("diary") },
         onRecordsClick = { navController.navigate("records") },
         onDebugClick = { navController.navigate("debug") }
     )
@@ -1114,6 +1115,7 @@ fun HomeScreenContent(
     caloriesStr: String,
     onCharacterClick: () -> Unit,
     onFreeChatClick: () -> Unit,
+    onDiaryClick: () -> Unit,
     onRecordsClick: () -> Unit,
     onDebugClick: () -> Unit
 ) {
@@ -1221,7 +1223,7 @@ fun HomeScreenContent(
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding(),
             onFreeChat = onFreeChatClick,
-            onDiary = { navController.navigate("diary") },
+            onDiary = onDiaryClick,
             onRecords = onRecordsClick
         )
     }
@@ -1675,6 +1677,7 @@ fun HomeScreenPreview() {
             caloriesStr = "238 kcal",
             onCharacterClick = {},
             onFreeChatClick = {},
+            onDiaryClick = {},
             onRecordsClick = {},
             onDebugClick = {}
         )
@@ -2405,7 +2408,6 @@ private fun formatMillis(millis: Long): String {
     return String.format(Locale.US, "%02d:%02d:%02d", h, m, s)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
