@@ -1211,8 +1211,6 @@ fun HomeScreenContent(
                         HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "歩行距離", distanceStr, null, Color(0xFF4FC3F7))
                         HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    HomeAdPlaceholder()
                     Spacer(modifier = Modifier.height(90.dp))
                 }
             }
@@ -1579,47 +1577,6 @@ fun HomeWeeklySection() {
     }
 }
 
-@Composable
-fun HomeCampaignBanner() {
-    Surface(modifier = Modifier
-        .fillMaxWidth()
-        .height(70.dp), shape = RoundedCornerShape(8.dp), color = Color(0xFFE3F2FD)) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Row(modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier
-                    .size(50.dp)
-                    .background(Color.White, RoundedCornerShape(4.dp)))
-                Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text("歩いた分だけ、いいことあるよ。", fontSize = 9.sp, color = Color(0xFF1976D2))
-                    Text("SPRING CAMPAIGN", fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color(0xFF1976D2))
-                    Surface(shape = RoundedCornerShape(10.dp), color = Color(0xFFE91E63)) {
-                        Text("詳しくはこちら ▶", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = Color.White, fontSize = 7.sp)
-                    }
-                }
-            }
-            Icon(Icons.Default.Info, null, modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(4.dp)
-                .size(10.dp), tint = Color.Gray)
-        }
-    }
-}
-
-@Composable
-fun HomeAdPlaceholder() {
-    Surface(
-        modifier = Modifier.fillMaxWidth().height(60.dp),
-        shape = RoundedCornerShape(8.dp),
-        color = Color.Gray.copy(alpha = 0.08f)
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text("ここに広告が表示されます", fontSize = 12.sp, color = Color.Gray)
-        }
-    }
-}
 
 @Composable
 fun HomeCustomBottomNav(modifier: Modifier = Modifier, onFreeChat: () -> Unit, onDiary: () -> Unit, onRecords: () -> Unit) {
@@ -2166,18 +2123,6 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                     }
                 }
 
-                // 広告スペース
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp),
-                    color = Color.Gray.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text("ここに広告が表示されます", fontSize = 12.sp, color = Color.Gray)
-                    }
-                }
                 Spacer(modifier = Modifier.height(20.dp))
             }
         }
