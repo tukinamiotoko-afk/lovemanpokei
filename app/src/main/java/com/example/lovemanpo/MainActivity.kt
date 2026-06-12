@@ -272,7 +272,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
 
     val currentActionPoints =
         derivedStateOf { totalEarnedPoints.intValue - spentActionPoints.intValue }
-    val stepGaugeProgress = derivedStateOf { (todaySteps.intValue.toFloat() / 10000f).coerceAtMost(1f) }
+    val stepGaugeProgress = derivedStateOf { (todaySteps.intValue.toFloat() / 5000f).coerceAtMost(1f) }
     val heartGaugeProgress = derivedStateOf { heartCount.intValue.toFloat() / 15f }
 
     val strideLength: Float
@@ -1542,7 +1542,7 @@ fun HomeWeeklySection() {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
             Text("今週の歩数", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.DarkGray)
-            Text("目標 70,000 歩", fontSize = 9.sp, color = Color.Gray)
+            Text("目標 35,000 歩", fontSize = 9.sp, color = Color.Gray)
         }
         Spacer(modifier = Modifier.height(10.dp))
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -1717,12 +1717,12 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
 
     val displayData = getAggregatedList(stepRecords, hourlyRecords, period, viewDate)
     val totalStepsInRange = displayData.sumOf { it.steps }
-    // 期間に応じて目標歩数を動的に計算（1日1万歩基準）
+    // 期間に応じて目標歩数を動的に計算（1日5000歩基準）
     val stepGoal = when (period) {
-        DisplayPeriod.DAY -> 10000
-        DisplayPeriod.WEEK -> 70000
-        DisplayPeriod.MONTH -> viewDate.lengthOfMonth() * 10000
-        DisplayPeriod.YEAR -> if (java.time.Year.of(viewDate.year).isLeap) 3660000 else 3650000
+        DisplayPeriod.DAY -> 5000
+        DisplayPeriod.WEEK -> 35000
+        DisplayPeriod.MONTH -> viewDate.lengthOfMonth() * 5000
+        DisplayPeriod.YEAR -> if (java.time.Year.of(viewDate.year).isLeap) 1830000 else 1825000
     }
 
     Scaffold(
@@ -2167,7 +2167,7 @@ fun StepGraphPink(displayData: List<AggregatedData>, period: DisplayPeriod) {
     val pinkColor = Color(0xFFFF6B9D)
     if (displayData.isEmpty()) return
 
-    val rawMaxSteps = displayData.maxOfOrNull { it.steps }?.coerceAtLeast(1) ?: 10000
+    val rawMaxSteps = displayData.maxOfOrNull { it.steps }?.coerceAtLeast(1) ?: 5000
     val interval = ((((rawMaxSteps / 5) + 999) / 1000) * 1000).coerceAtLeast(1000)
     val maxSteps = interval * 5
 
@@ -2566,7 +2566,7 @@ val homeStepDialogues = listOf(
     HomeStepMsg(0,     "今日も一緒に歩きましょうね！",                   R.drawable.hikari_smile),
     HomeStepMsg(1000,  "1000歩！ちょっとずつだけど、ちゃんと進んでるよ", R.drawable.hikari_smile),
     HomeStepMsg(3000,  "3000歩か……えへ、わたしも一緒に歩いてる気分",    R.drawable.hikari_blush),
-    HomeStepMsg(5000,  "5000歩！半分来たね。もう少し、がんばろ",         R.drawable.hikari_smile),
+    HomeStepMsg(5000,  "5000歩！今日の目標達成だよ。えらい！",            R.drawable.hikari_celebrate),
     HomeStepMsg(8000,  "8000歩……すごい。今日、かなり動いたじゃん",       R.drawable.hikari_celebrate),
     HomeStepMsg(10000, "10000歩！一緒に歩いてくれてありがとう……えへ",    R.drawable.hikari_blush),
     HomeStepMsg(20000, "20000歩……！もう、どこまで行く気なの",            R.drawable.hikari_celebrate),
@@ -2645,7 +2645,7 @@ fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String, tod
     val stepInfo = if (todaySteps > 0 || activeDays > 0) """
 
 【${playerName}さんの歩数情報】
-- 今日の歩数：${todaySteps}歩（目標：10000歩、残り${(10000 - todaySteps).coerceAtLeast(0)}歩）
+- 今日の歩数：${todaySteps}歩（目標：5000歩、残り${(5000 - todaySteps).coerceAtLeast(0)}歩）
 - これまでに1000歩以上歩いた日数：${activeDays}日${saboriNote}
 ひかりはこの情報を把握していて、会話の流れに合わせて自発的に触れる。目標に近いときは後押しする、達成していたら一緒に喜ぶ、まだ少ないときはさりげなく背中を押すなど、状況に応じて臨機応変に言葉をかける。毎回言う必要はないが、タイミングが合えば自然に出す。""" else ""
     return """あなたは「ひかり」というキャラクターになりきってください。
