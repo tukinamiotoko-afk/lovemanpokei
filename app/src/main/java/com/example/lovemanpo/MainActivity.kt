@@ -2757,12 +2757,12 @@ fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName:
 
 val positiveExpressions = setOf(
     R.drawable.osyaberi_tereru,
-    R.drawable.osyaberi_koigokoro,
-    R.drawable.osyaberi_yasasiiegao,
+    R.drawable.osyaberi_koigokorowoidaku,
+    R.drawable.osyaberi_yasasiiegao_ansinsita,
     R.drawable.osyaberi_hagu,
     R.drawable.osyaberi_kiss,
     R.drawable.osyaberi_soine,
-    R.drawable.osyaberi_omowazuwarau,
+    R.drawable.osyaberi_kottitoiisyoniwarau,
     R.drawable.osyaberi_uinnku,
     R.drawable.osyaberi_yuuwaku,
     R.drawable.osyaberi_mitumeau
@@ -2770,7 +2770,7 @@ val positiveExpressions = setOf(
 
 val negativeExpressions = setOf(
     R.drawable.osyaberi_okoru,
-    R.drawable.osyaberi_hukigenn,
+    R.drawable.osyaberi_hukigen,
     R.drawable.osyaberi_tumetaime,
     R.drawable.osyaberi_sitto
 )
@@ -3009,7 +3009,7 @@ fun detectHikariExpression(text: String, loveCount: Int): Int {
             -> ifLove(7, R.drawable.osyaberi_sitto)
         // Lv6 required
         listOf("好き", "愛し", "恋", "♡", "❤", "💕").any { text.contains(it) }
-            -> ifLove(6, R.drawable.osyaberi_koigokoro)
+            -> ifLove(6, R.drawable.osyaberi_koigokorowoidaku)
         listOf("見つめ", "じっと", "目が合").any { text.contains(it) }
             -> ifLove(6, R.drawable.osyaberi_mitumeau)
         // Lv5 required
@@ -3022,7 +3022,7 @@ fun detectHikariExpression(text: String, loveCount: Int): Int {
             -> ifLove(3, R.drawable.osyaberi_tereru)
         // Lv0 — いつでも出る表情（感情リアクション系）
         listOf("ごめん", "すまな", "申し訳", "悪かっ").any { text.contains(it) }
-            -> R.drawable.osyaberi_nakigao_mousiwakenai
+            -> R.drawable.osyaberi_oonakikanasikute
         listOf("泣", "悲し", "つらい", "涙", "なみだ").any { text.contains(it) }
             -> R.drawable.osyaberi_namida
         listOf("落ち込", "しょんぼり", "へこん").any { text.contains(it) }
@@ -3030,7 +3030,7 @@ fun detectHikariExpression(text: String, loveCount: Int): Int {
         listOf("怒", "ムカ", "ふざけ", "許さな").any { text.contains(it) }
             -> R.drawable.osyaberi_okoru
         listOf("不機嫌", "むすっ", "機嫌が").any { text.contains(it) }
-            -> R.drawable.osyaberi_hukigenn
+            -> R.drawable.osyaberi_hukigen
         listOf("もう", "ちゃんと", "だめ", "しっかり").any { text.contains(it) }
             -> R.drawable.osyaberi_sukoshiokoru
         listOf("冷たい", "別に", "関係な", "どうでも").any { text.contains(it) }
@@ -3042,11 +3042,11 @@ fun detectHikariExpression(text: String, loveCount: Int): Int {
         listOf("えーと", "うーん", "考え", "どうかな", "むずかし").any { text.contains(it) }
             -> R.drawable.osyaberi_kangaeru
         listOf("ありがとう", "よかった", "うれしい", "嬉し").any { text.contains(it) }
-            -> R.drawable.osyaberi_yasasiiegao
+            -> R.drawable.osyaberi_yasasiiegao_ansinsita
         listOf("え？", "どういう意味", "わからない", "困惑", "意味が", "何それ").any { text.contains(it) }
             -> R.drawable.osyaberi_tomadoi
         listOf("笑", "ウケる", "おもしろ", "くすっ", "あはは").any { text.contains(it) }
-            -> R.drawable.osyaberi_omowazuwarau
+            -> R.drawable.osyaberi_kottitoiisyoniwarau
         listOf("退屈", "つまらない", "暇", "たいくつ").any { text.contains(it) }
             -> R.drawable.osyaberi_taikutu
         else -> R.drawable.osyaberi_smile
@@ -3537,7 +3537,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                 )
                 "cinema" -> Pair(
                     "暗くなりかけたスクリーンを、ひかりはじっと見つめていた。隣に座ると、少し肩が近い。\n「映画館って、なんかドキドキしません？始まる前のこの感じ、好きなんですよね」",
-                    R.drawable.osyaberi_omowazuwarau
+                    R.drawable.osyaberi_kottitoiisyoniwarau
                 )
                 "beach"  -> Pair(
                     "ひかりは靴を脱いで、おそるおそる砂浜に足を踏み出した。足元を見て、少し目を丸くする。\n「わ、砂、思ったより温かい……！海って久しぶりに来たかもしれないです」",
