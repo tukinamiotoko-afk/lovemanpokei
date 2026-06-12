@@ -2776,44 +2776,46 @@ val negativeExpressions = setOf(
 )
 
 fun availableExpressions(loveCount: Int): String {
-    val base = "normal, smile, sugokuegao, okoru, hukigenn, tumetaime, nakigao, namida, otikomu, sukoshiokoru, huan, odoroki, kangaeru, tomadoi, taikutu, yasasiiegao, omowazuwarau"
+    val base = "normal, smile, sugokuegao, okoru, hukigen, tumetaime, oonakikanasikute, namida, otikomu, sukoshiokoru, huan, odoroki, kangaeru, tomadoi, taikutu, yasasiiegao_ansinsita, hazukasii"
     val lv3  = if (loveCount >= 3) ", tereru" else ""
     val lv5  = if (loveCount >= 5) ", uinnku, doyagao" else ""
-    val lv6  = if (loveCount >= 6) ", koigokoro, mitumeau" else ""
-    val lv7  = if (loveCount >= 7) ", yuuwaku, sitto" else ""
-    val lv8  = if (loveCount >= 8) ", hagu" else ""
+    val lv6  = if (loveCount >= 6) ", koigokorowoidaku, mitumeau" else ""
+    val lv7  = if (loveCount >= 7) ", yuuwaku, sitto, hutekusareru" else ""
+    val lv8  = if (loveCount >= 8) ", hagu, kottitoiisyoniwarau" else ""
     val lv9  = if (loveCount >= 9) ", kiss, soine" else ""
     return base + lv3 + lv5 + lv6 + lv7 + lv8 + lv9
 }
 
 fun exprNameToRes(name: String): Int = when (name) {
-    "tereru"    -> R.drawable.osyaberi_tereru
-    "koigokoro" -> R.drawable.osyaberi_koigokoro
-    "yasasiiegao" -> R.drawable.osyaberi_yasasiiegao
-    "hagu"      -> R.drawable.osyaberi_hagu
-    "kiss"      -> R.drawable.osyaberi_kiss
-    "soine"     -> R.drawable.osyaberi_soine
-    "omowazuwarau" -> R.drawable.osyaberi_omowazuwarau
-    "uinnku"    -> R.drawable.osyaberi_uinnku
-    "yuuwaku"   -> R.drawable.osyaberi_yuuwaku
-    "mitumeau"  -> R.drawable.osyaberi_mitumeau
-    "okoru"     -> R.drawable.osyaberi_okoru
-    "hukigenn"  -> R.drawable.osyaberi_hukigenn
-    "tumetaime" -> R.drawable.osyaberi_tumetaime
-    "sitto"     -> R.drawable.osyaberi_sitto
-    "nakigao"   -> R.drawable.osyaberi_nakigao_mousiwakenai
-    "namida"    -> R.drawable.osyaberi_namida
-    "otikomu"   -> R.drawable.osyaberi_otikomu
-    "sukoshiokoru" -> R.drawable.osyaberi_sukoshiokoru
-    "huan"      -> R.drawable.osyaberi_huan
-    "odoroki"   -> R.drawable.osyaberi_odoroki
-    "kangaeru"  -> R.drawable.osyaberi_kangaeru
-    "tomadoi"      -> R.drawable.osyaberi_tomadoi
-    "taikutu"      -> R.drawable.osyaberi_taikutu
-    "doyagao"      -> R.drawable.osyaberi_doyagao
-    "normal"       -> R.drawable.osyaberi_normal
-    "sugokuegao"   -> R.drawable.osyaberi_sugokuegao
-    else           -> R.drawable.osyaberi_normal
+    "tereru"                 -> R.drawable.osyaberi_tereru
+    "koigokorowoidaku"       -> R.drawable.osyaberi_koigokorowoidaku
+    "yasasiiegao_ansinsita"  -> R.drawable.osyaberi_yasasiiegao_ansinsita
+    "hagu"                   -> R.drawable.osyaberi_hagu
+    "kiss"                   -> R.drawable.osyaberi_kiss
+    "soine"                  -> R.drawable.osyaberi_soine
+    "kottitoiisyoniwarau"    -> R.drawable.osyaberi_kottitoiisyoniwarau
+    "uinnku"                 -> R.drawable.osyaberi_uinnku
+    "yuuwaku"                -> R.drawable.osyaberi_yuuwaku
+    "mitumeau"               -> R.drawable.osyaberi_mitumeau
+    "okoru"                  -> R.drawable.osyaberi_okoru
+    "hukigen"                -> R.drawable.osyaberi_hukigen
+    "tumetaime"              -> R.drawable.osyaberi_tumetaime
+    "sitto"                  -> R.drawable.osyaberi_sitto
+    "oonakikanasikute"       -> R.drawable.osyaberi_oonakikanasikute
+    "namida"                 -> R.drawable.osyaberi_namida
+    "otikomu"                -> R.drawable.osyaberi_otikomu
+    "sukoshiokoru"           -> R.drawable.osyaberi_sukoshiokoru
+    "huan"                   -> R.drawable.osyaberi_huan
+    "odoroki"                -> R.drawable.osyaberi_odoroki
+    "kangaeru"               -> R.drawable.osyaberi_kangaeru
+    "tomadoi"                -> R.drawable.osyaberi_tomadoi
+    "taikutu"                -> R.drawable.osyaberi_taikutu
+    "doyagao"                -> R.drawable.osyaberi_doyagao
+    "normal"                 -> R.drawable.osyaberi_normal
+    "sugokuegao"             -> R.drawable.osyaberi_sugokuegao
+    "hazukasii"              -> R.drawable.osyaberi_hazukasii
+    "hutekusareru"           -> R.drawable.osyaberi_hutekusareru
+    else                     -> R.drawable.osyaberi_normal
 }
 
 data class ParsedReply(val text: String, val exprRes: Int, val exprName: String, val loveChange: Int)
@@ -2849,34 +2851,36 @@ fun ChatStatusCard(loveCount: Int, heartCount: Int, lastExprName: String?) {
         else           -> "はじめまして"
     }
     val exprLabel = when (lastExprName) {
-        "smile"        -> "にこにこ"
-        "tereru"       -> "照れてる"
-        "koigokoro"    -> "恋心"
-        "yasasiiegao"  -> "やさしい"
-        "hagu"         -> "ハグ"
-        "kiss"         -> "キス"
-        "soine"        -> "添い寝"
-        "omowazuwarau" -> "思わず笑う"
-        "uinnku"       -> "ウィンク"
-        "yuuwaku"      -> "誘惑"
-        "mitumeau"     -> "見つめ合い"
-        "okoru"        -> "怒り"
-        "hukigenn"     -> "不機嫌"
-        "tumetaime"    -> "冷たい"
-        "sitto"        -> "嫉妬"
-        "nakigao"      -> "泣き顔"
-        "namida"       -> "涙"
-        "otikomu"      -> "落ち込み"
-        "sukoshiokoru" -> "少し怒り"
-        "huan"         -> "不安"
-        "odoroki"      -> "驚き"
-        "kangaeru"     -> "考え中"
-        "tomadoi"      -> "戸惑い"
-        "taikutu"      -> "退屈"
-        "doyagao"      -> "ドヤ顔"
-        "normal"       -> "ノーマル"
-        "sugokuegao"   -> "すごく笑顔"
-        else           -> null
+        "smile"                  -> "にこにこ"
+        "tereru"                 -> "照れてる"
+        "koigokorowoidaku"       -> "恋心"
+        "yasasiiegao_ansinsita"  -> "やさしい"
+        "hagu"                   -> "ハグ"
+        "kiss"                   -> "キス"
+        "soine"                  -> "添い寝"
+        "kottitoiisyoniwarau"    -> "一緒に笑う"
+        "uinnku"                 -> "ウィンク"
+        "yuuwaku"                -> "誘惑"
+        "mitumeau"               -> "見つめ合い"
+        "okoru"                  -> "怒り"
+        "hukigen"                -> "不機嫌"
+        "tumetaime"              -> "冷たい"
+        "sitto"                  -> "嫉妬"
+        "oonakikanasikute"       -> "大泣き"
+        "namida"                 -> "涙"
+        "otikomu"                -> "落ち込み"
+        "sukoshiokoru"           -> "少し怒り"
+        "huan"                   -> "不安"
+        "odoroki"                -> "驚き"
+        "kangaeru"               -> "考え中"
+        "tomadoi"                -> "戸惑い"
+        "taikutu"                -> "退屈"
+        "doyagao"                -> "ドヤ顔"
+        "normal"                 -> "ノーマル"
+        "sugokuegao"             -> "すごく笑顔"
+        "hazukasii"              -> "恥ずかしい"
+        "hutekusareru"           -> "ふてくされ"
+        else                     -> null
     }
     Surface(
         modifier = Modifier
