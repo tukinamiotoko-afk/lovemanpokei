@@ -2812,6 +2812,7 @@ fun exprNameToRes(name: String): Int = when (name) {
     "taikutu"                -> R.drawable.osyaberi_taikutu
     "doyagao"                -> R.drawable.osyaberi_doyagao
     "normal"                 -> R.drawable.osyaberi_normal
+    "smile"                  -> R.drawable.osyaberi_smile
     "sugokuegao"             -> R.drawable.osyaberi_sugokuegao
     "hazukasii"              -> R.drawable.osyaberi_hazukasii
     "hutekusareru"           -> R.drawable.osyaberi_hutekusareru
