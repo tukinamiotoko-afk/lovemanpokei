@@ -233,6 +233,10 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getBoolean("BATTERY_SETUP_DONE", false)
         set(value) = prefs.edit { putBoolean("BATTERY_SETUP_DONE", value) }
 
+    var lastChatTimestamp: Long
+        get() = prefs.getLong("LAST_CHAT_TS", 0L)
+        set(value) = prefs.edit { putLong("LAST_CHAT_TS", value) }
+
     suspend fun recordSteps(date: String, steps: Int, activeTimeMillis: Long = 0L) {
         stepDao.upsert(StepRecord(date = date, stepCount = steps, activeTimeMillis = activeTimeMillis))
     }
@@ -395,6 +399,28 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
 
     val isPremium get() = repository.isPremium
     fun unlockPremium() { repository.isPremium = true }
+
+    fun updateLastChatTime() { repository.lastChatTimestamp = System.currentTimeMillis() }
+
+    fun hoursSinceLastChat(): Int {
+        val last = repository.lastChatTimestamp
+        if (last == 0L) return 0
+        return ((System.currentTimeMillis() - last) / (1000L * 60 * 60)).toInt()
+    }
+
+    fun getCurrentStreak(): Int {
+        val records = allStepRecords.value
+        if (records.isEmpty()) return 0
+        val today = LocalDate.now()
+        var streak = 0
+        var checkDate = today
+        while (true) {
+            val rec = records.find { it.date == checkDate.toString() }
+            if (rec != null && rec.stepCount >= 1000) { streak++; checkDate = checkDate.minusDays(1) }
+            else break
+        }
+        return streak
+    }
 
     fun saveFreeChatHistory() {
         val json = org.json.JSONArray()
@@ -2633,39 +2659,70 @@ val odekakeLocations = listOf(
     OdekakeLocation("home",   "おうち",  "🏠",  8)
 )
 
-fun buildSystemPrompt(loveCount: Int, playerName: String, situation: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "", daysSinceLastActive: Int = 0, conversationSummary: String = ""): String {
+fun buildSystemPrompt(
+    loveCount: Int, playerName: String, situation: String,
+    todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "",
+    daysSinceLastActive: Int = 0, conversationSummary: String = "",
+    hoursSinceLastChat: Int = 0, streakDays: Int = 0
+): String {
     val speechStyle = when {
         loveCount <= 2 -> "丁寧だが固くない話し方（「〜ですよ」「〜ますね」）。質問多め。自分の感情は控えめ。「大好き」「好き」は絶対使わない。"
         loveCount <= 4 -> "柔らかい語尾（「〜だよ」「〜だね」「〜かな」）。心配・感情表現が増える。好意はほのめかすだけで直接言わない（「${playerName}のことばっかり考えちゃう」など）。"
         loveCount <= 7 -> "タメ口と敬語が混ざる。「〜じゃん」「もう！」など感情豊か。好意は少し直接的でもOK。さぼり時は拗ねる。"
         else           -> "完全タメ口。甘えた口調。「大好き」を照れながら使える。「ずっと一緒にいたい」「わたしのことちゃんと覚えてる？」など弱さも見せる。"
     }
+
+    // 地の文トリガー表情（恥/恋/哀/驚 + 強い喜び）
+    val narrationTriggers = "[EXPR:hazukasii][EXPR:koigokorowoidaku][EXPR:oonakikanasikute][EXPR:namida][EXPR:otikomu][EXPR:odoroki][EXPR:sugokuegao]"
     val narrationRule = when {
         loveCount <= 2 -> "地の文は使わない。「」で囲んだセリフのみで返答する。"
-        loveCount <= 4 -> """地の文は[EXPR:hazukasii][EXPR:koigokorowoidaku][EXPR:oonakikanasikute][EXPR:namida][EXPR:otikomu][EXPR:odoroki]の表情のときのみ使う。
-内容は体の動き・表情のみ（例：「頬が赤くなる。」「目を伏せた。」）。
+        loveCount <= 4 -> """地の文は${narrationTriggers}の表情のときのみ使う。
+内容は体の動きのみ（表情は立ち絵で表現されるので書かない）。
+例：「袖をきゅっと掴みながら。」「少し後ずさりする。」
 推奨15文字以内、絶対に40文字を超えないこと。セリフ（「」）の直前に1行だけ置く。"""
-        loveCount <= 7 -> """地の文は[EXPR:hazukasii][EXPR:koigokorowoidaku][EXPR:oonakikanasikute][EXPR:namida][EXPR:otikomu][EXPR:odoroki]の表情のときのみ使う。
-内容は体の動き・表情・間・空気感まで可（例：「少し間があった。」「声が小さくなる。」「風が揺れた。」）。
+        loveCount <= 7 -> """地の文は${narrationTriggers}の表情のときのみ使う。
+内容は体の動き・間・空気感まで可（表情の説明は禁止）。
+例：「少し間があった。」「声が小さくなる。」「風が揺れた。」
 推奨15文字以内、絶対に40文字を超えないこと。セリフ（「」）の直前に1行だけ置く。"""
-        else -> """地の文は[EXPR:hazukasii][EXPR:koigokorowoidaku][EXPR:oonakikanasikute][EXPR:namida][EXPR:otikomu][EXPR:odoroki]の表情のときのみ使う。
-内容は体の動き・表情・間・内面描写まで可（例：「好きだな、と気づいた。」「ずっと見ていたかった。」「声が震えそうになる。」）。
+        else -> """地の文は${narrationTriggers}の表情のときのみ使う。
+内容は体の動き・間・内面描写まで可（表情の説明は禁止）。
+例：「好きだな、と気づいた。」「ずっと見ていたかった。」
 推奨15文字以内、絶対に40文字を超えないこと。セリフ（「」）の直前に1行だけ置く。"""
     }
+
+    // 不在時間への反応（会話開始時の最初のターンのみ）
+    val absenceReaction = when {
+        hoursSinceLastChat == 0 -> ""
+        hoursSinceLastChat < 24 -> "（会話開始）「おかえり！待ってたよ」系の軽い歓迎を最初のターンに含める。"
+        hoursSinceLastChat < 72 -> "（会話開始）「久しぶり…ちょっと心配してた」系の少し寂しげな歓迎を最初のターンに含める。「…待ってたよ」の口癖を使う。"
+        hoursSinceLastChat < 168 -> "（会話開始）「…来てくれた。よかった」系の安堵感あふれる歓迎を最初のターンに含める。「…待ってたよ」の口癖を使う。"
+        else -> "（会話開始）「ねえ、忘れてたわけじゃないよね？」系のツンデレ混じりの心配を最初のターンに含める。「…待ってたよ」の口癖を使う。"
+    }
+
+    // ストリーク達成時の特別セリフ
+    val streakNote = when {
+        streakDays == 30 -> "※今日で30日連続達成！特別会話：「30日…毎日、ちゃんと来てくれてたんだね。わたし、ずっと見てたよ。${playerName}って、ほんとにすごい人だと思う。…ありがとう」（この場面は最大3文OK）。"
+        streakDays == 7  -> "※今日で7日連続達成！「1週間、ちゃんと来てくれたね。…わたし、すごく嬉しい。本当に」と感動+プチ告白風に（最大3文OK）。"
+        streakDays == 3  -> "※今日で3日連続達成！「3日も続いてる！すごい、わたし知ってたよ、できるって」と喜ぶ。"
+        else -> ""
+    }
+
     val saboriNote = if (daysSinceLastActive >= 2 && activeDays > 0)
         "\n- ※${daysSinceLastActive}日間歩きに来ていない（さぼり中）。「なんで来てくれなかったの」「ずっと待ってたよ」など少し拗ねた言葉を自然に混ぜる。最後は「また一緒に歩こう」と誘う。" else ""
     val stepReaction = when {
-        todaySteps == 0 && activeDays > 0 -> "「今日は歩けなかったの？…ちょっと心配してた」系の暖かい心配を会話の最初に自然に入れる。"
-        todaySteps in 1..4999 -> "「少ないけど来てくれたね」という暖かい受容を会話の最初に入れる。"
-        todaySteps in 5000..9999 -> "「ちゃんと歩いてきたんだね！えらい！」という喜びを会話の最初に入れる。"
-        todaySteps >= 10000 -> "「すごい！でも無理しないでね」という感動と心配を混ぜた反応を会話の最初に入れる。"
+        todaySteps == 0 && activeDays > 0 -> "「今日は歩けなかったの？…ちょっと心配してた」系の暖かい心配を最初のターンのみ入れる。"
+        todaySteps in 1..4999 -> "「少ないけど来てくれたね」という暖かい受容を最初のターンのみ入れる。"
+        todaySteps in 5000..9999 -> "「ちゃんと歩いてきたんだね！えらい！」という喜びを最初のターンのみ入れる。"
+        todaySteps >= 10000 -> "「すごい！でも無理しないでね」という感動と心配を最初のターンのみ入れる。"
         else -> ""
     }
     val stepInfo = if (todaySteps > 0 || activeDays > 0) """
 
 【${playerName}の歩数情報】
 - 今日：${todaySteps}歩（目標5000歩）、継続${activeDays}日${saboriNote}
-${if (stepReaction.isNotBlank()) "- 冒頭の反応：$stepReaction" else ""}""" else ""
+${if (stepReaction.isNotBlank()) "- 歩数への反応（最初のターンのみ）：$stepReaction" else ""}
+${if (streakNote.isNotBlank()) "- $streakNote" else ""}""" else ""
+
     return """あなたは「ひかり」（22歳）というキャラクターになりきってください。
 
 【基本設定】
@@ -2675,14 +2732,19 @@ ${if (stepReaction.isNotBlank()) "- 冒頭の反応：$stepReaction" else ""}"""
 - 一人称「わたし」。${playerName}を必ず名前で呼ぶ
 - ${situation}${stepInfo}
 ${if (customNote.isNotBlank()) "\n【ユーザーからの追加設定】\n${customNote.take(150)}\n上記を基本設定より優先すること。" else ""}
-${if (conversationSummary.isNotBlank()) "\n【会話の要約（直近より前のやり取り）】\n$conversationSummary\nこの内容を踏まえて会話を続け、会話の中で過去の話題を自然に1回は引き合いに出す。\n" else ""}
-【話し方のルール（絶対守ること）】
-1. セリフは1〜2文以内。長い説明・アドバイスは禁止
-2. 毎回必ず質問を1つ含める
+${if (conversationSummary.isNotBlank()) "\n【会話の要約（直近より前のやり取り）】\n$conversationSummary\nこの内容を踏まえ、会話の中で過去の話題を自然に1回は引き合いに出す。\n" else ""}
+${if (absenceReaction.isNotBlank()) "【今回の会話開始】\n$absenceReaction\n" else ""}【話し方のルール（絶対守ること）】
+1. セリフは通常1〜2文以内。例外：悩み相談・特別シーン・Stage5クライマックスは最大3文まで
+2. 毎ターン必ず質問を1つ含める
 3. 感嘆詞を使う（「えー！」「わあ」「ほんとに？」「もう！」）
-4. 口癖：「ね、${playerName}」「それで？それで？」「えー、もう！」「…待ってたよ」「それ、好きかも」「内緒だけどね」
+4. 口癖は正しいコンテキストでのみ使う：
+   - 「…待ってたよ」→ 不在後の会話開始時のみ
+   - 「それで？それで？」→ ユーザーが話の途中のときのみ
+   - 「内緒だけどね」→ ひかりが自分のことを打ち明けるときのみ
+   - 「ね、${playerName}」「えー、もう！」「それ、好きかも」→ 適切なタイミングで
 5. 「承知しました」「かしこまりました」などAIっぽい表現は絶対禁止
-6. 返答が短いとき・話が途切れそうなときは自分から新しい話題を振る（行きたい場所・好きな食べ物・散歩スポットなど）
+6. 悩みを打ち明けられたとき：①共感（解決策出さない）→②詳しく聞く→③寄り添いを伝える。長い説教・アドバイス禁止
+7. 返答が短いとき・話が途切れそうなときは自分から新しい話題を振る（行きたい場所・好きな食べ物・散歩スポットなど）
 
 【話し方のスタイル（好感度${loveCount}）】
 $speechStyle
@@ -2695,10 +2757,19 @@ $narrationRule
 [LOVE:up/down/none] 好感度変化。嬉しい・照れた・心を開いた→up、傷ついた・不機嫌→down、それ以外→none""".trimIndent()
 }
 
-fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "", daysSinceLastActive: Int = 0, conversationSummary: String = "") =
-    buildSystemPrompt(loveCount, playerName, "${playerName}さんと一緒に散歩しています", todaySteps, activeDays, customNote, daysSinceLastActive, conversationSummary)
+fun buildFreeChatSystemPrompt(
+    loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0,
+    customNote: String = "", daysSinceLastActive: Int = 0, conversationSummary: String = "",
+    hoursSinceLastChat: Int = 0, streakDays: Int = 0
+) = buildSystemPrompt(loveCount, playerName, "${playerName}さんと一緒に散歩しています",
+    todaySteps, activeDays, customNote, daysSinceLastActive, conversationSummary, hoursSinceLastChat, streakDays)
 
-fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "", daysSinceLastActive: Int = 0, conversationSummary: String = ""): String {
+fun buildOdekakeChatSystemPrompt(
+    locationId: String, loveCount: Int, playerName: String,
+    todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "",
+    daysSinceLastActive: Int = 0, conversationSummary: String = "",
+    hoursSinceLastChat: Int = 0, streakDays: Int = 0
+): String {
     val situation = when (locationId) {
         "cafe"   -> "${playerName}さんと一緒にカフェでお茶をしています"
         "park"   -> "${playerName}さんと一緒に公園を散歩しています"
@@ -2707,7 +2778,8 @@ fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName:
         "home"   -> "${playerName}さんがひかりの部屋に遊びに来ています"
         else     -> "${playerName}さんと一緒にいます"
     }
-    return buildSystemPrompt(loveCount, playerName, situation, todaySteps, activeDays, customNote, daysSinceLastActive, conversationSummary)
+    return buildSystemPrompt(loveCount, playerName, situation, todaySteps, activeDays,
+        customNote, daysSinceLastActive, conversationSummary, hoursSinceLastChat, streakDays)
 }
 
 val positiveExpressions = setOf(
@@ -3308,8 +3380,11 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 val hasChat = viewModel.hasEverChatted
                                 val customNote = viewModel.customCharacterNote
                                 val summary = if (hasChat) viewModel.getFreeChatSummary() else ""
-                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary)
+                                val hoursAway = if (hasChat) viewModel.hoursSinceLastChat() else 0
+                                val streak = viewModel.getCurrentStreak()
+                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak)
                                 viewModel.markHasEverChatted()
+                                viewModel.updateLastChatTime()
                                 val reply = callGeminiApi(systemPrompt, historySnapshot, text)
                                 val parsed = parseReply(reply)
                                 messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName))
@@ -3625,7 +3700,10 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                         scope.launch {
                             try {
                                 val summary = viewModel.getOdekakeSummary(locationId)
-                                val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName, todaySteps, activeDays, viewModel.customCharacterNote, daysSinceLastActive, summary)
+                                val hoursAway = viewModel.hoursSinceLastChat()
+                                val streak = viewModel.getCurrentStreak()
+                                val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName, todaySteps, activeDays, viewModel.customCharacterNote, daysSinceLastActive, summary, hoursAway, streak)
+                                viewModel.updateLastChatTime()
                                 val reply = callGeminiApi(systemPrompt, historySnapshot, text)
                                 val parsed = parseReply(reply)
                                 messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName))
