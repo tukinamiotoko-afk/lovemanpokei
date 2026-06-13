@@ -89,11 +89,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
@@ -195,12 +193,6 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getBoolean("IS_PREMIUM", false)
         set(value) = prefs.edit { putBoolean("IS_PREMIUM", value) }
 
-    fun getOdekakeHistoryJson(locationId: String): String =
-        prefs.getString("ODEKAKE_HISTORY_$locationId", "[]") ?: "[]"
-
-    fun setOdekakeHistoryJson(locationId: String, value: String) =
-        prefs.edit { putString("ODEKAKE_HISTORY_$locationId", value) }
-
     var freeChatSummary: String
         get() = prefs.getString("FREE_CHAT_SUMMARY", "") ?: ""
         set(value) = prefs.edit { putString("FREE_CHAT_SUMMARY", value) }
@@ -214,15 +206,6 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
     var diaryDates: Set<String>
         get() = prefs.getStringSet("DIARY_DATES", emptySet()) ?: emptySet()
         set(value) = prefs.edit { putStringSet("DIARY_DATES", value) }
-
-    fun getOdekakeSummary(locationId: String): String =
-        prefs.getString("ODEKAKE_SUMMARY_$locationId", "") ?: ""
-    fun setOdekakeSummary(locationId: String, value: String) =
-        prefs.edit { putString("ODEKAKE_SUMMARY_$locationId", value) }
-    fun getOdekakeSummarizedCount(locationId: String): Int =
-        prefs.getInt("ODEKAKE_SUMMARIZED_COUNT_$locationId", 0)
-    fun setOdekakeSummarizedCount(locationId: String, value: Int) =
-        prefs.edit { putInt("ODEKAKE_SUMMARIZED_COUNT_$locationId", value) }
 
     var heightCm: Float
         get() = prefs.getFloat("HEIGHT_CM", 170f)
@@ -359,34 +342,6 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
         } catch (_: Exception) {}
     }
 
-    private val odekakeChatMessagesMap = mutableMapOf<String, androidx.compose.runtime.snapshots.SnapshotStateList<ChatMessage>>()
-
-    fun getOdekakeMessages(locationId: String): androidx.compose.runtime.snapshots.SnapshotStateList<ChatMessage> {
-        return odekakeChatMessagesMap.getOrPut(locationId) {
-            androidx.compose.runtime.mutableStateListOf<ChatMessage>().also { list ->
-                try {
-                    val json = org.json.JSONArray(repository.getOdekakeHistoryJson(locationId))
-                    repeat(json.length()) { i ->
-                        val obj = json.getJSONObject(i)
-                        list.add(ChatMessage(obj.getString("role"), obj.getString("content"), null, null, obj.optString("actionText").ifEmpty { null }))
-                    }
-                } catch (_: Exception) {}
-            }
-        }
-    }
-
-    fun saveOdekakeHistory(locationId: String) {
-        val json = org.json.JSONArray()
-        odekakeChatMessagesMap[locationId]?.forEach { msg ->
-            json.put(org.json.JSONObject().apply {
-                put("role", msg.role)
-                put("content", msg.content)
-                msg.actionText?.let { put("actionText", it) }
-            })
-        }
-        repository.setOdekakeHistoryJson(locationId, json.toString())
-    }
-
     fun getFreeChatSummary() = repository.freeChatSummary
     fun needsFreeChatSummaryUpdate(total: Int) = total > 10 && repository.freeChatSummarizedCount < total - 10
     fun updateFreeChatSummary(summary: String, count: Int) { repository.freeChatSummary = summary; repository.freeChatSummarizedCount = count }
@@ -419,10 +374,6 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
         }
         return sb.toString().trim()
     }
-
-    fun getOdekakeSummary(locationId: String) = repository.getOdekakeSummary(locationId)
-    fun needsOdekakeSummaryUpdate(locationId: String, total: Int) = total > 10 && repository.getOdekakeSummarizedCount(locationId) < total - 10
-    fun updateOdekakeSummary(locationId: String, summary: String, count: Int) { repository.setOdekakeSummary(locationId, summary); repository.setOdekakeSummarizedCount(locationId, count) }
 
     val hasEverChatted get() = repository.hasEverChatted
     fun markHasEverChatted() { repository.hasEverChatted = true }
@@ -742,14 +693,6 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 composable("home") { HomeScreen(navController, viewModel) }
                 composable("chatmenu") { ChatMenuScreen(navController, viewModel) }
                 composable("freechat") { FreeChatScreen(navController, viewModel) }
-                composable("odekake") { OdekakeScenarioSelectScreen(navController, viewModel) }
-                composable(
-                    route = "odekake_chat/{locationId}",
-                    arguments = listOf(navArgument("locationId") { type = NavType.StringType })
-                ) { backStackEntry ->
-                    val locationId = backStackEntry.arguments?.getString("locationId") ?: "cafe"
-                    OdekakeChatScreen(navController, viewModel, locationId)
-                }
                 composable("records") { RecordsScreen(navController, viewModel) }
                 composable("diary")   { DiaryScreen(navController, viewModel) }
                 composable("settings") { SettingsScreen(navController, viewModel) }
@@ -1533,7 +1476,6 @@ fun HintSdHikari(modifier: Modifier = Modifier) {
     val hints = listOf(
         "2,000歩歩くと\n行動ポイントが1つもらえるよ！",
         "行動ポイントを使って\nひかりとお話しできるよ♪",
-        "おでかけで会話すると\nラブレベルが上がるよ！",
         "毎日歩いてひかりとの\n仲を深めよう♪",
         "セリフをタップすると\nひかりが話しかけてくれるよ！",
         "おしゃべりからいつでも\nひかりと話せるよ♪"
@@ -2698,16 +2640,6 @@ fun homeTouchDialogues(loveCount: Int): List<Pair<String, Int>> = when {
     )
 }
 
-data class OdekakeLocation(val id: String, val name: String, val emoji: String, val requiredLove: Int = 0)
-
-val odekakeLocations = listOf(
-    OdekakeLocation("cafe",   "カフェ",  "☕",  0),
-    OdekakeLocation("park",   "公園",    "🌸",  2),
-    OdekakeLocation("cinema", "映画館",  "🎬",  4),
-    OdekakeLocation("beach",  "海",      "🏖️",  6),
-    OdekakeLocation("home",   "おうち",  "🏠",  8)
-)
-
 fun calcTalkStage(loveCount: Int): Int = when {
     loveCount >= 9 -> 5; loveCount >= 7 -> 4; loveCount >= 5 -> 3; loveCount >= 3 -> 2; else -> 1
 }
@@ -2873,24 +2805,6 @@ fun buildFreeChatSystemPrompt(
 ) = buildSystemPrompt(loveCount, playerName, "状況：${playerName}さんと一緒に散歩しています",
     todaySteps, activeDays, customNote, daysSinceLastActive, conversationSummary,
     hoursSinceLastChat, streakDays, stepsDuringAbsence)
-
-fun buildOdekakeChatSystemPrompt(
-    locationId: String, loveCount: Int, playerName: String,
-    todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "",
-    daysSinceLastActive: Int = 0, conversationSummary: String = "",
-    hoursSinceLastChat: Int = 0, streakDays: Int = 0, stepsDuringAbsence: Int = 0
-): String {
-    val situation = when (locationId) {
-        "cafe"   -> "状況：${playerName}さんと一緒にカフェでお茶をしています"
-        "park"   -> "状況：${playerName}さんと一緒に公園を散歩しています"
-        "cinema" -> "状況：${playerName}さんと一緒に映画館に来ています"
-        "beach"  -> "状況：${playerName}さんと一緒に海に来ています"
-        "home"   -> "状況：${playerName}さんがひかりの部屋に遊びに来ています"
-        else     -> "状況：${playerName}さんと一緒にいます"
-    }
-    return buildSystemPrompt(loveCount, playerName, situation, todaySteps, activeDays,
-        customNote, daysSinceLastActive, conversationSummary, hoursSinceLastChat, streakDays, stepsDuringAbsence)
-}
 
 val positiveExpressions = setOf(
     R.drawable.osyaberi_tereru,
@@ -3326,23 +3240,6 @@ fun ChatMenuScreen(navController: NavController, viewModel: StepViewModel) {
                     }
                 }
             }
-            // おでかけカード
-            Surface(
-                modifier = Modifier.fillMaxWidth().clickable { navController.navigate("odekake") },
-                shape = RoundedCornerShape(20.dp),
-                color = Color(0xFFFFF0F8),
-                shadowElevation = 8.dp,
-                border = BorderStroke(1.dp, Color(0xFFFF6B9D).copy(alpha = 0.4f))
-            ) {
-                Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.ShoppingBag, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(36.dp))
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text("おでかけ", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A), fontFamily = MplusRoundedFontFamily)
-                        Text("場所を選んでひかりとお出かけ♪\n会話でラブレベルUP！", fontSize = 11.sp, color = Color.Gray, fontFamily = MplusRoundedFontFamily)
-                    }
-                }
-            }
         }
     }
 }
@@ -3627,280 +3524,6 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             }
                         }
                     }
-                }
-            }
-        }
-    }
-}
-
-// ---- おでかけ場所選択画面 ----
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun OdekakeScenarioSelectScreen(navController: NavController, viewModel: StepViewModel) {
-    val actionPoints by viewModel.currentActionPoints
-    val loveCount by viewModel.loveCount
-
-    Scaffold(topBar = {
-        TopAppBarWithBack(title = "おでかけ (${actionPoints}pt)", onBack = { navController.popBackStack() }, titleColor = Color(0xFFE87C9A), titleFontFamily = MplusRoundedFontFamily)
-    }) { padding ->
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("どこへ行く？", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text("会話を進めるとひかりとの好感度が上がります♪", fontSize = 12.sp, color = Color.Gray)
-            Spacer(modifier = Modifier.height(8.dp))
-            odekakeLocations.forEach { loc ->
-                val unlocked = loveCount >= loc.requiredLove
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(enabled = unlocked) {
-                            navController.navigate("odekake_chat/${loc.id}")
-                        },
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (unlocked) MaterialTheme.colorScheme.surfaceVariant
-                                         else Color(0xFFEEEEEE)
-                    )
-                ) {
-                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            if (unlocked) loc.emoji else "🔒",
-                            fontSize = 28.sp
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column {
-                            Text(
-                                loc.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = if (unlocked) Color.Unspecified else Color.Gray
-                            )
-                            if (!unlocked) {
-                                Text(
-                                    "ラブレベル ${loc.requiredLove} で解放",
-                                    fontSize = 11.sp,
-                                    color = Color.Gray
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ---- おでかけ会話画面 ----
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, locationId: String) {
-    val loveCount by viewModel.loveCount
-    val heartCount by viewModel.heartCount
-    val actionPoints by viewModel.currentActionPoints
-    val playerName by viewModel.playerName
-    val todaySteps by viewModel.todaySteps
-    val allRecords by viewModel.allStepRecords
-    val activeDays = remember(allRecords) { allRecords.count { it.stepCount >= 1000 } }
-    val daysSinceLastActive = remember(allRecords) {
-        val today = LocalDate.now()
-        val last = allRecords.filter { it.stepCount >= 1000 }
-            .mapNotNull { runCatching { LocalDate.parse(it.date) }.getOrNull() }.maxOrNull()
-        if (last != null) java.time.temporal.ChronoUnit.DAYS.between(last, today).toInt() else 0
-    }
-    val location = odekakeLocations.find { it.id == locationId } ?: odekakeLocations.first()
-    val messages = viewModel.getOdekakeMessages(locationId)
-
-    LaunchedEffect(locationId) {
-        if (messages.isEmpty()) {
-            val (text, expr) = when (locationId) {
-                "cafe"   -> Pair(
-                    "ひかりはメニューを広げて、きょろきょろと店内を見回している。視線がスイーツのページで止まった。\n「うわ、なんかいい雰囲気のお店ですね。何にしましょうか……甘いもの、気になります」",
-                    R.drawable.osyaberi_smile
-                )
-                "park"   -> Pair(
-                    "少し先を歩いていたひかりが、こちらを振り返る。風が髪を揺らした。\n「今日、天気よくてよかったです。なんか気分上がりますね」",
-                    R.drawable.osyaberi_smile
-                )
-                "cinema" -> Pair(
-                    "暗くなりかけたスクリーンを、ひかりはじっと見つめていた。隣に座ると、少し肩が近い。\n「映画館って、なんかドキドキしません？始まる前のこの感じ、好きなんですよね」",
-                    R.drawable.osyaberi_kottitoiisyoniwarau
-                )
-                "beach"  -> Pair(
-                    "ひかりは靴を脱いで、おそるおそる砂浜に足を踏み出した。足元を見て、少し目を丸くする。\n「わ、砂、思ったより温かい……！海って久しぶりに来たかもしれないです」",
-                    R.drawable.osyaberi_odoroki
-                )
-                "home"   -> Pair(
-                    "部屋に入ってもらいながら、ひかりはそわそわと枕の位置を直したりしている。\n「あ、散らかってたらごめんなさい。来るって聞いてたんですけど、なんか……緊張しちゃって」",
-                    R.drawable.osyaberi_smile
-                )
-                else     -> Pair("（あたりを見回しながら）来ましたね。どうぞ。", R.drawable.osyaberi_smile)
-            }
-            messages.add(ChatMessage("assistant", text, expr))
-        }
-    }
-    var inputText by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var odekakeMessageCount by remember { mutableIntStateOf(0) }
-    val scope = rememberCoroutineScope()
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
-
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
-    }
-
-    Scaffold(topBar = {
-        TopAppBarWithBack(
-            title = "${location.emoji} ${location.name} (${actionPoints}pt)",
-            onBack = { navController.popBackStack() }
-        )
-    }) { padding ->
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFFFF5F7))
-            .padding(padding)) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 8.dp)
-            ) {
-                items(messages.size) { i ->
-                    val msg = messages[i]
-                    val isUser = msg.role == "user"
-                    if (isUser) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFFE87C9A),
-                                modifier = Modifier.widthIn(max = 280.dp)
-                            ) {
-                                Text(msg.content, modifier = Modifier.padding(10.dp), color = Color.White, fontSize = 14.sp)
-                            }
-                        }
-                    } else {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.Start
-                        ) {
-                            Image(
-                                painter = painterResource(msg.expressionRes ?: R.drawable.osyaberi_smile),
-                                contentDescription = "ひかり",
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(300.dp)
-                                    .clip(RoundedCornerShape(20.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Column(modifier = Modifier.padding(horizontal = 4.dp)) {
-                                if (msg.actionText != null) {
-                                    // 新フォーマット: [ACTION] が地の文
-                                    Text(msg.actionText, color = Color(0xFF888888), fontSize = 12.sp, lineHeight = 20.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, modifier = Modifier.padding(vertical = 2.dp))
-                                    Text(msg.content.take(400), color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = Modifier.padding(vertical = 2.dp).background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
-                                } else {
-                                    // 旧フォーマット後方互換: 「」で地の文/セリフを分割
-                                    parseMessageSegments(msg.content.take(400)).forEach { seg ->
-                                        if (seg.isNarration) {
-                                            Text(seg.text, color = Color(0xFF888888), fontSize = 12.sp, lineHeight = 20.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, modifier = Modifier.padding(vertical = 2.dp))
-                                        } else {
-                                            Text(seg.text, color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = Modifier.padding(vertical = 2.dp).background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                if (isLoading) {
-                    item {
-                        Box(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(modifier = Modifier.size(28.dp), color = Color(0xFFE87C9A), strokeWidth = 2.dp)
-                        }
-                    }
-                }
-                item {
-                    val lastExpr = messages.lastOrNull { it.role == "assistant" }?.exprName
-                    ChatStatusCard(loveCount = loveCount, heartCount = heartCount, lastExprName = lastExpr)
-                }
-            }
-
-            errorMessage?.let {
-                Text(it, color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp))
-            }
-
-            Row(modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = inputText,
-                    onValueChange = { if (it.length <= 250) inputText = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("メッセージを入力...", fontSize = 13.sp) },
-                    maxLines = 1,
-                    singleLine = true,
-                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                IconButton(
-                    onClick = {
-                        val text = inputText.trim()
-                        if (text.isEmpty() || isLoading) return@IconButton
-                        if (!viewModel.spendPointForChat()) {
-                            errorMessage = "ポイントが足りません（2000歩で1ポイント）"
-                            return@IconButton
-                        }
-                        errorMessage = null
-                        val userMsg = ChatMessage("user", text)
-                        messages.add(userMsg)
-                        viewModel.saveOdekakeHistory(locationId)
-                        inputText = ""
-                        isLoading = true
-                        odekakeMessageCount++
-                        val allHistory = messages.dropLast(1)
-                        val historySnapshot = allHistory.takeLast(10)
-                        scope.launch {
-                            try {
-                                val summary = viewModel.buildMemoryContext()
-                                val hoursAway = viewModel.hoursSinceLastChat()
-                                val streak = viewModel.getCurrentStreak()
-                                val absenceSteps = viewModel.getStepsDuringAbsence(hoursAway)
-                                val systemPrompt = buildOdekakeChatSystemPrompt(locationId, loveCount, playerName, todaySteps, activeDays, viewModel.customCharacterNote, daysSinceLastActive, summary, hoursAway, streak, absenceSteps)
-                                viewModel.updateLastChatTime()
-                                val reply = callGeminiApi(systemPrompt, historySnapshot, text)
-                                val parsed = parseReply(reply, loveCount)
-                                messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName, parsed.actionText))
-                                when (parsed.loveChange) {
-                                    1  -> viewModel.earnHeart()
-                                    -1 -> viewModel.loseHeart()
-                                }
-                                viewModel.saveOdekakeHistory(locationId)
-                                // 5メッセージごとに日次日記を更新（バックグラウンド）
-                                val userMsgCount = messages.count { it.role == "user" }
-                                if (userMsgCount % 5 == 0 && userMsgCount >= 5) {
-                                    scope.launch {
-                                        try {
-                                            val newSummary = callGeminiApiForSummary(messages)
-                                            viewModel.updateDailyDiary(newSummary)
-                                        } catch (_: Exception) {}
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                viewModel.refundPointForChat()
-                                messages.removeLastOrNull()
-                                errorMessage = "エラー: ${e.message}"
-                            } finally {
-                                isLoading = false
-                            }
-                        }
-                    },
-                    enabled = !isLoading && inputText.isNotBlank()
-                ) {
-                    Icon(Icons.Default.Send, contentDescription = "送信", tint = Color(0xFFE87C9A))
                 }
             }
         }
