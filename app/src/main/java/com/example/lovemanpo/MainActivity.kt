@@ -189,6 +189,19 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getString("CUSTOM_CHARACTER_NOTE", "") ?: ""
         set(value) = prefs.edit { putString("CUSTOM_CHARACTER_NOTE", value) }
 
+    var lifestyle: String
+        get() = prefs.getString("LIFESTYLE", "") ?: ""
+        set(value) = prefs.edit { putString("LIFESTYLE", value) }
+    var favoriteDrink: String
+        get() = prefs.getString("FAVORITE_DRINK", "") ?: ""
+        set(value) = prefs.edit { putString("FAVORITE_DRINK", value) }
+    var weakness: String
+        get() = prefs.getString("WEAKNESS", "") ?: ""
+        set(value) = prefs.edit { putString("WEAKNESS", value) }
+    var bodyNotes: String
+        get() = prefs.getString("BODY_NOTES", "") ?: ""
+        set(value) = prefs.edit { putString("BODY_NOTES", value) }
+
     var isPremium: Boolean
         get() = prefs.getBoolean("IS_PREMIUM", false)
         set(value) = prefs.edit { putBoolean("IS_PREMIUM", value) }
@@ -380,6 +393,18 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
 
     val customCharacterNote get() = repository.customCharacterNote
     val customCharacterItems get() = repository.customCharacterNote
+
+    val lifestyle get() = repository.lifestyle
+    val favoriteDrink get() = repository.favoriteDrink
+    val weakness get() = repository.weakness
+    val bodyNotes get() = repository.bodyNotes
+
+    fun saveLifestyleProfile(lifestyle: String, favoriteDrink: String, weakness: String, bodyNotes: String) {
+        repository.lifestyle = lifestyle
+        repository.favoriteDrink = favoriteDrink
+        repository.weakness = weakness
+        repository.bodyNotes = bodyNotes
+    }
         .split("\n").filter { it.isNotBlank() }
     fun saveCustomCharacterItems(items: List<String>) {
         repository.customCharacterNote = items.joinToString("\n")
@@ -2400,6 +2425,10 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
     var tempGender by remember { mutableStateOf(viewModel.userGender.value) }
     var customItems by remember { mutableStateOf(viewModel.customCharacterItems) }
     var newItemText by remember { mutableStateOf("") }
+    var tempLifestyle by remember { mutableStateOf(viewModel.lifestyle) }
+    var tempFavoriteDrink by remember { mutableStateOf(viewModel.favoriteDrink) }
+    var tempWeakness by remember { mutableStateOf(viewModel.weakness) }
+    var tempBodyNotes by remember { mutableStateOf(viewModel.bodyNotes) }
     val isPremium by remember { derivedStateOf { viewModel.isPremium } }
     val pinkAccent = Color(0xFFFF6B9D)
 
@@ -2510,6 +2539,46 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFFF0F8FF),
+                border = BorderStroke(1.dp, Color(0xFF88BBDD).copy(alpha = 0.5f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("ひかりが覚えておくこと", fontWeight = FontWeight.Bold, color = Color(0xFF447799), fontSize = 14.sp)
+                    Text("具体的に書くほど会話が自然になります", fontSize = 11.sp, color = Color(0xFF888888))
+                    OutlinedTextField(
+                        value = tempLifestyle, onValueChange = { if (it.length <= 50) tempLifestyle = it },
+                        label = { Text("仕事・生活スタイル") },
+                        placeholder = { Text("例：夜間の警備員　デスクワーク中心", color = Color(0xFFBBBBBB), fontSize = 12.sp) },
+                        modifier = Modifier.fillMaxWidth(), maxLines = 2,
+                        supportingText = { Text("${tempLifestyle.length}/50", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp) }
+                    )
+                    OutlinedTextField(
+                        value = tempFavoriteDrink, onValueChange = { if (it.length <= 30) tempFavoriteDrink = it },
+                        label = { Text("好きな飲み物") },
+                        placeholder = { Text("例：コーヒー　麦茶", color = Color(0xFFBBBBBB), fontSize = 12.sp) },
+                        modifier = Modifier.fillMaxWidth(), maxLines = 1,
+                        supportingText = { Text("${tempFavoriteDrink.length}/30", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp) }
+                    )
+                    OutlinedTextField(
+                        value = tempWeakness, onValueChange = { if (it.length <= 50) tempWeakness = it },
+                        label = { Text("苦手・弱点（時間帯など）") },
+                        placeholder = { Text("例：朝が弱い　夜更かし気味", color = Color(0xFFBBBBBB), fontSize = 12.sp) },
+                        modifier = Modifier.fillMaxWidth(), maxLines = 2,
+                        supportingText = { Text("${tempWeakness.length}/50", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp) }
+                    )
+                    OutlinedTextField(
+                        value = tempBodyNotes, onValueChange = { if (it.length <= 80) tempBodyNotes = it },
+                        label = { Text("体の注意事項（怪我・持病など）") },
+                        placeholder = { Text("例：左膝が痛い　腰が弱い", color = Color(0xFFBBBBBB), fontSize = 12.sp) },
+                        modifier = Modifier.fillMaxWidth(), maxLines = 2,
+                        supportingText = { Text("${tempBodyNotes.length}/80", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp) }
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = {
                 val h = tempHeight.toFloatOrNull() ?: 170f
@@ -2518,6 +2587,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                 viewModel.setUserProfile(h, w)
                 viewModel.saveProfile(h, tempGender)
                 if (isPremium) viewModel.saveCustomCharacterItems(customItems)
+                viewModel.saveLifestyleProfile(tempLifestyle, tempFavoriteDrink, tempWeakness, tempBodyNotes)
                 navController.popBackStack()
             }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = pinkAccent)) { Text("保存して戻る") }
         }
@@ -2648,18 +2718,27 @@ fun calcWalkStage(activeDays: Int): Int = when {
     activeDays >= 30 -> 5; activeDays >= 15 -> 4; activeDays >= 8 -> 3; activeDays >= 3 -> 2; else -> 1
 }
 
+fun buildProfilePocket(lifestyle: String, favoriteDrink: String, weakness: String, bodyNotes: String): String {
+    val lines = mutableListOf<String>()
+    if (lifestyle.isNotBlank()) lines.add("仕事/生活: $lifestyle")
+    if (favoriteDrink.isNotBlank()) lines.add("好きな飲み物: $favoriteDrink（労いの具体物として自然に使う）")
+    if (weakness.isNotBlank()) lines.add("苦手/弱点: $weakness（この時間帯の歩数0を責めない）")
+    if (bodyNotes.isNotBlank()) lines.add("⚠️体の注意: $bodyNotes（この状態で無理な歩数を勧めない）")
+    return if (lines.isEmpty()) "" else "\n【プロファイルメモ】\n${lines.joinToString("\n")}\n"
+}
+
 fun buildSituationTag(
     playerName: String, daysSinceLastConv: Int, stepsDuringAbsence: Int,
     todaySteps: Int, currentHour: Int, streakDays: Int, isStreakMilestone: Boolean
 ): String = when {
     daysSinceLastConv >= 1 && stepsDuringAbsence > 0 ->
-        "状況タグ：並走\n${playerName}は${daysSinceLastConv}日間会話に来なかったが、この期間に${stepsDuringAbsence}歩歩いていた。返答冒頭で責めず「見えてたよ」という証言として伝える。Stage1-2=「来てくれたら嬉しかったな」/ Stage3-4=「声かけてくれなかったね」/ Stage5=「なんで来てくれなかったの」"
+        "状況タグ：並走\n${playerName}は${daysSinceLastConv}日間会話に来なかったが、この期間に${stepsDuringAbsence}歩歩いていた。返答冒頭で責めず「見えてたよ」という証言として伝える。Stage1-2=「来てくれたら嬉しかったな」/ Stage3-4=「声かけてくれなかったね」/ Stage5=「なんで来てくれなかったの」。歓迎の後、「この間どうしてた？」またはそのバリエーションで${playerName}の話を引き出す。"
     isStreakMilestone ->
-        "状況タグ：達成\n達成内容：${streakDays}日連続達成。感嘆詞から始め「見ていた」という証言として伝える。「よく頑張りました」は絶対禁止。セリフ長制限解除（最大3文）、[ACTION]のStage制限解除（内面描写まで可）。"
+        "状況タグ：達成\n達成内容：${streakDays}日連続達成。感嘆詞から始め「見ていた」という証言として伝える。「よく頑張りました」は絶対禁止。セリフ長制限解除（最大3文）、[ACTION]のStage制限解除（内面描写まで可）。称賛の後、「なんで今日そんなに歩いたの？」のように背景・動機を引き出す質問で締める。"
     todaySteps >= 8000 && currentHour >= 21 ->
-        "状況タグ：疲労\n今日${todaySteps}歩・${currentHour}時。「称賛 → 心配 → 休息の願い」の順で構成する。"
+        "状況タグ：疲労\n今日${todaySteps}歩・${currentHour}時。「称賛 → 心配 → 休息の願い」の順で構成する。質問は「大丈夫？」の1文のみ許可。lifestyle/favoriteDrinkキーワードがあれば自然に労いに使う（「コーヒーでも飲んで」など）。"
     else ->
-        "状況タグ：ねぎらい\n今日${todaySteps}歩。「来てくれた」という事実を受け止める。「えらいね」「よく頑張った」などの評価口調禁止。"
+        "状況タグ：ねぎらい\n今日${todaySteps}歩。「来てくれた」という事実を受け止める。「えらいね」「よく頑張った」などの評価口調禁止。${if (todaySteps >= 3000) "歩数多め→「今日どこ歩いたの？」系の問いで会話を続ける。" else "歩数少なめ→「今日何があった？」で${playerName}の話を引き出す。"}"
 }
 
 fun buildSystemPrompt(
@@ -2667,7 +2746,9 @@ fun buildSystemPrompt(
     todaySteps: Int = 0, activeDays: Int = 0, customNote: String = "",
     daysSinceLastActive: Int = 0, conversationSummary: String = "",
     hoursSinceLastChat: Int = 0, streakDays: Int = 0,
-    stepsDuringAbsence: Int = 0
+    stepsDuringAbsence: Int = 0,
+    lifestyle: String = "", favoriteDrink: String = "",
+    weakness: String = "", bodyNotes: String = ""
 ): String {
     val talkStage = calcTalkStage(loveCount)
     val walkStage = calcWalkStage(activeDays)
@@ -2787,7 +2868,7 @@ ${if (streakNote.isNotBlank()) "ストリーク: $streakNote" else ""}
 ${if (saboriNote.isNotBlank()) saboriNote else ""}
 ${if (absenceNote.isNotBlank()) "会話開始: $absenceNote" else ""}
 ${if (customNote.isNotBlank()) "\n追加設定: ${customNote.take(150)}（基本設定より優先）" else ""}
-
+${buildProfilePocket(lifestyle, favoriteDrink, weakness, bodyNotes)}
 【今回の状況タグ】
 $situationTag
 
@@ -2801,10 +2882,11 @@ ${if (conversationSummary.isNotBlank()) "【${playerName}との会話の記憶�
 fun buildFreeChatSystemPrompt(
     loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0,
     customNote: String = "", daysSinceLastActive: Int = 0, conversationSummary: String = "",
-    hoursSinceLastChat: Int = 0, streakDays: Int = 0, stepsDuringAbsence: Int = 0
+    hoursSinceLastChat: Int = 0, streakDays: Int = 0, stepsDuringAbsence: Int = 0,
+    lifestyle: String = "", favoriteDrink: String = "", weakness: String = "", bodyNotes: String = ""
 ) = buildSystemPrompt(loveCount, playerName, "状況：${playerName}さんと一緒に散歩しています",
     todaySteps, activeDays, customNote, daysSinceLastActive, conversationSummary,
-    hoursSinceLastChat, streakDays, stepsDuringAbsence)
+    hoursSinceLastChat, streakDays, stepsDuringAbsence, lifestyle, favoriteDrink, weakness, bodyNotes)
 
 val positiveExpressions = setOf(
     R.drawable.osyaberi_tereru,
@@ -3436,7 +3518,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 val hoursAway = if (hasChat) viewModel.hoursSinceLastChat() else 0
                                 val streak = viewModel.getCurrentStreak()
                                 val absenceSteps = viewModel.getStepsDuringAbsence(hoursAway)
-                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps)
+                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps, viewModel.lifestyle, viewModel.favoriteDrink, viewModel.weakness, viewModel.bodyNotes)
                                 viewModel.markHasEverChatted()
                                 viewModel.updateLastChatTime()
                                 val reply = callGeminiApi(systemPrompt, historySnapshot, text)
