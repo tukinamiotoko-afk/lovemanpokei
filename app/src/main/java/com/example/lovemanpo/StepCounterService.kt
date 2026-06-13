@@ -1,5 +1,6 @@
 package com.example.lovemanpo
 
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -16,6 +17,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.lovemanpo.R
@@ -104,6 +106,22 @@ class StepCounterService : Service(), SensorEventListener {
         Log.d(TAG, "Service onStartCommand")
         startServiceForeground()
         return START_STICKY
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        // タスク一覧から削除されても1秒後にサービスを再起動
+        val restartIntent = Intent(applicationContext, StepCounterService::class.java)
+        val pendingIntent = PendingIntent.getService(
+            this, 1, restartIntent,
+            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.set(
+            AlarmManager.ELAPSED_REALTIME,
+            SystemClock.elapsedRealtime() + 1000L,
+            pendingIntent
+        )
     }
 
     override fun onDestroy() {
