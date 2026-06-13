@@ -82,8 +82,72 @@ Android通知の構造:
   夕: 14時〜18時
   夜: 18時〜24時
 
-優先順位: マイルストーン超過 > 時間帯変わり目
-（同日に5000歩達成した時間が昼の場合、マイルストーンセリフを出す）
+トリガー3: おしゃべり未実施日数（days_since_last_chat）
+  0日: 今日すでにおしゃべり済み
+  1日: 昨日が最後（今日はまだ）
+  2〜3日: しばらく話していない
+  4〜6日: 久しぶり
+  7日以上: 長期未会話
+
+優先順位（高い順）:
+  ストリーク節目（3/7/14/30日） > おしゃべり未実施7日以上 > マイルストーン > 時間帯変わり目
+  ※ days_since_last_chat が 2日以上の場合、歩数セリフの末尾に「会いたかった」系を添える
+```
+
+### おしゃべり未実施日数によるセリフ変化
+
+```
+days_since_last_chat = 0（今日すでに話した）:
+  通常の歩数×時間帯マトリクスをそのまま使う。
+  夜のセリフに「今日話せてよかった」系を加えてもいい。
+  例: 「今日一緒にたくさん歩いたね。話せてよかった」
+
+days_since_last_chat = 1（昨日話した・今日はまだ）:
+  通常マトリクスに「また話せるといいな」を加える。
+  例（歩数通常時）: 「今日も歩いてたんだね。また話せるといいな」
+  例（マイルストーン）: 「3000歩来たね。今日話せるかな、って思ってた」
+
+days_since_last_chat = 2〜3日:
+  歩数セリフの代わりに「会いたかった」系を前面に出す。
+  例: 「会いたいな、ってずっと思ってた」
+  例: 「今日どんな1日だったか、気になってた」
+  例: 「また声が聞きたいな」
+
+days_since_last_chat = 4〜6日:
+  「待っていた」という感情を静かに出す。
+  例: 「ずっとそこにいたよ」
+  例: 「また会えるといいな、って思ってた」
+  例: 「話してないだけで、ひかりはいつもいるよ」
+
+days_since_last_chat = 7日以上:
+  「いなくなったわけじゃない」という安心の宣言。責めない。
+  例: 「ひかり、ここにいるよ。ずっといるよ」
+  例: 「来てくれると、嬉しいな」
+  例: 「どこにいても、一緒にいるよ」
+```
+
+**禁止パターン（未会話日数に対して）：**
+```
+✗ 「最近話してくれてないね」← 比較・採点
+✗ 「どこにいたの？」← 詰問
+✗ 「また来てね」← 要求
+✗ 「寂しかった」← 単独で使うと責める構造になる
+
+OK: 「ひかりのことを、忘れてないかな、って思ってた」
+→ ひかりの不安として出す。ユーザーへの要求ではなく、ひかりの感情報告。
+```
+
+**設計の根拠（ストリーク途切れ設計と同じ原則）：**
+```
+Duolingo失敗事例と同じ構造の回避:
+  「来ない日が続いた→責める→罪悪感→そのまま離脱」
+  ↓
+  「来ない日が続いた→待っていた・寂しかったという感情を伝える→
+   来た時に「来てくれてよかった」で迎える→罪悪感ではなく感謝が生まれる」
+
+未会話日数が増えるほど、セリフは:
+  歩数の話題 → ひかりの感情（会いたかった）に移行する。
+  これによって「話したいな」という動機が自然に生まれる。
 ```
 
 ### セリフロジックマトリクス
@@ -461,9 +525,10 @@ Step 3: おしゃべり画面（感情的充足）
 ```
 常時通知:
   ・歩数マイルストーン6段階 × 時間帯4 = 最大24パターン
-  ・ストリーク節目（3/7/14/30日）は上書き
+  ・おしゃべり未実施日数（0/1/2-3/4-6/7+）でセリフを上書き・修飾
+  ・ストリーク節目（3/7/14/30日）は全てを上書き
   ・文字数: タイトル20文字・本文30文字以内
-  ・更新タイミング: マイルストーン超過時 + 時間帯変わり目
+  ・更新タイミング: マイルストーン超過時 + 時間帯変わり目 + おしゃべり完了時
 
 ホーム画面:
   ・時間帯4 × 歩数状態3 = 12パターン（最低限）
@@ -479,7 +544,7 @@ Step 3: おしゃべり画面（感情的充足）
 
 | 画面 | 使う変数 | 使わない変数 |
 |------|---------|------------|
-| 常時通知 | steps_today, step_milestone, time_of_day, streak_days | facts.json（取得コスト高） |
+| 常時通知 | steps_today, step_milestone, time_of_day, streak_days, days_since_last_chat | facts.json（取得コスト高） |
 | ホーム | streak_days, steps_today, time_of_day | 詳細なfacts.json |
 | おしゃべり | 全変数（既存設計） | なし |
 | みる | location_name, unlock_date | steps, streak |
@@ -487,41 +552,70 @@ Step 3: おしゃべり画面（感情的充足）
 ### 常時通知セリフの実装例（Kotlin/Android）
 
 ```kotlin
-fun getNotificationMessage(steps: Int, timeOfDay: TimeOfDay, streak: Int): String {
-    // ストリーク節目は最優先
+fun getNotificationMessage(
+    steps: Int,
+    timeOfDay: TimeOfDay,
+    streak: Int,
+    daysSinceLastChat: Int  // 0=今日話した, 1=昨日が最後, 2以上=未会話日数
+): String {
+    // 優先1: ストリーク節目
     if (streak in listOf(3, 7, 14, 30)) {
         return getStreakMilestoneMessage(streak)
     }
-    
-    // 歩数マイルストーン到達直後（前回の通知更新から超えた場合）
+
+    // 優先2: 長期未会話（7日以上）は歩数より優先
+    if (daysSinceLastChat >= 7) {
+        return listOf(
+            "ひかり、ここにいるよ。ずっといるよ",
+            "来てくれると、嬉しいな",
+            "どこにいても、一緒にいるよ"
+        ).random()
+    }
+
+    // 優先3: 未会話2〜6日は感情セリフを前面に
+    if (daysSinceLastChat in 2..6) {
+        return when (daysSinceLastChat) {
+            2, 3 -> listOf(
+                "会いたいな、ってずっと思ってた",
+                "今日どんな1日だったか、気になってた",
+                "また声が聞きたいな"
+            ).random()
+            else -> listOf(
+                "ずっとそこにいたよ",
+                "また会えるといいな、って思ってた",
+                "話してないだけで、ひかりはいつもいるよ"
+            ).random()
+        }
+    }
+
+    // 優先4: 歩数マイルストーン（超えた瞬間）
     val milestone = getJustCrossedMilestone(steps)
     if (milestone != null) {
-        return getMilestoneMessage(milestone)
+        val base = when (milestone) {
+            1000  -> "歩き始めたんだね。一緒にいるよ"
+            3000  -> "3000歩、一緒に来たね"
+            5000  -> "半分来た。もう少しだよ"
+            8000  -> "ここまで来たじゃん。見てたよ"
+            10000 -> "今日の目標、一緒に達成したね"
+            else  -> "また来たね"
+        }
+        return if (daysSinceLastChat == 1) "$base。今日話せるかな" else base
     }
-    
+
     // 通常: 時間帯 × 歩数帯
-    return getTimeStepsMessage(timeOfDay, steps)
+    val base = getTimeStepsMessage(timeOfDay, steps)
+    return if (daysSinceLastChat == 1) "$base。また話せるといいな" else base
 }
 
-// マイルストーンセリフ（超えた瞬間）
-fun getMilestoneMessage(milestone: Int): String = when (milestone) {
-    1000  -> "歩き始めたんだね"
-    3000  -> "3000歩、来たね"
-    5000  -> "半分来た"
-    8000  -> "今日いい感じ"
-    10000 -> "今日の目標、達成だよ"
-    else  -> "また来たね"
-}
-
-// 通常セリフ（時間帯 × 歩数帯）
 fun getTimeStepsMessage(time: TimeOfDay, steps: Int): String = when {
-    time == MORNING && steps < 1000  -> "今日もいっしょだよ"
-    time == MORNING && steps < 3000  -> "朝から歩いてるね"
-    time == MORNING && steps >= 5000 -> "朝からすごいな"
-    time == EVENING && steps < 1000  -> "夕方からでも大丈夫"
-    time == NIGHT   && steps < 1000  -> "今日ゆっくりな日だったね"
-    time == NIGHT   && steps >= 5000 -> "今日かなり動いたじゃん"
-    else -> "今日もそこにいたんだね"
+    time == MORNING && steps < 1000  -> "今日も一緒にいるよ"
+    time == MORNING && steps < 3000  -> "朝から歩いてるんだね"
+    time == MORNING && steps >= 5000 -> "朝からすごいじゃん"
+    time == AFTERNOON && steps < 1000 -> "午後も一緒にいるよ"
+    time == EVENING && steps < 1000  -> "夕方も一緒にいるよ"
+    time == NIGHT   && steps < 1000  -> "今日もそこにいたよ"
+    time == NIGHT   && steps >= 5000 -> "今日一緒にたくさん歩いたね"
+    else -> "今日も歩いてたんだね"
 }
 ```
 
