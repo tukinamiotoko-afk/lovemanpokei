@@ -393,6 +393,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
 
     val customCharacterNote get() = repository.customCharacterNote
     val customCharacterItems get() = repository.customCharacterNote
+        .split("\n").filter { it.isNotBlank() }
 
     val lifestyle get() = repository.lifestyle
     val favoriteDrink get() = repository.favoriteDrink
@@ -405,7 +406,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
         repository.weakness = weakness
         repository.bodyNotes = bodyNotes
     }
-        .split("\n").filter { it.isNotBlank() }
+
     fun saveCustomCharacterItems(items: List<String>) {
         repository.customCharacterNote = items.joinToString("\n")
     }
