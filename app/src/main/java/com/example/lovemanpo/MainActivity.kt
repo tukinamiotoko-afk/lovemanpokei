@@ -208,6 +208,13 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getInt("FREE_CHAT_SUMMARIZED_COUNT", 0)
         set(value) = prefs.edit { putInt("FREE_CHAT_SUMMARIZED_COUNT", value) }
 
+    // 日次日記（日付 → 要約テキスト）
+    fun getDailyDiary(date: String): String = prefs.getString("DAILY_DIARY_$date", "") ?: ""
+    fun setDailyDiary(date: String, text: String) = prefs.edit { putString("DAILY_DIARY_$date", text) }
+    var diaryDates: Set<String>
+        get() = prefs.getStringSet("DIARY_DATES", emptySet()) ?: emptySet()
+        set(value) = prefs.edit { putStringSet("DIARY_DATES", value) }
+
     fun getOdekakeSummary(locationId: String): String =
         prefs.getString("ODEKAKE_SUMMARY_$locationId", "") ?: ""
     fun setOdekakeSummary(locationId: String, value: String) =
@@ -383,6 +390,35 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     fun getFreeChatSummary() = repository.freeChatSummary
     fun needsFreeChatSummaryUpdate(total: Int) = total > 10 && repository.freeChatSummarizedCount < total - 10
     fun updateFreeChatSummary(summary: String, count: Int) { repository.freeChatSummary = summary; repository.freeChatSummarizedCount = count }
+
+    // 日次日記を更新（今日の日付に紐付け）
+    fun updateDailyDiary(summary: String) {
+        val today = LocalDate.now().toString()
+        repository.setDailyDiary(today, summary)
+        val dates = repository.diaryDates.toMutableSet()
+        dates.add(today)
+        repository.diaryDates = dates.sorted().takeLast(90).toSet()
+    }
+
+    // 800 chars 固定の記憶コンテキストをビルド（新しい日付から降順で埋める）
+    fun buildMemoryContext(): String {
+        val maxChars = 800
+        val sb = StringBuilder()
+        val dates = repository.diaryDates.sortedDescending()
+        for (date in dates) {
+            val diary = repository.getDailyDiary(date)
+            if (diary.isBlank()) continue
+            val entry = "$date: $diary\n"
+            if (sb.length + entry.length > maxChars) break
+            sb.append(entry)
+        }
+        // 旧フォーマット移行: 日次日記がまだなければ freeChatSummary を使用
+        if (sb.isEmpty()) {
+            val legacy = repository.freeChatSummary
+            if (legacy.isNotBlank()) return legacy.take(maxChars)
+        }
+        return sb.toString().trim()
+    }
 
     fun getOdekakeSummary(locationId: String) = repository.getOdekakeSummary(locationId)
     fun needsOdekakeSummaryUpdate(locationId: String, total: Int) = total > 10 && repository.getOdekakeSummarizedCount(locationId) < total - 10
@@ -3499,7 +3535,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             try {
                                 val hasChat = viewModel.hasEverChatted
                                 val customNote = viewModel.customCharacterNote
-                                val summary = if (hasChat) viewModel.getFreeChatSummary() else ""
+                                val summary = viewModel.buildMemoryContext()
                                 val hoursAway = if (hasChat) viewModel.hoursSinceLastChat() else 0
                                 val streak = viewModel.getCurrentStreak()
                                 val absenceSteps = viewModel.getStepsDuringAbsence(hoursAway)
@@ -3514,13 +3550,15 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                     -1 -> viewModel.loseHeart()
                                 }
                                 viewModel.saveFreeChatHistory()
-                                // バックグラウンドでサマリー更新
-                                if (viewModel.needsFreeChatSummaryUpdate(messages.size)) {
-                                    try {
-                                        val oldMsgs = messages.dropLast(10)
-                                        val newSummary = callGeminiApiForSummary(oldMsgs)
-                                        viewModel.updateFreeChatSummary(newSummary, oldMsgs.size)
-                                    } catch (_: Exception) {}
+                                // 5メッセージごとに日次日記を更新（バックグラウンド）
+                                val userMsgCount = messages.count { it.role == "user" }
+                                if (userMsgCount % 5 == 0 && userMsgCount >= 5) {
+                                    scope.launch {
+                                        try {
+                                            val newSummary = callGeminiApiForSummary(messages)
+                                            viewModel.updateDailyDiary(newSummary)
+                                        } catch (_: Exception) {}
+                                    }
                                 }
                             } catch (e: Exception) {
                                 viewModel.refundPointForChat()
@@ -3827,7 +3865,7 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                         val historySnapshot = allHistory.takeLast(10)
                         scope.launch {
                             try {
-                                val summary = viewModel.getOdekakeSummary(locationId)
+                                val summary = viewModel.buildMemoryContext()
                                 val hoursAway = viewModel.hoursSinceLastChat()
                                 val streak = viewModel.getCurrentStreak()
                                 val absenceSteps = viewModel.getStepsDuringAbsence(hoursAway)
@@ -3841,13 +3879,15 @@ fun OdekakeChatScreen(navController: NavController, viewModel: StepViewModel, lo
                                     -1 -> viewModel.loseHeart()
                                 }
                                 viewModel.saveOdekakeHistory(locationId)
-                                // バックグラウンドでサマリー更新
-                                if (viewModel.needsOdekakeSummaryUpdate(locationId, messages.size)) {
-                                    try {
-                                        val oldMsgs = messages.dropLast(10)
-                                        val newSummary = callGeminiApiForSummary(oldMsgs)
-                                        viewModel.updateOdekakeSummary(locationId, newSummary, oldMsgs.size)
-                                    } catch (_: Exception) {}
+                                // 5メッセージごとに日次日記を更新（バックグラウンド）
+                                val userMsgCount = messages.count { it.role == "user" }
+                                if (userMsgCount % 5 == 0 && userMsgCount >= 5) {
+                                    scope.launch {
+                                        try {
+                                            val newSummary = callGeminiApiForSummary(messages)
+                                            viewModel.updateDailyDiary(newSummary)
+                                        } catch (_: Exception) {}
+                                    }
                                 }
                             } catch (e: Exception) {
                                 viewModel.refundPointForChat()
