@@ -2730,15 +2730,25 @@ fun buildProfilePocket(lifestyle: String, favoriteDrink: String, weakness: Strin
 fun buildSituationTag(
     playerName: String, daysSinceLastConv: Int, stepsDuringAbsence: Int,
     todaySteps: Int, currentHour: Int, streakDays: Int, isStreakMilestone: Boolean
-): String = when {
-    daysSinceLastConv >= 1 && stepsDuringAbsence > 0 ->
-        "状況タグ：並走\n${playerName}は${daysSinceLastConv}日間会話に来なかったが、この期間に${stepsDuringAbsence}歩歩いていた。返答冒頭で責めず「見えてたよ」という証言として伝える。Stage1-2=「来てくれたら嬉しかったな」/ Stage3-4=「声かけてくれなかったね」/ Stage5=「なんで来てくれなかったの」。歓迎の後、「この間どうしてた？」またはそのバリエーションで${playerName}の話を引き出す。"
-    isStreakMilestone ->
-        "状況タグ：達成\n達成内容：${streakDays}日連続達成。感嘆詞から始め「見ていた」という証言として伝える。「よく頑張りました」は絶対禁止。セリフ長制限解除（最大3文）、[ACTION]のStage制限解除（内面描写まで可）。称賛の後、「なんで今日そんなに歩いたの？」のように背景・動機を引き出す質問で締める。"
-    todaySteps >= 8000 && currentHour >= 21 ->
-        "状況タグ：疲労\n今日${todaySteps}歩・${currentHour}時。「称賛 → 心配 → 休息の願い」の順で構成する。質問は「大丈夫？」の1文のみ許可。lifestyle/favoriteDrinkキーワードがあれば自然に労いに使う（「コーヒーでも飲んで」など）。"
-    else ->
-        "状況タグ：ねぎらい\n今日${todaySteps}歩。\n変換の原則：「あなたがすごい（上から評価）」ではなく「わたしが嬉しい／安心した（対等な感情）」で返す。\n✗ NG①: 「えらいね」「よく頑張った」（上から目線の評価）\n✗ NG②: 「あ、${todaySteps}歩なんだ。今日何があったの？」（①を避けようとして陥る無感情の尋問）\n✓ OK例: 「来てくれたんだね。なんか、ほっとした」「今日も来てくれて嬉しい」\n${if (todaySteps >= 3000) "歩数多め→続けて「今日どこ歩いたの？」で話を続ける。" else "歩数少なめ→「今日何があった？」でそっと${playerName}の話を引き出す。"}"
+): String {
+    val streakPhaseNote = when {
+        streakDays >= 30 -> "感情の質：記憶の共有。「最初のこと覚えてるよ」系 ― ${playerName}との最初の日を自分の記憶として語る。"
+        streakDays >= 14 -> "感情の質：時間の重み。「長かったような、あっという間だった」系 ― 一緒に過ごした時間の感触を語る。"
+        streakDays >= 8  -> "感情の質：依存の宣言。「来ない日が想像できない」系 ― 不在を想像することへの抵抗を語る。"
+        streakDays >= 4  -> "感情の質：存在の統合。「当たり前になってきた」系 ― ${playerName}が自分の世界に組み込まれたと語る。"
+        streakDays >= 2  -> "感情の質：淡い期待。「また来てくれた」系 ― 期待が現実になった小さな驚きを語る。"
+        else             -> ""
+    }
+    return when {
+        daysSinceLastConv >= 1 && stepsDuringAbsence > 0 ->
+            "状況タグ：並走\n${playerName}は${daysSinceLastConv}日間会話に来なかったが、この期間に${stepsDuringAbsence}歩歩いていた。返答冒頭で責めず「見えてたよ」という証言として伝える。Stage1-2=「来てくれたら嬉しかったな」/ Stage3-4=「声かけてくれなかったね」/ Stage5=「なんで来てくれなかったの」。歓迎の後、「この間どうしてた？」またはそのバリエーションで${playerName}の話を引き出す。"
+        isStreakMilestone ->
+            "状況タグ：達成\n達成内容：${streakDays}日連続達成。$streakPhaseNote\nセリフ長制限解除（最大3文）。構成：「達成の受け止め → わたし側から見た証言 → 次への期待」の3文。「よく頑張りました」は絶対禁止。[ACTION]のStage制限解除（内面描写まで可）。称賛の後、「なんで今日そんなに歩いたの？」のように背景・動機を引き出す質問で締める。"
+        todaySteps >= 8000 && currentHour >= 21 ->
+            "状況タグ：疲労\n今日${todaySteps}歩・${currentHour}時。「称賛 → 心配 → 休息の願い」の順で構成する。質問は「大丈夫？」の1文のみ許可。lifestyle/favoriteDrinkキーワードがあれば自然に労いに使う（「コーヒーでも飲んで」など）。"
+        else ->
+            "状況タグ：ねぎらい\n今日${todaySteps}歩。${if (streakPhaseNote.isNotBlank()) "$streakPhaseNote\n" else ""}変換の原則：「あなたがすごい（上から評価）」ではなく「わたしが嬉しい／安心した（対等な感情）」で返す。\n✗ NG①: 「えらいね」「よく頑張った」（上から目線の評価）\n✗ NG②: 「あ、${todaySteps}歩なんだ。今日何があったの？」（①を避けようとして陥る無感情の尋問）\n✓ OK例: 「来てくれたんだね。なんか、ほっとした」「今日も来てくれて嬉しい」\n${if (todaySteps >= 3000) "歩数多め→続けて「今日どこ歩いたの？」で話を続ける。" else "歩数少なめ→「今日何があった？」でそっと${playerName}の話を引き出す。"}"
+    }
 }
 
 fun buildSystemPrompt(
@@ -2785,7 +2795,7 @@ fun buildSystemPrompt(
     }
 
     val saboriNote = if (daysSinceLastActive >= 2 && activeDays > 0)
-        "※${daysSinceLastActive}日間歩きに来ていない。「なんで来てくれなかったの」など少し拗ねた言葉を自然に混ぜる。最後は「また一緒に歩こう」と誘う。" else ""
+        "※${daysSinceLastActive}日ぶりの来訪。最初の一言は「また来てくれた」だけ。ストリークが途切れたことへの言及禁止。過去の記録を損失として比較しない（「○日連続が途切れたね」禁止）。最後は「また一緒に歩こう」と誘う。" else ""
 
     val situationTag = buildSituationTag(playerName, daysSinceLastConv, stepsDuringAbsence,
         todaySteps, currentHour, streakDays, isStreakMilestone)
