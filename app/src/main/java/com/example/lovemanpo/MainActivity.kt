@@ -1254,7 +1254,7 @@ fun HomeScreenContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-50).dp)
+                    .offset(y = (-30).dp)
                     .shadow(8.dp, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                     .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                     .background(
@@ -2207,7 +2207,7 @@ fun StatCardNew(modifier: Modifier, label: String, value: String, comment: Strin
                 .fillMaxSize()
                 .background(
                     brush = androidx.compose.ui.graphics.Brush.linearGradient(
-                        colors = listOf(Color(0xFFFFD6EB), Color(0xFFD6C8FF))
+                        colors = listOf(Color(0xFFFF8DBE), Color(0xFFFFE0EF))
                     )
                 )
         ) {
@@ -2228,9 +2228,9 @@ fun StatCardNew(modifier: Modifier, label: String, value: String, comment: Strin
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    Text(text = label, fontSize = 10.sp, color = Color(0xFF664466), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
-                    Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF3D1A3D), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
-                    Text(text = comment, fontSize = 6.sp, fontWeight = FontWeight.Bold, color = Color(0xFF886688), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
+                    Text(text = label, fontSize = 10.sp, color = Color(0xFF994466), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
+                    Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF7A1A3D), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
+                    Text(text = comment, fontSize = 6.sp, fontWeight = FontWeight.Bold, color = Color(0xFFBB6688), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
                 }
             }
         }
