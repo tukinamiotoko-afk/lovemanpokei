@@ -1196,7 +1196,6 @@ fun HomeScreenContent(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .verticalScroll(rememberScrollState())
         ) {
             // カード行 + ボタン列
             Row(
@@ -1230,7 +1229,7 @@ fun HomeScreenContent(
 
             Box(modifier = Modifier
                 .fillMaxWidth()
-                .height(380.dp)) {
+                .weight(1f)) {
                 Image(
                     painter = painterResource(id = expressionRes),
                     contentDescription = "ひかり",
