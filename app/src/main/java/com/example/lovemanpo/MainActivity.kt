@@ -2230,7 +2230,6 @@ fun StatCardNew(modifier: Modifier, label: String, value: String, comment: Strin
                 ) {
                     Text(text = label, fontSize = 10.sp, color = Color(0xFF994466), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
                     Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF7A1A3D), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
-                    Text(text = comment, fontSize = 6.sp, fontWeight = FontWeight.Bold, color = Color(0xFFBB6688), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
                 }
             }
         }
