@@ -2226,7 +2226,7 @@ fun StatCardNew(modifier: Modifier, label: String, value: String, comment: Strin
                 Spacer(modifier = Modifier.width(6.dp))
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(text = label, fontSize = 10.sp, color = Color(0xFF994466), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
                     Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF7A1A3D), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
