@@ -1155,7 +1155,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         onCharacterClick = {
             touchedDialogue = touchDialogues.randomOrNull()
         },
-        onFreeChatClick = { navController.navigate("chatmenu") },
+        onFreeChatClick = { navController.navigate("freechat") },
         onDiaryClick = { navController.navigate("diary") },
         onRecordsClick = { navController.navigate("records") },
         onDebugClick = { navController.navigate("debug") }
