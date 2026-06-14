@@ -1254,6 +1254,7 @@ fun HomeScreenContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .offset(y = (-50).dp)
                     .shadow(8.dp, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                     .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                     .background(
@@ -2197,30 +2198,40 @@ fun StatCardNew(modifier: Modifier, label: String, value: String, comment: Strin
     )
     Surface(
         modifier = modifier,
-        color = Color(0xFFFFF0F5),
+        color = Color.Transparent,
         shape = RoundedCornerShape(12.dp),
-        shadowElevation = 1.dp
+        shadowElevation = 2.dp
     ) {
-        Row(
+        Box(
             modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 16.dp)
-                .heightIn(min = 72.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxSize()
+                .background(
+                    brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                        colors = listOf(Color(0xFFFFD6EB), Color(0xFFD6C8FF))
+                    )
+                )
         ) {
-            Icon(
-                icon, 
-                null, 
-                tint = Color(0xFFFF6B9D).copy(alpha = 0.6f), 
-                modifier = Modifier.size(28.dp) // アイコンも少しコンパクトに
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy((2).dp) // 文字同士の隙間を詰めました
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 10.dp, vertical = 10.dp)
+                    .heightIn(min = 52.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = label, fontSize = 10.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
-                Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray, maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
-                Text(text = comment, fontSize = 6.sp,fontWeight = FontWeight.Bold, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
+                Icon(
+                    icon,
+                    null,
+                    tint = Color(0xFFFF6B9D).copy(alpha = 0.7f),
+                    modifier = Modifier.size(26.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(text = label, fontSize = 10.sp, color = Color(0xFF664466), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
+                    Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF3D1A3D), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
+                    Text(text = comment, fontSize = 6.sp, fontWeight = FontWeight.Bold, color = Color(0xFF886688), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
+                }
             }
         }
     }
