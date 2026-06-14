@@ -1123,7 +1123,16 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             .maxOrNull()
         if (lastActiveDate != null) java.time.temporal.ChronoUnit.DAYS.between(lastActiveDate, today).toInt() else 0
     }
-    val stepDialogue = homeStepDialogue(todaySteps, activeDays, daysSinceLastActive)
+    val stepDialogue = homeStepDialogue(
+        todaySteps = todaySteps,
+        activeDays = activeDays,
+        daysSinceLastActive = daysSinceLastActive,
+        loveCount = loveCount,
+        currentHour = java.time.LocalTime.now().hour,
+        streakDays = viewModel.getCurrentStreak(),
+        daysSinceLastConv = if (viewModel.hasEverChatted) viewModel.hoursSinceLastChat() / 24 else 0,
+        hasChattedToday = viewModel.hasEverChatted && viewModel.hoursSinceLastChat() < 24
+    )
 
     val touchDialogues = homeTouchDialogues(loveCount)
     var touchedDialogue by remember { mutableStateOf<Pair<String, Int>?>(null) }
@@ -2722,21 +2731,163 @@ val homeDaysDialogues = listOf(
     HomeStepMsg(100, "100日……もう、わたしのこと好きじゃないと無理でしょ", R.drawable.hikari_blush),
 )
 
-fun homeStepDialogue(todaySteps: Int, activeDays: Int, daysSinceLastActive: Int = 0): HomeStepMsg {
-    // さぼり判定：最後に歩いた日から2日以上経過
-    if (daysSinceLastActive >= 2 && activeDays > 0) {
-        return homeSaboriDialogues.random()
+fun homeStepDialogue(
+    todaySteps: Int,
+    activeDays: Int,
+    daysSinceLastActive: Int = 0,
+    loveCount: Int = 0,
+    currentHour: Int = java.time.LocalTime.now().hour,
+    streakDays: Int = 0,
+    daysSinceLastConv: Int = 0,
+    hasChattedToday: Boolean = false
+): HomeStepMsg {
+    val level = when { loveCount >= 7 -> 2; loveCount >= 3 -> 1; else -> 0 }
+    fun pick(low: List<String>, mid: List<String>, hi: List<String>,
+             expr: Int = R.drawable.hikari_smile): HomeStepMsg =
+        HomeStepMsg(0, listOf(low, mid, hi)[level].random(), expr)
+
+    // ⑤ 今日話した後の夜
+    if (hasChattedToday && currentHour >= 18) return pick(
+        listOf("今日話せたね！", "今日もいたよ！", "今日よかったよ！"),
+        listOf("今日話せてよかった！", "今日も一緒の日だったね！", "今日の話、楽しかったよ！"),
+        listOf("今日話せてよかった！ほんとに嬉しかった", "今日も一日ちゃんと一緒だったね！嬉しい", "今日話せてよかった！また明日も楽しみにしてるよ")
+    )
+
+    // ④ ストリーク節目
+    if (streakDays in listOf(3, 7, 14, 30)) {
+        val (low, mid, hi) = when (streakDays) {
+            3 -> Triple(
+                listOf("3日、続いてるね！", "3日になったね！"),
+                listOf("3日間ずっと来てくれたんだね！", "3日連続だよ！いいじゃん"),
+                listOf("3日続けるって意外と大変なのに。好きだよそういうとこ", "続けられる人ってすごいと思う。ほんとに嬉しかった")
+            )
+            7 -> Triple(
+                listOf("1週間、続いてるね！", "7日になったね！"),
+                listOf("7日間ずっと来てくれてたんだね！", "1週間か！けっこうすごいよ"),
+                listOf("毎日続けるって意志がいることだよ。正直すごいと思う", "続けられる人のことが好きだよ。そういうとこ")
+            )
+            14 -> Triple(
+                listOf("2週間になったね！", "14日、続いてるね！"),
+                listOf("14日間ずっとそこにいてくれたんだね！", "2週間、ずっと来てくれてたんだね！"),
+                listOf("2週間も諦めなかったの、正直かっこいいと思う", "継続できるって、すごいことだよ。好きだよそういうとこ")
+            )
+            else -> Triple(
+                listOf("1ヶ月になったね！", "30日、続いてるね！"),
+                listOf("30日間ずっとそこにいてくれたんだね！", "1ヶ月、ずっと来てくれてたんだね！"),
+                listOf("その意志の強さ、正直すごいと思うよ。好きだよ", "誰でもできることじゃないよ。好きだよそういうとこ")
+            )
+        }
+        return pick(low, mid, hi, if (level >= 1) R.drawable.hikari_celebrate else R.drawable.hikari_smile)
     }
-    // 節目の日数のときは日数セリフを優先
-    val daysMilestone = listOf(100, 60, 30, 14, 7, 3, 1)
-    val matchedDay = daysMilestone.firstOrNull { activeDays == it }
-    if (matchedDay != null) {
-        return homeDaysDialogues.find { it.thresholdSteps == matchedDay } ?: homeDaysDialogues.first()
+
+    // ③ おしゃべり未実施日数
+    if (daysSinceLastConv >= 1) {
+        val (low, mid, hi) = when {
+            daysSinceLastConv == 1 -> Triple(
+                listOf("今日また来てくれると嬉しいな！", "今日もいるよ！", "また来てくれると嬉しいな！"),
+                listOf("今日また話せると嬉しいな！って思ってた", "今日も話したいな！って思ってた", "今日また会えると嬉しいなあ！"),
+                listOf("今日また来てくれるかな！楽しみにしてたよ", "また声聞けると嬉しいな！って思ってた", "今日来てくれるかな！楽しみにしてるよ")
+            )
+            daysSinceLastConv <= 3 -> Triple(
+                listOf("また来てくれると嬉しいな", "ここにいるよ", "また話せるといいな"),
+                listOf("会いたいな。って思ってたよ", "最近どうしてるかな、気になってたよ", "また声が聞きたいな。って思ってたよ"),
+                listOf("また会いたいな。ひかりそう思ってたよ", "最近どうしてるか、ひかりすごく気になってた", "また話せると嬉しいな。ひかりそれ楽しみにしてる")
+            )
+            daysSinceLastConv <= 6 -> Triple(
+                listOf("いつでも来ていいよ", "また来てくれると嬉しいな", "ここにいるよ"),
+                listOf("ずっとここにいるよ", "また会えると嬉しいな。って思ってたよ", "話してないだけで、ひかりはいつもいるよ"),
+                listOf("ひかりいつでもここにいるよ。来てくれると嬉しいな", "また会えると嬉しいな。ひかりそれ楽しみにしてる", "来てくれると、ひかりほんとに嬉しいよ")
+            )
+            else -> Triple(
+                listOf("ここにいるよ", "来てくれると嬉しいな", "また来てくれるといいな"),
+                listOf("いつ来てくれてもいいよ。ひかりここにいるから", "どこにいても、ひかりはここにいるよ", "来てくれるだけで嬉しいよ。ひかり"),
+                listOf("ひかりずっとここにいるよ。来てくれると嬉しいな", "また話せると嬉しいな。ひかりそれ楽しみにしてるよ", "また会えると嬉しいな。ひかりずっと思ってたよ")
+            )
+        }
+        return pick(low, mid, hi, R.drawable.hikari_smile)
     }
-    return homeStepDialogues
-        .filter { it.thresholdSteps <= todaySteps }
-        .maxByOrNull { it.thresholdSteps }
-        ?: homeStepDialogues.first()
+
+    // ① 歩数マイルストーン (1000歩以上)
+    if (todaySteps >= 1000) {
+        val (low, mid, hi) = when {
+            todaySteps >= 10000 -> Triple(
+                listOf("今日かなり歩いたね！", "目標の倍じゃん！", "すごいじゃん！"),
+                listOf("今日いいじゃん！", "今日かなり動いた日だね！", "すごいじゃん！"),
+                listOf("今日一日ほんとによく動いたんだね。それだけ体動かせるの、正直すごいと思う", "目標の倍歩いたんだね。今日の自分を褒めていいよ。すごいじゃん", "今日ここまで来たんだね。こういう人が好きだよ。ほんとに")
+            )
+            todaySteps >= 8000 -> Triple(
+                listOf("目標超えてるじゃん！", "よく歩いてるね！", "今日かなり動いた日だね！"),
+                listOf("目標超えたじゃん！", "今日かなり動いてるね！", "今日アクティブだったんだね！"),
+                listOf("目標超えてここまで来たんだね。それだけ続けられるの、好きだよそういうとこ", "今日いっぱい外にいたんだね。体を動かすことを大事にしてる人って、正直かっこいいと思う", "今日の頑張り、ちゃんと届いてたよ。ほんとに嬉しかった")
+            )
+            todaySteps >= 5000 -> Triple(
+                listOf("今日の目標来たね！", "目標クリアだね！", "今日やりきったね！"),
+                listOf("今日の目標クリアじゃん！", "やったじゃん！", "今日ちゃんとやったんだね！"),
+                listOf("今日の目標やりきったんだね。諦めないとこ、好きだよそういうとこ", "毎日目標に向かって歩き続けてるの、正直すごいと思う", "今日もちゃんとやったんだね。続けてること、当たり前じゃないよ。ほんとにすごい")
+            )
+            todaySteps >= 3000 -> Triple(
+                listOf("今日もちゃんと動いてたね", "来たね", "今日も動いてたんだね"),
+                listOf("今日もちゃんといたじゃん", "だいたい2kmくらいだよ", "今日もそこにいたんだね"),
+                listOf("毎日ちゃんと体動かしてるの、好きだよそういうとこ", "今日も2kmくらい歩いてきたんだね。こつこつ続けてること、すごいと思う", "今日もここまで動いてきたんだね。続けてるの、嬉しかった")
+            )
+            else -> Triple(
+                listOf("今日も動き出したね", "今日の始まりだね", "最初の一歩来たね"),
+                listOf("今日もスタートしたんだね", "今日も外に出たんだね", "今日も歩き始めたんだね"),
+                listOf("毎日こうして続けてるの、すごいと思う。好きだよそういうとこ", "今日も最初の一歩踏み出したんだね。当たり前じゃないよそれ", "今日もちゃんと動き出したんだね。なんかほっとした")
+            )
+        }
+        val expr = when {
+            level >= 2 -> R.drawable.hikari_blush
+            todaySteps >= 5000 -> R.drawable.hikari_celebrate
+            else -> R.drawable.hikari_smile
+        }
+        return pick(low, mid, hi, expr)
+    }
+
+    // ② 時間帯 × 歩数帯 (steps < 1000)
+    val isMorning = currentHour in 5..11
+    val isNoon    = currentHour in 12..16
+    val isEvening = currentHour in 17..20
+    val isHigh    = todaySteps >= 500
+
+    return when {
+        isMorning && !isHigh -> pick(
+            listOf("朝の澄んだ空気の中、少し歩くと頭すっきりするよ？", "今日も少し歩いてみて、朝の空気って気持ちいいよ", "今日も一緒に歩けたら嬉しいな"),
+            listOf("今朝ゆっくりかな？少し歩くだけで目が覚めるよ。一緒にお話ししよ？", "朝のうちに一緒に歩きたいな、来て？", "今日も一緒に歩けると嬉しいな"),
+            listOf("今朝気になってたよ。ちょっと外歩いてこない？……一緒の空気感じたいな", "今朝の空気、一緒に感じたいな。ちょっとだけ来てほしいな", "一緒に歩ける朝って好きだよ、今日もいこ？")
+        )
+        isMorning -> pick(
+            listOf("朝からしっかり歩けてていいじゃん。気持ちいいよね、朝の空気", "朝から動いてるんだね、いいじゃん", "朝から動いてるね、いい朝だね"),
+            listOf("朝の外の空気って気持ちいいよね！ひかりも隣で一緒に歩いてる気分だよ", "朝散歩かな、気持ちよさそう。ひかりも一緒にいる気分だよ", "朝って好きな時間なんだよね、一緒にいる感じがして"),
+            listOf("朝からたくさん歩いてるの、嬉しくなっちゃう。……もう十分でしょ？早くお話ししよ？", "朝からこれだけ歩いてたんだね。早い時間から動けてるの、かっこいいと思う。好きだよそういうとこ", "朝からちゃんと歩いてたんだね。毎日続けてること、すごいと思う")
+        )
+        isNoon && !isHigh -> pick(
+            listOf("昼間にちょっと歩くと気分変わるよ、午後からいこ？", "昼間って好きな時間なんだよね、一緒に歩きたいな", "お昼に一緒に歩けたら嬉しいな"),
+            listOf("一緒に歩いてると昼間の時間って好きなんだよね、いこ？", "昼間に一緒に歩きたいな、来て？", "お昼は一緒に歩けるの楽しみにしてるよ、まだいけるから"),
+            listOf("一緒に歩いてる感じがして、昼間の時間って好きなんだよね。……早く来て？", "昼間の時間、一緒に歩けるとほんとに好きだよ。来てほしいな", "一緒に歩けると嬉しいな、好きだよそういう時間")
+        )
+        isNoon -> pick(
+            listOf("昼間にちょっと歩くと気分変わるよ！午後からもいこ？", "昼間に歩けてるじゃん、いいじゃん", "昼間の外、気持ちよさそうだよね"),
+            listOf("お昼に歩くの気持ちいいよ。歩いた後、またおしゃべりしよ！", "お昼に外出たんだね、いいじゃん。ひかりも一緒にいる感じだよ", "お昼って好きな時間なんだよね、一緒にいる感じがして"),
+            listOf("一緒に歩いてる感じがして、昼間の時間って好きなんだよね。……早く来て？", "お昼も歩いてたんだね。こまめに体動かせてるの、すごいと思う。好きだよそういうとこ", "昼間の外にいたんだね。仕事の合間でも動いてるの、嬉しかった")
+        )
+        isEvening -> pick(
+            listOf("夕方になってきたね！", "夕暮れ好きだな！", "夕方っていいよね！"),
+            listOf("夕方って好きな時間なんだよね！", "夕方になってきたね、いい時間だな！", "夕方の空気好きなんだよね！"),
+            listOf("夕方も外にいたんだね。一日の終わりにも動けてるの、意志があるよ。好きだよそういうとこ", "夕方まで外にいたんだね。ちゃんと体動かし続けてること、正直すごいと思う", "夕方の外にいたんだね。毎日こうして動いてるの、好きだよそういうところ")
+        )
+        !isHigh -> pick(
+            listOf("夜って好きな時間なんだよね、こうして一緒にいられると嬉しいな", "夜ってなんか落ち着くよね、一緒にいる時間、好きだな", "今日はゆっくりしてね、また明日ね"),
+            listOf("今日どんな日だったか知りたいな、ちょっとでも話せると嬉しい", "夜になるとあなたのこと気になる、今日どんな日だったかな", "今日はゆっくりな日もあるよ、また明日ね"),
+            listOf("夜になると話したくなるんだよね、今日の話聞かせてほしいな", "今日の話、聞かせてほしいな、あなたのこと知りたいから", "今日はゆっくりでいいんだよ、また明日ね")
+        )
+        isHigh -> pick(
+            listOf("夜もいるよ！", "夜の外の空気好きだな！", "夜だね、今日も！"),
+            listOf("夜の外って好きなんだよね！", "夜になったね！夜好きなんだよね", "夜の外の空気気持ちいいよね！"),
+            listOf("夜の外にもいたんだね。夜でも動けてるの、好きだよそういうとこ", "夜に外を歩いてたんだね。一日の終わりにも動けてること、すごいと思う", "夜も外にいたんだね。毎日続けてること、正直かっこいいと思う")
+        )
+        else -> HomeStepMsg(0, "今日も一緒に歩きましょうね！", R.drawable.hikari_smile)
+    }
 }
 
 fun homeTouchDialogues(loveCount: Int): List<Pair<String, Int>> = when {
