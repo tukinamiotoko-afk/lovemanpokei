@@ -2207,7 +2207,7 @@ fun StatCardNew(modifier: Modifier, label: String, value: String, comment: Strin
                 .fillMaxSize()
                 .background(
                     brush = androidx.compose.ui.graphics.Brush.linearGradient(
-                        colors = listOf(Color(0xFFFF8DBE), Color(0xFFFFE0EF))
+                        colors = listOf(Color(0xFFFFCCE0), Color(0xFFFFF0F8))
                     )
                 )
         ) {
