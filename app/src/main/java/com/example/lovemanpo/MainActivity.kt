@@ -1284,9 +1284,11 @@ fun HomeScreenContent(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding(),
+            onHome = {},
             onFreeChat = onFreeChatClick,
             onDiary = onDiaryClick,
-            onRecords = onRecordsClick
+            onRecords = onRecordsClick,
+            selectedScreen = "home"
         )
     }
 } // ← ここで HomeScreenContent が終わる
@@ -1642,12 +1644,20 @@ fun HomeWeeklySection() {
 
 
 @Composable
-fun HomeCustomBottomNav(modifier: Modifier = Modifier, onFreeChat: () -> Unit, onDiary: () -> Unit, onRecords: () -> Unit) {
+fun HomeCustomBottomNav(
+    modifier: Modifier = Modifier,
+    onHome: () -> Unit = {},
+    onFreeChat: () -> Unit,
+    onDiary: () -> Unit,
+    onRecords: () -> Unit,
+    selectedScreen: String = ""
+) {
     Surface(modifier = modifier
         .fillMaxWidth()
         .height(80.dp), color = Color.White, shadowElevation = 10.dp) {
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically) {
-            HomeNavItem(Icons.Default.Book, "日記", false, onDiary)
+            HomeNavItem(Icons.Default.Home, "ホーム", selectedScreen == "home", onHome)
+            HomeNavItem(Icons.Default.Book, "日記", selectedScreen == "diary", onDiary)
 
             Box(contentAlignment = Alignment.Center, modifier = Modifier
                 .offset(y = (-12).dp)
@@ -1662,7 +1672,7 @@ fun HomeCustomBottomNav(modifier: Modifier = Modifier, onFreeChat: () -> Unit, o
                     .offset(y = 22.dp), fontSize = 10.sp, color = Color(0xFFE87C9A), fontWeight = FontWeight.Bold)
             }
 
-            HomeNavItem(Icons.Default.BarChart, "記録", false, onRecords)
+            HomeNavItem(Icons.Default.BarChart, "記録", selectedScreen == "records", onRecords)
         }
     }
 }
@@ -1789,7 +1799,17 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
     }
 
     Scaffold(
-        containerColor = Color.Transparent, // ここを透明にする
+        containerColor = Color.Transparent,
+        bottomBar = {
+            HomeCustomBottomNav(
+                modifier = Modifier.navigationBarsPadding(),
+                onHome = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
+                onFreeChat = { navController.navigate("freechat") },
+                onDiary = { navController.navigate("diary") },
+                onRecords = {},
+                selectedScreen = "records"
+            )
+        },
         topBar = {
             Column(
                 modifier = Modifier
