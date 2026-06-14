@@ -1254,7 +1254,6 @@ fun HomeScreenContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-15).dp)
                     .shadow(8.dp, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                     .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                     .background(
@@ -1263,10 +1262,10 @@ fun HomeScreenContent(
                         )
                     )
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     val formattedMessage = dialogueMessage.replace("○○", playerName)
                     HomeCommentBanner(expressionRes, formattedMessage, onClick = onCharacterClick)
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
@@ -2203,7 +2202,9 @@ fun StatCardNew(modifier: Modifier, label: String, value: String, comment: Strin
         shadowElevation = 1.dp
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp), // パディングを詰めました
+            modifier = Modifier
+                .padding(horizontal = 12.dp, vertical = 16.dp)
+                .heightIn(min = 72.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
