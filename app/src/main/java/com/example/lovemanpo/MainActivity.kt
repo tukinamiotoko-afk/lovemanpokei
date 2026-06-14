@@ -2233,8 +2233,8 @@ fun StatCardNew(modifier: Modifier, label: String, value: String, comment: Strin
         ) {
             Row(
                 modifier = Modifier
-                    .padding(horizontal = 10.dp, vertical = 10.dp)
-                    .heightIn(min = 52.dp),
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .heightIn(min = 44.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
