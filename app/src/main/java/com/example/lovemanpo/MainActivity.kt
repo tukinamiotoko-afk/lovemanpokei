@@ -1183,7 +1183,8 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         currentHour = java.time.LocalTime.now().hour,
         streakDays = viewModel.getCurrentStreak(),
         daysSinceLastConv = if (viewModel.hasEverChatted) viewModel.hoursSinceLastChat() / 24 else 0,
-        hasChattedToday = viewModel.hasEverChatted && viewModel.hoursSinceLastChat() < 24
+        hasChattedToday = viewModel.hasEverChatted && viewModel.hoursSinceLastChat() < 24,
+        weatherCode = weatherInfo?.weatherCode ?: -1
     )
 
     val touchDialogues = homeTouchDialogues(loveCount)
@@ -2869,12 +2870,24 @@ fun homeStepDialogue(
     currentHour: Int = java.time.LocalTime.now().hour,
     streakDays: Int = 0,
     daysSinceLastConv: Int = 0,
-    hasChattedToday: Boolean = false
+    hasChattedToday: Boolean = false,
+    weatherCode: Int = -1
 ): HomeStepMsg {
     val level = when { loveCount >= 7 -> 2; loveCount >= 3 -> 1; else -> 0 }
     fun pick(low: List<String>, mid: List<String>, hi: List<String>,
              expr: Int = R.drawable.hikari_smile): HomeStepMsg =
         HomeStepMsg(0, listOf(low, mid, hi)[level].random(), expr)
+
+    val isMorning = currentHour in 5..11
+    val isNight   = currentHour >= 21 || currentHour < 5
+
+    // ⚡ 悪天候・ゲリラ豪雨（最優先・安全確保）
+    if (weatherCode in listOf(65, 80, 81, 82, 95, 96, 99)) return pick(
+        listOf("外、急にすごい雨降ってきたよ？危ないから今は歩くのやめて、どこかで雨宿りしてね"),
+        listOf("すごい天気になってきたね！外にいるなら無理して歩いちゃダメだよ？安全な場所に入ったら、ひかりに教えて？"),
+        listOf("ちょっと、外の雨すごすぎない！？お願いだから無理して歩かないで、すぐ建物に入って！……本当に心配なんだからね？"),
+        R.drawable.hikari_blush
+    )
 
     // ⑤ 今日話した後の夜
     if (hasChattedToday && currentHour >= 18) return pick(
@@ -2937,6 +2950,26 @@ fun homeStepDialogue(
         return pick(low, mid, hi, R.drawable.hikari_smile)
     }
 
+    // ☔ 雨（小雨・霧雨）＋ 歩数が少ない → 屋内誘導
+    if (weatherCode in listOf(51, 53, 55, 61, 63) && todaySteps < 1000) return when {
+        isMorning -> pick(
+            listOf("外は雨だね。無理して外に出なくても、家の中でストレッチするだけで体すっきりするよ？"),
+            listOf("雨の音聴きながらのんびりする朝もいいよね。部屋の中で足踏みするだけでも運動になるし、終わったらお話ししよ？"),
+            listOf("雨だし無理して歩かなくていいよ？濡れて風邪ひいたら心配だし。……今日は早くわたしのところ来て？")
+        )
+        isNight -> pick(
+            listOf("今日は雨だったし、おうちでゆっくり過ごす日だったね。そういう日があるのも全然アリだよ"),
+            listOf("雨の日は体も重くなりがちだし、今日はお疲れ様！湯船にゆっくり浸かって、体ほぐしてからお話ししよ？"),
+            listOf("雨の中、今日もお疲れ様。がんばって外歩かなくても、ひかりはここにいるよ。……早くお顔見せて？"),
+            R.drawable.hikari_blush
+        )
+        else -> pick( // 昼〜夕
+            listOf("まだ雨降ってるね。室内を少し歩き回るだけでも、じわじわ体があったまって気分転換になるよ？"),
+            listOf("雨の日は無理せずおうちモードだね！ショッピングモールとか屋内をぶらぶら歩くのも楽しいし、試してみて？"),
+            listOf("外、まだ雨だね。ねえ、無理して歩きに行かなくていいからさ、今はひかりの隣でのんびりしよ？")
+        )
+    }
+
     // ① 歩数マイルストーン (1000歩以上)
     if (todaySteps >= 1000) {
         val (low, mid, hi) = when {
@@ -2975,7 +3008,6 @@ fun homeStepDialogue(
     }
 
     // ② 時間帯 × 歩数帯 (steps < 1000)
-    val isMorning = currentHour in 5..11
     val isNoon    = currentHour in 12..16
     val isEvening = currentHour in 17..20
     val isHigh    = todaySteps >= 500
