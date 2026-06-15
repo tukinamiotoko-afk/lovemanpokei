@@ -1333,6 +1333,7 @@ fun HomeScreenContent(
                     )
             ) {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Spacer(modifier = Modifier.height(40.dp))
                     val formattedMessage = dialogueMessage.replace("○○", playerName)
                     HomeCommentBanner(expressionRes, formattedMessage, onClick = onCharacterClick)
                     HomeWeatherBanner(weatherInfo)
