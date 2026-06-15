@@ -124,6 +124,7 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures // 必要
 import androidx.core.view.WindowCompat // 必要
 import androidx.core.view.WindowInsetsCompat // 必要
 import androidx.core.view.WindowInsetsControllerCompat // 必要
+import com.google.android.gms.location.LocationServices
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
@@ -1133,7 +1134,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     ) { granted ->
         if (granted) {
             try {
-                com.google.android.gms.location.LocationServices
+                LocationServices
                     .getFusedLocationProviderClient(context)
                     .lastLocation.addOnSuccessListener { loc ->
                         loc?.let { scope.launch { weatherInfo = fetchWeather(it.latitude, it.longitude) } }
@@ -1145,7 +1146,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         val ok = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         if (ok) {
             try {
-                com.google.android.gms.location.LocationServices
+                LocationServices
                     .getFusedLocationProviderClient(context)
                     .lastLocation.addOnSuccessListener { loc ->
                         loc?.let { scope.launch { weatherInfo = fetchWeather(it.latitude, it.longitude) } }
