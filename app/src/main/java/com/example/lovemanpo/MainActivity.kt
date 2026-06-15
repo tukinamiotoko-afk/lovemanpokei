@@ -3597,9 +3597,8 @@ fun buildNarrationAnnotatedString(text: String): androidx.compose.ui.text.Annota
             androidx.compose.ui.text.AnnotatedString(
                 match.value,
                 androidx.compose.ui.text.SpanStyle(
-                    color = androidx.compose.ui.graphics.Color(0xFF999999),
-                    fontSize = 12.sp,
-                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                    color = androidx.compose.ui.graphics.Color(0xFF666666),
+                    fontSize = 12.sp
                 )
             )
         )
@@ -3901,13 +3900,13 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             Column(modifier = Modifier.padding(horizontal = 4.dp)) {
                                 if (msg.actionText != null) {
                                     // 新フォーマット: [ACTION] が地の文
-                                    Text(msg.actionText, color = Color(0xFF888888), fontSize = 12.sp, lineHeight = 20.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, modifier = Modifier.padding(vertical = 2.dp))
+                                    Text(msg.actionText, color = Color(0xFF555555), fontSize = 12.sp, lineHeight = 20.sp, modifier = Modifier.padding(vertical = 2.dp))
                                     Text(msg.content.take(400), color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = Modifier.padding(vertical = 2.dp).background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
                                 } else {
                                     // 旧フォーマット後方互換: 「」で地の文/セリフを分割
                                     parseMessageSegments(msg.content.take(400)).forEach { seg ->
                                         if (seg.isNarration) {
-                                            Text(seg.text, color = Color(0xFF888888), fontSize = 12.sp, lineHeight = 20.sp, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, modifier = Modifier.padding(vertical = 2.dp))
+                                            Text(seg.text, color = Color(0xFF555555), fontSize = 12.sp, lineHeight = 20.sp, modifier = Modifier.padding(vertical = 2.dp))
                                         } else {
                                             Text(seg.text, color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = Modifier.padding(vertical = 2.dp).background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
                                         }
