@@ -507,8 +507,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
         if (nextLevel > 10) return
         val wall = loveLevelWalls.find { it.level == nextLevel }
         val totalSteps = allStepRecords.value.sumOf { it.stepCount.toLong() }
-        val days = allStepRecords.value.count { it.stepCount >= 1000 }
-        if (wall == null || (totalSteps >= wall.totalSteps && days >= wall.activeDays)) {
+        if (wall == null || totalSteps >= wall.totalSteps) {
             loveCount.intValue = nextLevel
             heartCount.intValue = 0
             repository.loveCount = nextLevel
@@ -2721,16 +2720,16 @@ data class AggregatedData(val label: String, val steps: Int, val activeTimeMilli
 
 // ---- 好感度レベルアップ壁 ----
 
-data class LoveLevelWall(val level: Int, val totalSteps: Long, val activeDays: Int)
+data class LoveLevelWall(val level: Int, val totalSteps: Long)
 val loveLevelWalls = listOf(
-    LoveLevelWall(3,   10_000L,  2),
-    LoveLevelWall(4,   25_000L,  5),
-    LoveLevelWall(5,   50_000L,  10),
-    LoveLevelWall(6,   90_000L,  21),
-    LoveLevelWall(7,  150_000L,  30),
-    LoveLevelWall(8,  220_000L,  42),
-    LoveLevelWall(9,  300_000L,  60),
-    LoveLevelWall(10, 400_000L,  90),
+    LoveLevelWall(3,   10_000L),
+    LoveLevelWall(4,   25_000L),
+    LoveLevelWall(5,   50_000L),
+    LoveLevelWall(6,   90_000L),
+    LoveLevelWall(7,  150_000L),
+    LoveLevelWall(8,  220_000L),
+    LoveLevelWall(9,  300_000L),
+    LoveLevelWall(10, 400_000L),
 )
 
 // ---- AI チャット共通 ----
