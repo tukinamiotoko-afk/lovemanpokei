@@ -298,8 +298,15 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     fun earnHeartFromOdekake() {
         heartCount.intValue++
         if (heartCount.intValue >= 10) {
-            heartCount.intValue = 0
-            if (loveCount.intValue < 10) loveCount.intValue++
+            val nextLevel = loveCount.intValue + 1
+            val thresholdIndex = nextLevel - 2
+            val threshold = LOVE_STEP_THRESHOLDS.getOrElse(thresholdIndex) { Int.MAX_VALUE }
+            if (loveCount.intValue < 10 && cumulativeSteps.intValue >= threshold) {
+                heartCount.intValue = 0
+                loveCount.intValue++
+            } else {
+                heartCount.intValue = 9
+            }
         }
         repository.heartCount = heartCount.intValue
         repository.loveCount = loveCount.intValue
@@ -371,6 +378,12 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     fun debugAddActionPoints(amount: Int) {
         repository.totalEarnedPoints += amount
         totalEarnedPoints.intValue = repository.totalEarnedPoints
+    }
+
+    companion object {
+        // cumulative steps required to unlock each love level (index = nextLevel - 2)
+        // Lv.1→2: 0, Lv.2→3: 10000, Lv.3→4: 25000, ..., Lv.9→10: 400000
+        val LOVE_STEP_THRESHOLDS = intArrayOf(0, 10_000, 25_000, 50_000, 90_000, 150_000, 220_000, 300_000, 400_000)
     }
 
     fun debugResetData() {
