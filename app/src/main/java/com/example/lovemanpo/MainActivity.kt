@@ -124,7 +124,8 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures // 必要
 import androidx.core.view.WindowCompat // 必要
 import androidx.core.view.WindowInsetsCompat // 必要
 import androidx.core.view.WindowInsetsControllerCompat // 必要
-import com.google.android.gms.location.LocationServices
+import android.annotation.SuppressLint
+import android.location.LocationManager
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
@@ -1133,25 +1134,13 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            try {
-                LocationServices
-                    .getFusedLocationProviderClient(context)
-                    .lastLocation.addOnSuccessListener { loc ->
-                        loc?.let { scope.launch { weatherInfo = fetchWeather(it.latitude, it.longitude) } }
-                    }
-            } catch (_: SecurityException) {}
+            scope.launch { weatherInfo = fetchWeatherFromLocation(context) }
         }
     }
     LaunchedEffect(Unit) {
         val ok = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         if (ok) {
-            try {
-                LocationServices
-                    .getFusedLocationProviderClient(context)
-                    .lastLocation.addOnSuccessListener { loc ->
-                        loc?.let { scope.launch { weatherInfo = fetchWeather(it.latitude, it.longitude) } }
-                    }
-            } catch (_: SecurityException) {}
+            scope.launch { weatherInfo = fetchWeatherFromLocation(context) }
         } else {
             locationPermLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
         }
@@ -2834,6 +2823,18 @@ suspend fun fetchWeather(lat: Double, lon: Double): WeatherInfo? =
             val cur = JSONObject(text).getJSONObject("current")
             WeatherInfo(tempC = cur.getDouble("temperature_2m"), weatherCode = cur.getInt("weather_code"))
         } catch (e: Exception) { null }
+    }
+
+@SuppressLint("MissingPermission")
+suspend fun fetchWeatherFromLocation(context: android.content.Context): WeatherInfo? =
+    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        try {
+            val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as LocationManager
+            val loc = lm.getProviders(true)
+                .mapNotNull { lm.getLastKnownLocation(it) }
+                .maxByOrNull { it.time }
+            loc?.let { fetchWeather(it.latitude, it.longitude) }
+        } catch (_: Exception) { null }
     }
 
 // ---- 好感度レベルアップ壁 ----
