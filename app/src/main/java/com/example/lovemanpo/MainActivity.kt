@@ -501,14 +501,32 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
         }
     }
 
-    fun earnHeart() {
-        heartCount.intValue++
-        if (heartCount.intValue >= 15) {
+    fun checkAndApplyLevelUp() {
+        if (heartCount.intValue < 15) return
+        val nextLevel = loveCount.intValue + 1
+        if (nextLevel > 10) return
+        val wall = loveLevelWalls.find { it.level == nextLevel }
+        val totalSteps = allStepRecords.value.sumOf { it.stepCount.toLong() }
+        val days = allStepRecords.value.count { it.stepCount >= 1000 }
+        if (wall == null || (totalSteps >= wall.totalSteps && days >= wall.activeDays)) {
+            loveCount.intValue = nextLevel
             heartCount.intValue = 0
-            if (loveCount.intValue < 10) loveCount.intValue++
+            repository.loveCount = nextLevel
+            repository.heartCount = 0
         }
+        // 壁未クリア → heartCount は 15 のまま（ゲージ満タン待機）
+    }
+
+    fun earnHeart() {
+        if (heartCount.intValue >= 15) {
+            checkAndApplyLevelUp()
+            return
+        }
+        heartCount.intValue++
         repository.heartCount = heartCount.intValue
-        repository.loveCount = loveCount.intValue
+        if (heartCount.intValue >= 15) {
+            checkAndApplyLevelUp()
+        }
     }
 
     fun loseHeart() {
@@ -1101,6 +1119,9 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     }
     val activeTimeMillis = todayRecord?.activeTimeMillis ?: 0L
     val activeDays = remember(allRecords) { allRecords.count { it.stepCount >= 1000 } }
+
+    // 歩数記録が更新されるたびに壁クリアを自動チェック
+    LaunchedEffect(allRecords) { viewModel.checkAndApplyLevelUp() }
 
     // 距離の計算 (km)
     val distance = (todaySteps * viewModel.strideLength) / 1000.0
@@ -2697,6 +2718,20 @@ fun TopAppBarWithBack(title: String, onBack: () -> Unit, actions: @Composable ()
 }
 
 data class AggregatedData(val label: String, val steps: Int, val activeTimeMillis: Long, val dateForSort: String)
+
+// ---- 好感度レベルアップ壁 ----
+
+data class LoveLevelWall(val level: Int, val totalSteps: Long, val activeDays: Int)
+val loveLevelWalls = listOf(
+    LoveLevelWall(3,   10_000L,  2),
+    LoveLevelWall(4,   25_000L,  5),
+    LoveLevelWall(5,   50_000L,  10),
+    LoveLevelWall(6,   90_000L,  21),
+    LoveLevelWall(7,  150_000L,  30),
+    LoveLevelWall(8,  220_000L,  42),
+    LoveLevelWall(9,  300_000L,  60),
+    LoveLevelWall(10, 400_000L,  90),
+)
 
 // ---- AI チャット共通 ----
 
