@@ -34,6 +34,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.GenericShape
@@ -240,6 +243,10 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getLong("LAST_CHAT_TS", 0L)
         set(value) = prefs.edit { putLong("LAST_CHAT_TS", value) }
 
+    var unlockedMemoryIds: Set<String>
+        get() = prefs.getStringSet("UNLOCKED_MEMORY_IDS", emptySet()) ?: emptySet()
+        set(value) = prefs.edit { putStringSet("UNLOCKED_MEMORY_IDS", value) }
+
     suspend fun recordSteps(date: String, steps: Int, activeTimeMillis: Long = 0L) {
         stepDao.upsert(StepRecord(date = date, stepCount = steps, activeTimeMillis = activeTimeMillis))
     }
@@ -413,6 +420,14 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
 
     val isPremium get() = repository.isPremium
     fun unlockPremium() { repository.isPremium = true }
+
+    val unlockedMemoryIds = mutableStateOf(repository.unlockedMemoryIds)
+
+    fun unlockMemory(id: String) {
+        val updated = unlockedMemoryIds.value.toMutableSet().also { it.add(id) }
+        repository.unlockedMemoryIds = updated
+        unlockedMemoryIds.value = updated
+    }
 
     fun updateLastChatTime() { repository.lastChatTimestamp = System.currentTimeMillis() }
 
@@ -761,6 +776,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 composable("diary")   { DiaryScreen(navController, viewModel) }
                 composable("settings") { SettingsScreen(navController, viewModel) }
                 composable("debug") { DebugScreen(navController, viewModel) }
+                composable("memories") { MemoriesScreen(navController, viewModel) }
             }
             key(navTrigger) {
                 if (navTrigger > 0) CharacterPullOverlay()
@@ -1220,6 +1236,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         onFreeChatClick = { navController.navigate("freechat") },
         onDiaryClick = { navController.navigate("diary") },
         onRecordsClick = { navController.navigate("records") },
+        onMemoriesClick = { navController.navigate("memories") },
         onDebugClick = { navController.navigate("debug") }
     )
 }
@@ -1245,6 +1262,7 @@ fun HomeScreenContent(
     onFreeChatClick: () -> Unit,
     onDiaryClick: () -> Unit,
     onRecordsClick: () -> Unit,
+    onMemoriesClick: () -> Unit = {},
     onDebugClick: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
@@ -1352,6 +1370,7 @@ fun HomeScreenContent(
             onFreeChat = onFreeChatClick,
             onDiary = onDiaryClick,
             onRecords = onRecordsClick,
+            onMemories = onMemoriesClick,
             selectedScreen = "home"
         )
     }
@@ -1738,6 +1757,7 @@ fun HomeCustomBottomNav(
     onFreeChat: () -> Unit,
     onDiary: () -> Unit,
     onRecords: () -> Unit,
+    onMemories: () -> Unit = {},
     selectedScreen: String = ""
 ) {
     Surface(modifier = modifier
@@ -1761,6 +1781,7 @@ fun HomeCustomBottomNav(
             }
 
             HomeNavItem(Icons.Default.BarChart, "記録", selectedScreen == "records", onRecords)
+            HomeNavItem(Icons.Default.PhotoLibrary, "おもいで", selectedScreen == "memories", onMemories)
         }
     }
 }
@@ -1895,6 +1916,7 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                 onFreeChat = { navController.navigate("freechat") },
                 onDiary = { navController.navigate("diary") },
                 onRecords = {},
+                onMemories = { navController.navigate("memories") },
                 selectedScreen = "records"
             )
         },
@@ -2827,6 +2849,28 @@ val loveLevelWalls = listOf(
     LoveLevelWall(8,  220_000L),
     LoveLevelWall(9,  300_000L),
     LoveLevelWall(10, 400_000L),
+)
+
+// ---- おもいで（コレクション）----
+
+data class MemoryItem(
+    val id: String,
+    val name: String,
+    val requiredLoveLevel: Int,
+    val imageRes: Int
+)
+
+val memoryItems = listOf(
+    MemoryItem("morning_walk",   "朝のお散歩",       1,  R.drawable.park_morning),
+    MemoryItem("park_lunch",     "公園でランチ",     2,  R.drawable.park_evening),
+    MemoryItem("rainy_window",   "雨の窓辺",         3,  R.drawable.hikari_room_lamp_on),
+    MemoryItem("sunset_bench",   "夕暮れのベンチ",   4,  R.drawable.park_evening),
+    MemoryItem("night_stars",    "星空の下で",       5,  R.drawable.park_night),
+    MemoryItem("autumn_leaves",  "秋の落ち葉道",     6,  R.drawable.shopping_street_morning),
+    MemoryItem("winter_cafe",    "冬のカフェ",       7,  R.drawable.cafe_background),
+    MemoryItem("spring_picnic",  "春のピクニック",   8,  R.drawable.park_morning),
+    MemoryItem("summer_beach",   "夏の海辺",         9,  R.drawable.street_background),
+    MemoryItem("secret_place",   "ふたりだけの場所", 10, R.drawable.hikari_room_think_you_cg_),
 )
 
 // ---- AI チャット共通 ----
@@ -4017,5 +4061,146 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 }
             }
         }
+    }
+}
+
+// ---- おもいで画面 ----
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MemoriesScreen(navController: NavController, viewModel: StepViewModel) {
+    val pinkAccent = Color(0xFFFF6B9D)
+    val loveCount by viewModel.loveCount
+    val unlockedIds by viewModel.unlockedMemoryIds
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("おもいで", color = pinkAccent, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = pinkAccent)
+                    }
+                }
+            )
+        },
+        bottomBar = {
+            HomeCustomBottomNav(
+                modifier = Modifier.navigationBarsPadding(),
+                onHome = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
+                onFreeChat = { navController.navigate("freechat") },
+                onDiary = { navController.navigate("diary") },
+                onRecords = { navController.navigate("records") },
+                onMemories = {},
+                selectedScreen = "memories"
+            )
+        }
+    ) { padding ->
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            items(memoryItems) { item ->
+                MemoryCard(
+                    item = item,
+                    isAvailable = loveCount >= item.requiredLoveLevel,
+                    isUnlocked = item.id in unlockedIds
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MemoryCard(item: MemoryItem, isAvailable: Boolean, isUnlocked: Boolean) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(3f / 4f)
+                .clip(RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            when {
+                isUnlocked -> {
+                    Image(
+                        painter = painterResource(id = item.imageRes),
+                        contentDescription = item.name,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                isAvailable -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFF2A2A2A)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = Color(0xFF555555),
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "おしゃべりで解放",
+                                fontSize = 9.sp,
+                                color = Color(0xFF666666),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+                else -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFF111111)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = Color(0xFF333333),
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "Lv.${item.requiredLoveLevel}で解放",
+                                fontSize = 9.sp,
+                                color = Color(0xFF444444),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = item.name,
+            fontSize = 11.sp,
+            fontWeight = if (isUnlocked) FontWeight.Medium else FontWeight.Normal,
+            color = when {
+                isUnlocked  -> Color(0xFF333333)
+                isAvailable -> Color(0xFF888888)
+                else        -> Color(0xFF555555)
+            },
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
