@@ -68,6 +68,9 @@ dependencies {
     // Gemini API
     implementation(libs.google.generativeai)
 
+    // 位置情報（天気取得用）
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.espresso.core)

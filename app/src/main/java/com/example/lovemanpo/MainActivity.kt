@@ -1110,6 +1110,38 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     // 背景固定設定
     val bgRes = R.drawable.home_haikei
 
+    // 天気
+    val context = LocalContext.current
+    var weatherInfo by remember { mutableStateOf<WeatherInfo?>(null) }
+    val scope = rememberCoroutineScope()
+    val locationPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            try {
+                com.google.android.gms.location.LocationServices
+                    .getFusedLocationProviderClient(context)
+                    .lastLocation.addOnSuccessListener { loc ->
+                        loc?.let { scope.launch { weatherInfo = fetchWeather(it.latitude, it.longitude) } }
+                    }
+            } catch (_: SecurityException) {}
+        }
+    }
+    LaunchedEffect(Unit) {
+        val ok = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (ok) {
+            try {
+                com.google.android.gms.location.LocationServices
+                    .getFusedLocationProviderClient(context)
+                    .lastLocation.addOnSuccessListener { loc ->
+                        loc?.let { scope.launch { weatherInfo = fetchWeather(it.latitude, it.longitude) } }
+                    }
+            } catch (_: SecurityException) {}
+        } else {
+            locationPermLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+        }
+    }
+
     // 今日の活動データを取得して計算
     val allRecords by viewModel.allStepRecords
     val todayRecord = remember(allRecords) {
@@ -1177,10 +1209,10 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         bgRes = bgRes,
         dialogueMessage = displayMessage,
         expressionRes = displayExpression,
-        // ★ 計算した文字列を渡す
         activeTimeStr = activeTimeStr,
         distanceStr = distanceStr,
         caloriesStr = caloriesStr,
+        weatherInfo = weatherInfo,
         onCharacterClick = {
             touchedDialogue = touchDialogues.randomOrNull()
         },
@@ -1207,6 +1239,7 @@ fun HomeScreenContent(
     activeTimeStr: String,
     distanceStr: String,
     caloriesStr: String,
+    weatherInfo: WeatherInfo? = null,
     onCharacterClick: () -> Unit,
     onFreeChatClick: () -> Unit,
     onDiaryClick: () -> Unit,
@@ -1295,6 +1328,7 @@ fun HomeScreenContent(
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     val formattedMessage = dialogueMessage.replace("○○", playerName)
                     HomeCommentBanner(expressionRes, formattedMessage, onClick = onCharacterClick)
+                    HomeWeatherBanner(weatherInfo)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -1628,6 +1662,30 @@ fun HomeCommentBanner(expr: Int, message: String, onClick: () -> Unit = {}) {
                     Text(message, fontSize = 10.sp, color = Color(0xFF1A1A1A))
                 }
         }
+    }
+}
+
+@Composable
+fun HomeWeatherBanner(weatherInfo: WeatherInfo?) {
+    if (weatherInfo == null) return
+    val emoji = wmoToEmoji(weatherInfo.weatherCode)
+    val desc  = wmoToDescription(weatherInfo.weatherCode)
+    val temp  = String.format(java.util.Locale.US, "%.0f", weatherInfo.tempC)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 6.dp, bottom = 2.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(emoji, fontSize = 15.sp)
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = "$desc · $temp°C",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color(0xFF4A6080)
+        )
     }
 }
 
@@ -2717,6 +2775,44 @@ fun TopAppBarWithBack(title: String, onBack: () -> Unit, actions: @Composable ()
 }
 
 data class AggregatedData(val label: String, val steps: Int, val activeTimeMillis: Long, val dateForSort: String)
+
+// ---- 天気 ----
+
+data class WeatherInfo(val tempC: Double, val weatherCode: Int)
+
+fun wmoToDescription(code: Int): String = when (code) {
+    0 -> "晴れ"; 1 -> "ほぼ晴れ"; 2 -> "一部くもり"; 3 -> "くもり"
+    45, 48 -> "霧"
+    51, 53, 55 -> "霧雨"
+    61 -> "小雨"; 63 -> "雨"; 65 -> "大雨"
+    71 -> "小雪"; 73 -> "雪"; 75 -> "大雪"
+    80, 81, 82 -> "にわか雨"
+    95, 96, 99 -> "雷雨"
+    else -> "不明"
+}
+
+fun wmoToEmoji(code: Int): String = when (code) {
+    0 -> "☀️"; 1 -> "🌤️"; 2 -> "⛅"; 3 -> "☁️"
+    45, 48 -> "🌫️"
+    51, 53, 55, 80, 81, 82 -> "🌦️"
+    61, 63, 65 -> "🌧️"
+    71, 73, 75 -> "❄️"
+    95, 96, 99 -> "⛈️"
+    else -> "🌡️"
+}
+
+suspend fun fetchWeather(lat: Double, lon: Double): WeatherInfo? =
+    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        try {
+            val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code&timezone=auto&forecast_days=1")
+            val conn = url.openConnection() as HttpURLConnection
+            conn.connectTimeout = 5000
+            conn.readTimeout = 5000
+            val text = conn.inputStream.bufferedReader().readText()
+            val cur = JSONObject(text).getJSONObject("current")
+            WeatherInfo(tempC = cur.getDouble("temperature_2m"), weatherCode = cur.getInt("weather_code"))
+        } catch (e: Exception) { null }
+    }
 
 // ---- 好感度レベルアップ壁 ----
 
