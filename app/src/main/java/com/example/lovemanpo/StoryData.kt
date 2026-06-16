@@ -307,6 +307,27 @@ val script20_Purikura = listOf(
 )
 
 // ==========================================
+// ★ 通知用短いセリフ定義 ★
+// ==========================================
+
+data class NotificationDialogue(val thresholdSteps: Int, val message: String)
+
+val notificationDialogues = listOf(
+    NotificationDialogue(0,     "一緒に歩こっ！"),
+    NotificationDialogue(1000,  "1000歩！いい感じ♪"),
+    NotificationDialogue(3000,  "3000歩だよ！"),
+    NotificationDialogue(5000,  "5000歩！すごい！"),
+    NotificationDialogue(8000,  "もうちょっとで1万歩！"),
+    NotificationDialogue(10000, "1万歩達成！さすが♡"),
+    NotificationDialogue(20000, "2万歩…！ありえない！"),
+    NotificationDialogue(30000, "もはや伝説…！")
+)
+
+fun getNotificationMessage(steps: Int): String =
+    notificationDialogues.filter { it.thresholdSteps <= steps }
+        .maxByOrNull { it.thresholdSteps }?.message ?: "一緒に歩こっ！"
+
+// ==========================================
 // ★ ホーム画面のセリフ定義 ★
 // ==========================================
 

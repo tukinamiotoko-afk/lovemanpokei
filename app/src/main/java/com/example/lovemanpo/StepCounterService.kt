@@ -254,8 +254,8 @@ class StepCounterService : Service(), SensorEventListener {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("ラブ万歩計: 歩数計測中")
-            .setContentText("現在 $steps 歩です。ひかりが見守っています！")
+            .setContentTitle("$steps 歩")
+            .setContentText(getNotificationMessage(steps))
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
