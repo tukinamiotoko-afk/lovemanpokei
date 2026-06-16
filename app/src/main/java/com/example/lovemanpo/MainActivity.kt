@@ -284,6 +284,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     val loveCount = mutableIntStateOf(repository.loveCount)
     val heartCount = mutableIntStateOf(repository.heartCount)
     val pendingLevelUpLevel = mutableIntStateOf(0)
+    val pendingOdekakeInvite = mutableStateOf<String?>(null)
     val selectedPeriod = mutableStateOf(DisplayPeriod.DAY)
     val spentActionPoints = mutableIntStateOf(repository.spentActionPoints)
     val totalEarnedPoints = mutableIntStateOf(repository.totalEarnedPoints)
@@ -545,6 +546,8 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     }
 
     fun dismissLevelUpNotification() { pendingLevelUpLevel.intValue = 0 }
+    fun setOdekakeInvite(locationName: String) { pendingOdekakeInvite.value = locationName }
+    fun consumeOdekakeInvite(): String? = pendingOdekakeInvite.value.also { pendingOdekakeInvite.value = null }
 
     fun earnHeart() {
         if (heartCount.intValue >= 15) {
@@ -1244,7 +1247,11 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     if (pendingLevelUp > 0) {
         LevelUpDialog(
             newLevel = pendingLevelUp,
-            onDismiss = { viewModel.dismissLevelUpNotification() }
+            onDismiss = { viewModel.dismissLevelUpNotification() },
+            onGoNow = { locationName ->
+                viewModel.setOdekakeInvite(locationName)
+                navController.navigate("freechat")
+            }
         )
     }
 }
@@ -3713,7 +3720,14 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
     LaunchedEffect(Unit) {
-        if (messages.isEmpty()) {
+        val invite = viewModel.consumeOdekakeInvite()
+        if (invite != null) {
+            messages.add(ChatMessage(
+                "assistant",
+                "${invite}に行こうよ！一緒に行こう♪",
+                R.drawable.osyaberi_sugokuegao
+            ))
+        } else if (messages.isEmpty()) {
             messages.add(ChatMessage(
                 "assistant",
                 "ひかりがこちらに気づいて、ぱっと明るい顔になった。\n「あ、はじめまして！お散歩サークルに入ったひかりです。これからよろしくお願いします！一緒に歩きましょうね！」",
@@ -3976,7 +3990,11 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     if (pendingLevelUp > 0) {
         LevelUpDialog(
             newLevel = pendingLevelUp,
-            onDismiss = { viewModel.dismissLevelUpNotification() }
+            onDismiss = { viewModel.dismissLevelUpNotification() },
+            onGoNow = { locationName ->
+                viewModel.setOdekakeInvite(locationName)
+                navController.navigate("freechat")
+            }
         )
     }
 }
@@ -3984,7 +4002,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
 // ---- レベルアップダイアログ ----
 
 @Composable
-fun LevelUpDialog(newLevel: Int, onDismiss: () -> Unit) {
+fun LevelUpDialog(newLevel: Int, onDismiss: () -> Unit, onGoNow: ((String) -> Unit)? = null) {
     val newItems = memoryItems.filter { it.requiredLoveLevel == newLevel }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -4016,11 +4034,21 @@ fun LevelUpDialog(newLevel: Int, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("OK", color = Color(0xFFE87C9A), fontWeight = FontWeight.Bold)
+            if (newItems.isNotEmpty() && onGoNow != null) {
+                TextButton(onClick = { onDismiss(); onGoNow(newItems.first().name) }) {
+                    Text("今すぐ行く", color = Color(0xFFE87C9A), fontWeight = FontWeight.Bold)
+                }
+            } else {
+                TextButton(onClick = onDismiss) {
+                    Text("OK", color = Color(0xFFE87C9A), fontWeight = FontWeight.Bold)
+                }
             }
         },
-        dismissButton = {}
+        dismissButton = {
+            if (newItems.isNotEmpty() && onGoNow != null) {
+                TextButton(onClick = onDismiss) { Text("あとで", color = Color.Gray) }
+            }
+        }
     )
 }
 
