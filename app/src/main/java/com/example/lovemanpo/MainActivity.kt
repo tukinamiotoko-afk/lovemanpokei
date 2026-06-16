@@ -283,6 +283,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     val playerName = mutableStateOf(repository.playerName)
     val loveCount = mutableIntStateOf(repository.loveCount)
     val heartCount = mutableIntStateOf(repository.heartCount)
+    val pendingLevelUpLevel = mutableIntStateOf(0)
     val selectedPeriod = mutableStateOf(DisplayPeriod.DAY)
     val spentActionPoints = mutableIntStateOf(repository.spentActionPoints)
     val totalEarnedPoints = mutableIntStateOf(repository.totalEarnedPoints)
@@ -538,9 +539,12 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
             heartCount.intValue = 0
             repository.loveCount = nextLevel
             repository.heartCount = 0
+            pendingLevelUpLevel.intValue = nextLevel
         }
         // 壁未クリア → heartCount は 15 のまま（ゲージ満タン待機）
     }
+
+    fun dismissLevelUpNotification() { pendingLevelUpLevel.intValue = 0 }
 
     fun earnHeart() {
         if (heartCount.intValue >= 15) {
@@ -1133,6 +1137,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     val heartCount by viewModel.heartCount
     val heartGaugeProgress by viewModel.heartGaugeProgress
     val playerName by viewModel.playerName
+    val pendingLevelUp by viewModel.pendingLevelUpLevel
 
     // 背景固定設定
     val bgRes = R.drawable.home_haikei
@@ -1235,6 +1240,14 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         onMemoriesClick = { navController.navigate("memories") },
         onDebugClick = { navController.navigate("debug") }
     )
+
+    if (pendingLevelUp > 0) {
+        LevelUpDialog(
+            newLevel = pendingLevelUp,
+            navController = navController,
+            onDismiss = { viewModel.dismissLevelUpNotification() }
+        )
+    }
 }
 
 
@@ -2881,15 +2894,15 @@ data class MemoryItem(
 )
 
 val memoryItems = listOf(
-    MemoryItem("umi",            "海",               1,  R.drawable.osyaberi_basyo_umi),
-    MemoryItem("biiti",          "ビーチ",           2,  R.drawable.osyaberi_basyo_biiti),
-    MemoryItem("puuru",          "プール",           3,  R.drawable.osyaberi_basyo_puuru),
-    MemoryItem("suizokukan",     "水族館",           4,  R.drawable.osyaberi_basyo_suizokukan),
-    MemoryItem("doubutuen",      "動物園",           5,  R.drawable.osyaberi_basyo_doubutuen),
+    MemoryItem("doubutuen",      "動物園",           1,  R.drawable.osyaberi_basyo_doubutuen),
+    MemoryItem("suizokukan",     "水族館",           2,  R.drawable.osyaberi_basyo_suizokukan),
+    MemoryItem("biiti",          "ビーチ",           3,  R.drawable.osyaberi_basyo_biiti),
+    MemoryItem("puuru",          "プール",           4,  R.drawable.osyaberi_basyo_puuru),
+    MemoryItem("umi",            "海",               5,  R.drawable.osyaberi_basyo_umi),
     MemoryItem("hanabi",         "花火大会",         6,  R.drawable.osyaberi_basyo_hanabi),
-    MemoryItem("ryokan",         "旅館",             7,  R.drawable.osyaberi_basyo_ryokan),
-    MemoryItem("onsen",          "温泉",             8,  R.drawable.osyaberi_basyo_onsen),
-    MemoryItem("kurisumasuturi", "クリスマス",       10, R.drawable.osyaberi_basyo_kurisumasuturi),
+    MemoryItem("kurisumasuturi", "クリスマス",       7,  R.drawable.osyaberi_basyo_kurisumasuturi),
+    MemoryItem("onsen",          "温泉",             9,  R.drawable.osyaberi_basyo_onsen),
+    MemoryItem("ryokan",         "旅館",             9,  R.drawable.osyaberi_basyo_ryokan),
 )
 
 // ---- AI チャット共通 ----
@@ -2901,20 +2914,20 @@ data class TouchDialogue(val text: String, val expr: Int)
 
 val touchDialoguesLv5 = listOf(
     TouchDialogue("○○さんのこと、もっと知りたいな。", R.drawable.osyaberi_hazukasii),
-    TouchDialogue("一緒に歩いてると、なんか安心する。", R.drawable.osyaberi_smile),
-    TouchDialogue("ねえ、また一緒に出かけようね！", R.drawable.osyaberi_sugokuegao)
+    TouchDialogue("ねえ、今度海に行ってみたいな。二人で…なんちゃって！", R.drawable.osyaberi_hazukasii),
+    TouchDialogue("一緒に歩いてると、なんか安心する。", R.drawable.osyaberi_smile)
 )
 
 val touchDialoguesLv7 = listOf(
     TouchDialogue("○○さんのそばにいると、落ち着くんだよね…", R.drawable.osyaberi_hazukasii),
-    TouchDialogue("ずっと隣にいてほしいな。…なんて！", R.drawable.osyaberi_hazukasii),
+    TouchDialogue("温泉って行ったことないんですよね。いつか連れてってもらえたりしますか？えへへ", R.drawable.osyaberi_hazukasii),
     TouchDialogue("○○さんって、ちょっとズルいよ。こんなに好きにさせて。", R.drawable.osyaberi_hazukasii)
 )
 
 val touchDialoguesLv9 = listOf(
     TouchDialogue("○○さんのこと、大好きだよ。", R.drawable.osyaberi_hazukasii),
-    TouchDialogue("ずっと一緒にいたいな、○○さんと。", R.drawable.osyaberi_smile),
-    TouchDialogue("○○さんといると、世界が明るく見える気がする。", R.drawable.osyaberi_sugokuegao)
+    TouchDialogue("旅館、来てよかったな…。○○さんと二人で、うれしい。", R.drawable.osyaberi_hazukasii),
+    TouchDialogue("○○さんといると、世界が明るく見える気がする。", R.drawable.osyaberi_smile)
 )
 
 val stepDialoguesLv1 = listOf(
@@ -3682,6 +3695,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     val actionPoints by viewModel.currentActionPoints
     val playerName by viewModel.playerName
     val todaySteps by viewModel.todaySteps
+    val pendingLevelUp by viewModel.pendingLevelUpLevel
     val allRecords by viewModel.allStepRecords
     val activeDays = remember(allRecords) { allRecords.count { it.stepCount >= 1000 } }
     val daysSinceLastActive = remember(allRecords) {
@@ -3959,6 +3973,61 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             }
         }
     }
+
+    if (pendingLevelUp > 0) {
+        LevelUpDialog(
+            newLevel = pendingLevelUp,
+            navController = navController,
+            onDismiss = { viewModel.dismissLevelUpNotification() }
+        )
+    }
+}
+
+// ---- レベルアップダイアログ ----
+
+@Composable
+fun LevelUpDialog(newLevel: Int, navController: NavController, onDismiss: () -> Unit) {
+    val newItems = memoryItems.filter { it.requiredLoveLevel == newLevel }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFFFFF0F5),
+        shape = RoundedCornerShape(20.dp),
+        title = {
+            Text(
+                "✨ 好感度 Lv.$newLevel になりました！",
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFE87C9A),
+                fontSize = 16.sp
+            )
+        },
+        text = {
+            if (newItems.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    newItems.forEach { item ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("🔓", fontSize = 18.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "${item.name} に行けるようになりました",
+                                fontSize = 14.sp,
+                                color = Color(0xFF555555)
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (newItems.isNotEmpty()) {
+                TextButton(onClick = { onDismiss(); navController.navigate("memories") }) {
+                    Text("おもいでを見る", color = Color(0xFFE87C9A), fontWeight = FontWeight.Bold)
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("あとで", color = Color.Gray) }
+        }
+    )
 }
 
 // ---- おもいで画面 ----
