@@ -938,7 +938,8 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     val minutes = (activeTimeMillis % 3600000) / 60000
     val activeTimeStr = "${hours}時間 ${minutes}分"
 
-    val currentLoveContent = loveContents.find { it.thresholdLove == loveCount } ?: loveContents.first()
+    val currentLoveContent = loveContents.filter { it.thresholdLove <= loveCount }
+        .maxByOrNull { it.thresholdLove } ?: loveContents.first()
     val stepDialogue = currentLoveContent.stepDialogues
         .filter { it.thresholdSteps <= todaySteps }
         .maxByOrNull { it.thresholdSteps }
