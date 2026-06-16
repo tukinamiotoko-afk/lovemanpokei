@@ -307,6 +307,31 @@ val script20_Purikura = listOf(
 )
 
 // ==========================================
+// ★ 天気別セリフ定義 ★
+// ==========================================
+
+enum class WeatherCondition { SUNNY, CLOUDY, RAINY, SNOWY, STORMY, UNKNOWN }
+
+val weatherDialogues = mapOf(
+    WeatherCondition.SUNNY  to "今日は晴れてるね！絶好のお散歩日和だよ♪",
+    WeatherCondition.CLOUDY to "曇ってるけど歩きやすい気温かも！",
+    WeatherCondition.RAINY  to "雨か…傘、持った？でも一緒に歩こう！",
+    WeatherCondition.SNOWY  to "雪！！テンション上がる〜！転ばないでね！",
+    WeatherCondition.STORMY to "今日は無理しないでね…室内で運動でもいいよ！"
+)
+
+fun weatherCodeToCondition(code: Int): WeatherCondition = when (code) {
+    0, 1          -> WeatherCondition.SUNNY
+    2, 3, 45, 48  -> WeatherCondition.CLOUDY
+    in 51..67     -> WeatherCondition.RAINY
+    in 80..82     -> WeatherCondition.RAINY
+    in 71..77     -> WeatherCondition.SNOWY
+    85, 86        -> WeatherCondition.SNOWY
+    in 95..99     -> WeatherCondition.STORMY
+    else          -> WeatherCondition.UNKNOWN
+}
+
+// ==========================================
 // ★ 通知用短いセリフ定義 ★
 // ==========================================
 

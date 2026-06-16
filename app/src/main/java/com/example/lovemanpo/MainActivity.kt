@@ -226,6 +226,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     val weightKg = mutableFloatStateOf(repository.weightKg)
     val userGender = mutableStateOf(repository.userGender)
     val batterySetupDone = mutableStateOf(repository.batterySetupDone)
+    val weatherDialogue = mutableStateOf<String?>(null)
 
     val currentActionPoints =
         derivedStateOf { totalEarnedPoints.intValue - spentActionPoints.intValue }
@@ -285,6 +286,26 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     var openAiApiKey: String
         get() = repository.openAiApiKey
         set(value) { repository.openAiApiKey = value }
+
+    fun fetchWeather(lat: Double = 35.6762, lon: Double = 139.6503) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val url = java.net.URL(
+                    "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=weather_code&timezone=auto"
+                )
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.requestMethod = "GET"
+                conn.connectTimeout = 5000
+                conn.readTimeout = 5000
+                val response = conn.inputStream.bufferedReader().readText()
+                val code = org.json.JSONObject(response).getJSONObject("current").getInt("weather_code")
+                val condition = weatherCodeToCondition(code)
+                weatherDialogue.value = weatherDialogues[condition]
+            } catch (e: Exception) {
+                // 天気取得失敗時は無視
+            }
+        }
+    }
 
     fun spendPointForChat(): Boolean {
         if (currentActionPoints.value > 0) {
@@ -923,6 +944,9 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         .maxByOrNull { it.thresholdSteps }
         ?: currentLoveContent.stepDialogues.first()
 
+    val weatherDialogue by viewModel.weatherDialogue
+    LaunchedEffect(Unit) { viewModel.fetchWeather() }
+
     var touchedDialogue by remember { mutableStateOf<TouchDialogue?>(null) }
     LaunchedEffect(touchedDialogue) {
         if (touchedDialogue != null) {
@@ -931,7 +955,9 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         }
     }
 
-    val displayMessage = touchedDialogue?.message ?: stepDialogue.message
+    val displayMessage = touchedDialogue?.message
+        ?: if (stepDialogue.thresholdSteps == 0 && weatherDialogue != null) weatherDialogue!!
+        else stepDialogue.message
     val displayExpression = touchedDialogue?.expressionRes ?: stepDialogue.expressionRes ?: currentLoveContent.expressionRes
 
     HomeScreenContent(
