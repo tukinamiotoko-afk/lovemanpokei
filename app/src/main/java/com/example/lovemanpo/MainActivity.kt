@@ -1679,21 +1679,35 @@ fun HomeWeatherBanner(weatherInfo: WeatherInfo?) {
     val emoji = wmoToEmoji(weatherInfo.weatherCode)
     val desc  = wmoToDescription(weatherInfo.weatherCode)
     val temp  = String.format(java.util.Locale.US, "%.0f", weatherInfo.tempC)
-    Row(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 6.dp, bottom = 2.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = 6.dp)
+            .shadow(elevation = 4.dp, shape = RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    listOf(Color(0xFFE3F6FE), Color(0xFFB3E5FC))
+                )
+            )
+            .border(1.dp, Color(0xFF4FC3F7).copy(alpha = 0.45f), RoundedCornerShape(12.dp))
     ) {
-        Text(emoji, fontSize = 15.sp)
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = "$desc · $temp°C",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color(0xFF4A6080)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(emoji, fontSize = 22.sp)
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = "$desc · $temp°C",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF1565C0)
+            )
+        }
     }
 }
 
