@@ -1438,7 +1438,7 @@ fun HomeStepCircleGauge(steps: Int, progress: Float) {
                 Icon(Icons.AutoMirrored.Filled.DirectionsWalk, null, tint = Color(0xFFE87C9A), modifier = Modifier.size(18.dp))
                 Text("今日の歩数", fontSize = 10.sp, color = Color.Gray)
                 Text(String.format(java.util.Locale.US, "%,d", animatedSteps), fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray)
-                Text("歩 / 10,000 歩", fontSize = 9.sp, color = Color.Gray)
+                Text("歩 / 5,000 歩", fontSize = 9.sp, color = Color.Gray)
             }
         }
     }
