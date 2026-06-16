@@ -1244,7 +1244,6 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     if (pendingLevelUp > 0) {
         LevelUpDialog(
             newLevel = pendingLevelUp,
-            navController = navController,
             onDismiss = { viewModel.dismissLevelUpNotification() }
         )
     }
@@ -3977,7 +3976,6 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     if (pendingLevelUp > 0) {
         LevelUpDialog(
             newLevel = pendingLevelUp,
-            navController = navController,
             onDismiss = { viewModel.dismissLevelUpNotification() }
         )
     }
@@ -3986,7 +3984,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
 // ---- レベルアップダイアログ ----
 
 @Composable
-fun LevelUpDialog(newLevel: Int, navController: NavController, onDismiss: () -> Unit) {
+fun LevelUpDialog(newLevel: Int, onDismiss: () -> Unit) {
     val newItems = memoryItems.filter { it.requiredLoveLevel == newLevel }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -4018,15 +4016,11 @@ fun LevelUpDialog(newLevel: Int, navController: NavController, onDismiss: () -> 
             }
         },
         confirmButton = {
-            if (newItems.isNotEmpty()) {
-                TextButton(onClick = { onDismiss(); navController.navigate("memories") }) {
-                    Text("おもいでを見る", color = Color(0xFFE87C9A), fontWeight = FontWeight.Bold)
-                }
+            TextButton(onClick = onDismiss) {
+                Text("OK", color = Color(0xFFE87C9A), fontWeight = FontWeight.Bold)
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("あとで", color = Color.Gray) }
-        }
+        dismissButton = {}
     )
 }
 
