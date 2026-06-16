@@ -1333,7 +1333,6 @@ fun HomeScreenContent(
                     )
             ) {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Spacer(modifier = Modifier.height(40.dp))
                     val formattedMessage = dialogueMessage.replace("○○", playerName)
                     HomeCommentBanner(expressionRes, formattedMessage, onClick = onCharacterClick)
                     HomeWeatherBanner(weatherInfo)
@@ -1346,7 +1345,7 @@ fun HomeScreenContent(
                         HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "歩行距離", distanceStr, null, Color(0xFF4FC3F7))
                         HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
                     }
-                    Spacer(modifier = Modifier.height(90.dp))
+                    Spacer(modifier = Modifier.height(44.dp))
                 }
             }
         } // outer Column
