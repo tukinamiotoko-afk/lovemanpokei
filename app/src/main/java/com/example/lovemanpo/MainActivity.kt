@@ -220,6 +220,10 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getString("CURRENT_DIALOGUE", "今日も一緒にがんばろうね♪") ?: "今日も一緒にがんばろうね♪"
         set(value) = prefs.edit { putString("CURRENT_DIALOGUE", value) }
 
+    var currentWeatherCode: Int
+        get() = prefs.getInt("CURRENT_WEATHER_CODE", -1)
+        set(value) = prefs.edit { putInt("CURRENT_WEATHER_CODE", value) }
+
     // 日次日記（日付 → 要約テキスト）
     fun getDailyDiary(date: String): String = prefs.getString("DAILY_DIARY_$date", "") ?: ""
     fun setDailyDiary(date: String, text: String) = prefs.edit { putString("DAILY_DIARY_$date", text) }
@@ -428,6 +432,7 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     val unlockedMemoryIds = mutableStateOf(repository.unlockedMemoryIds)
 
     fun saveCurrentDialogue(text: String) { repository.currentDialogue = text }
+    fun saveWeatherCode(code: Int) { repository.currentWeatherCode = code }
 
     fun unlockMemory(id: String) {
         val updated = unlockedMemoryIds.value.toMutableSet().also { it.add(id) }
@@ -1211,6 +1216,9 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
 
     LaunchedEffect(displayMessage, playerName) {
         viewModel.saveCurrentDialogue(displayMessage.replace("○○", playerName))
+    }
+    LaunchedEffect(weatherInfo) {
+        weatherInfo?.let { viewModel.saveWeatherCode(it.weatherCode) }
     }
 
     HomeScreenContent(
