@@ -52,6 +52,18 @@ class StepCounterService : Service(), SensorEventListener {
         private const val CHANNEL_ID = "step_counter_channel"
         private const val NOTIFICATION_ID = 1001
         private const val TAG = "StepCounterService"
+
+        data class NotificationDialogue(val thresholdSteps: Int, val text: String)
+        val notificationDialogues = listOf(
+            NotificationDialogue(0,     "一緒に歩こっ！"),
+            NotificationDialogue(1000,  "1000歩！いい感じ♪"),
+            NotificationDialogue(3000,  "3000歩だよ！"),
+            NotificationDialogue(5000,  "5000歩！すごい！"),
+            NotificationDialogue(8000,  "もうちょっとで1万歩！"),
+            NotificationDialogue(10000, "1万歩達成！さすが♡"),
+            NotificationDialogue(20000, "2万歩…！ありえない！"),
+            NotificationDialogue(30000, "もはや伝説…！")
+        )
     }
 
     override fun onCreate() {
@@ -271,7 +283,7 @@ class StepCounterService : Service(), SensorEventListener {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val dialogue = repository.currentDialogue
+        val dialogue = notificationDialogues.lastOrNull { steps >= it.thresholdSteps }?.text ?: "一緒に歩こっ！"
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("ひかり")
             .setContentText(dialogue)
