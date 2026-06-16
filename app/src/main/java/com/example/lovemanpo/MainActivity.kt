@@ -2881,21 +2881,20 @@ data class MemoryItem(
 )
 
 val memoryItems = listOf(
-    MemoryItem("morning_walk",   "朝のお散歩",       1,  R.drawable.park_morning),
-    MemoryItem("park_lunch",     "公園でランチ",     2,  R.drawable.park_evening),
-    MemoryItem("rainy_window",   "雨の窓辺",         3,  R.drawable.hikari_room_lamp_on),
-    MemoryItem("sunset_bench",   "夕暮れのベンチ",   4,  R.drawable.park_evening),
-    MemoryItem("night_stars",    "星空の下で",       5,  R.drawable.park_night),
-    MemoryItem("autumn_leaves",  "秋の落ち葉道",     6,  R.drawable.shopping_street_morning),
-    MemoryItem("winter_cafe",    "冬のカフェ",       7,  R.drawable.cafe_background),
-    MemoryItem("spring_picnic",  "春のピクニック",   8,  R.drawable.park_morning),
-    MemoryItem("summer_beach",   "夏の海辺",         9,  R.drawable.street_background),
-    MemoryItem("secret_place",   "ふたりだけの場所", 10, R.drawable.hikari_room_think_you_cg_),
+    MemoryItem("umi",            "海",               1,  R.drawable.osyaberi_basyo_umi),
+    MemoryItem("biiti",          "ビーチ",           2,  R.drawable.osyaberi_basyo_biiti),
+    MemoryItem("puuru",          "プール",           3,  R.drawable.osyaberi_basyo_puuru),
+    MemoryItem("suizokukan",     "水族館",           4,  R.drawable.osyaberi_basyo_suizokukan),
+    MemoryItem("doubutuen",      "動物園",           5,  R.drawable.osyaberi_basyo_doubutuen),
+    MemoryItem("hanabi",         "花火大会",         6,  R.drawable.osyaberi_basyo_hanabi),
+    MemoryItem("ryokan",         "旅館",             7,  R.drawable.osyaberi_basyo_ryokan),
+    MemoryItem("onsen",          "温泉",             8,  R.drawable.osyaberi_basyo_onsen),
+    MemoryItem("kurisumasuturi", "クリスマス",       10, R.drawable.osyaberi_basyo_kurisumasuturi),
 )
 
 // ---- AI チャット共通 ----
 
-data class ChatMessage(val role: String, val content: String, val expressionRes: Int? = null, val exprName: String? = null, val actionText: String? = null)
+data class ChatMessage(val role: String, val content: String, val expressionRes: Int? = null, val exprName: String? = null, val actionText: String? = null, val basyoId: String? = null)
 
 data class StepDialogue(val thresholdSteps: Int, val text: String, val expr: Int)
 data class TouchDialogue(val text: String, val expr: Int)
@@ -3174,8 +3173,25 @@ ${if (profileMemo.isNotBlank()) "【プロファイルメモ】\n$profileMemo\n"
 $situationTag
 
 ${if (conversationSummary.isNotBlank()) "【会話の記憶】\n$conversationSummary\nこの記憶を自然に会話に織り交ぜる（「そういえば」「この間言ってたけど」）。「記録によると」とは言わない。1会話で言及は1〜2回まで。\n" else ""}
+【おでかけシーン（BASYO）】
+Talk Stage が 3 以上の会話で、自然な流れで以下の場所の話題が出た時、一度だけ使用できる。
+形式: [BASYO:場所ID]（[EMOTION:...]の直後に置く）
+すでに解錠された場所のIDは再度出力しない。
+
+場所ID一覧:
+- umi（海）
+- biiti（ビーチ）
+- puuru（プール）
+- suizokukan（水族館）
+- doubutuen（動物園）
+- hanabi（花火大会）
+- ryokan（旅館）
+- onsen（温泉）
+- kurisumasuturi（クリスマス）
+
 【出力フォーマット（毎ターン厳守）】
 [EMOTION:タグ名]
+[BASYO:場所ID]（条件を満たす時のみ）
 [ACTION: 地の文]（条件を満たす時のみ）
 セリフ本文""".trimIndent()
 }
@@ -3252,10 +3268,19 @@ fun exprNameToRes(name: String): Int = when (name) {
     "sugokuegao"             -> R.drawable.osyaberi_sugokuegao
     "hazukasii"              -> R.drawable.osyaberi_hazukasii
     "hutekusareru"           -> R.drawable.osyaberi_hutekusareru
+    "basyo_umi"              -> R.drawable.osyaberi_basyo_umi
+    "basyo_biiti"            -> R.drawable.osyaberi_basyo_biiti
+    "basyo_puuru"            -> R.drawable.osyaberi_basyo_puuru
+    "basyo_suizokukan"       -> R.drawable.osyaberi_basyo_suizokukan
+    "basyo_doubutuen"        -> R.drawable.osyaberi_basyo_doubutuen
+    "basyo_hanabi"           -> R.drawable.osyaberi_basyo_hanabi
+    "basyo_ryokan"           -> R.drawable.osyaberi_basyo_ryokan
+    "basyo_onsen"            -> R.drawable.osyaberi_basyo_onsen
+    "basyo_kurisumasuturi"   -> R.drawable.osyaberi_basyo_kurisumasuturi
     else                     -> R.drawable.osyaberi_normal
 }
 
-data class ParsedReply(val text: String, val actionText: String?, val exprRes: Int, val exprName: String, val loveChange: Int)
+data class ParsedReply(val text: String, val actionText: String?, val exprRes: Int, val exprName: String, val loveChange: Int, val basyoId: String? = null)
 
 fun emotionToRes(emotion: String, loveCount: Int = 0): Int = when (emotion) {
     "happy"    -> R.drawable.osyaberi_sugokuegao
@@ -3267,6 +3292,19 @@ fun emotionToRes(emotion: String, loveCount: Int = 0): Int = when (emotion) {
     else       -> R.drawable.osyaberi_normal
 }
 
+fun basyoIdToRes(id: String): Int = when (id) {
+    "umi"            -> R.drawable.osyaberi_basyo_umi
+    "biiti"          -> R.drawable.osyaberi_basyo_biiti
+    "puuru"          -> R.drawable.osyaberi_basyo_puuru
+    "suizokukan"     -> R.drawable.osyaberi_basyo_suizokukan
+    "doubutuen"      -> R.drawable.osyaberi_basyo_doubutuen
+    "hanabi"         -> R.drawable.osyaberi_basyo_hanabi
+    "ryokan"         -> R.drawable.osyaberi_basyo_ryokan
+    "onsen"          -> R.drawable.osyaberi_basyo_onsen
+    "kurisumasuturi" -> R.drawable.osyaberi_basyo_kurisumasuturi
+    else             -> R.drawable.osyaberi_normal
+}
+
 fun parseReply(reply: String, loveCount: Int = 0): ParsedReply {
     var text = reply
 
@@ -3274,6 +3312,11 @@ fun parseReply(reply: String, loveCount: Int = 0): ParsedReply {
     val emotionMatch = Regex("""\[EMOTION:(\w+)\]""").find(text)
     val emotionName = emotionMatch?.groupValues?.get(1) ?: ""
     if (emotionMatch != null) text = text.replace(emotionMatch.value, "").trim()
+
+    // [BASYO:id] — おでかけシーン画像 + 思い出解錠
+    val basyoMatch = Regex("""\[BASYO:(\w+)\]""").find(text)
+    val basyoId = basyoMatch?.groupValues?.get(1)
+    if (basyoMatch != null) text = text.replace(basyoMatch.value, "").trim()
 
     // [ACTION: text] — 地の文タグ
     val actionMatch = Regex("""\[ACTION:\s*(.+?)\]""").find(text)
@@ -3291,8 +3334,9 @@ fun parseReply(reply: String, loveCount: Int = 0): ParsedReply {
         when (loveMatch.groupValues[1]) { "up" -> 1; "down" -> -1; else -> 0 }
     } else null
 
-    // 表情リソース決定: 新EMOTION優先 → 旧EXPR → デフォルト
+    // 表情リソース決定: BASYO優先 → 新EMOTION → 旧EXPR → デフォルト
     val (exprRes, exprName) = when {
+        basyoId != null -> Pair(basyoIdToRes(basyoId), "basyo_$basyoId")
         emotionName.isNotEmpty() -> Pair(emotionToRes(emotionName, loveCount), emotionName)
         exprMatch != null -> { val n = exprMatch.groupValues[1]; Pair(exprNameToRes(n), n) }
         else -> Pair(R.drawable.osyaberi_normal, "normal")
@@ -3305,7 +3349,7 @@ fun parseReply(reply: String, loveCount: Int = 0): ParsedReply {
         else -> 0
     }
 
-    return ParsedReply(text.trim(), actionText, exprRes, exprName, loveChange)
+    return ParsedReply(text.trim(), actionText, exprRes, exprName, loveChange, basyoId)
 }
 
 data class MessageSegment(val text: String, val isNarration: Boolean)
@@ -3820,12 +3864,15 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 val hoursAway = if (hasChat) viewModel.hoursSinceLastChat() else 0
                                 val streak = viewModel.getCurrentStreak()
                                 val absenceSteps = viewModel.getStepsDuringAbsence(hoursAway)
-                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps, viewModel.lifestyle, viewModel.favoriteDrink, viewModel.weakness, viewModel.bodyNotes, currentTurn = messages.count { it.role == "user" }, previousStreakDays = viewModel.getPreviousStreak())
+                                val unlockedBasyo = viewModel.unlockedMemoryIds.value
+                                val basyoNote = if (unlockedBasyo.isNotEmpty()) "\n解錠済みBASYO（再出力禁止）: ${unlockedBasyo.joinToString(",")}" else ""
+                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps, viewModel.lifestyle, viewModel.favoriteDrink, viewModel.weakness, viewModel.bodyNotes, currentTurn = messages.count { it.role == "user" }, previousStreakDays = viewModel.getPreviousStreak()) + basyoNote
                                 viewModel.markHasEverChatted()
                                 viewModel.updateLastChatTime()
                                 val reply = callGeminiApi(systemPrompt, historySnapshot, text)
                                 val parsed = parseReply(reply, loveCount)
-                                messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName, parsed.actionText))
+                                messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName, parsed.actionText, parsed.basyoId))
+                                parsed.basyoId?.let { viewModel.unlockMemory(it) }
                                 when (parsed.loveChange) {
                                     1  -> viewModel.earnHeart()
                                     -1 -> viewModel.loseHeart()
