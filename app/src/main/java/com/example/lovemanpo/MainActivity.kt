@@ -216,6 +216,10 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getInt("FREE_CHAT_SUMMARIZED_COUNT", 0)
         set(value) = prefs.edit { putInt("FREE_CHAT_SUMMARIZED_COUNT", value) }
 
+    var currentDialogue: String
+        get() = prefs.getString("CURRENT_DIALOGUE", "今日も一緒にがんばろうね♪") ?: "今日も一緒にがんばろうね♪"
+        set(value) = prefs.edit { putString("CURRENT_DIALOGUE", value) }
+
     // 日次日記（日付 → 要約テキスト）
     fun getDailyDiary(date: String): String = prefs.getString("DAILY_DIARY_$date", "") ?: ""
     fun setDailyDiary(date: String, text: String) = prefs.edit { putString("DAILY_DIARY_$date", text) }
@@ -422,6 +426,8 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     fun unlockPremium() { repository.isPremium = true }
 
     val unlockedMemoryIds = mutableStateOf(repository.unlockedMemoryIds)
+
+    fun saveCurrentDialogue(text: String) { repository.currentDialogue = text }
 
     fun unlockMemory(id: String) {
         val updated = unlockedMemoryIds.value.toMutableSet().also { it.add(id) }
@@ -1202,6 +1208,10 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
 
     val displayMessage = touchedDialogue?.first ?: stepDialogue.text
     val displayExpression = touchedDialogue?.second ?: stepDialogue.expr
+
+    LaunchedEffect(displayMessage, playerName) {
+        viewModel.saveCurrentDialogue(displayMessage.replace("○○", playerName))
+    }
 
     HomeScreenContent(
         todaySteps = todaySteps,

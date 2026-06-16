@@ -58,13 +58,13 @@ class StepCounterService : Service(), SensorEventListener {
         super.onCreate()
         Log.d(TAG, "Service onCreate")
 
-        createNotificationChannel()
-        startServiceForeground()
-
         val database = AppDatabase.getDatabase(this)
         stepDao = database.stepDao()
         val prefs = getSharedPreferences("lovemanpo_prefs", Context.MODE_PRIVATE)
         repository = StepRepository(stepDao, prefs)
+
+        createNotificationChannel()
+        startServiceForeground()
 
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         stepCounterSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
@@ -271,9 +271,10 @@ class StepCounterService : Service(), SensorEventListener {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        val dialogue = repository.currentDialogue
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("ラブ万歩計: 歩数計測中")
-            .setContentText("現在 $steps 歩です。ひかりが見守っています！")
+            .setContentTitle("今日 $steps 歩")
+            .setContentText("「$dialogue」")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
