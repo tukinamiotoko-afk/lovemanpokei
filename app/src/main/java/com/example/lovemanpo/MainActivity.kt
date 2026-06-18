@@ -4796,8 +4796,6 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     var inputText by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var showDeleteConfirm by remember { mutableStateOf(false) }
-    var deleteProgress by remember { mutableFloatStateOf(0f) }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
@@ -4823,61 +4821,43 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
         }
     }
 
-    LaunchedEffect(showDeleteConfirm) {
-        if (showDeleteConfirm) {
-            deleteProgress = 0f
-            val steps = 100
-            repeat(steps) {
-                kotlinx.coroutines.delay(50L)
-                deleteProgress = (it + 1) / steps.toFloat()
-            }
-        } else {
-            deleteProgress = 0f
-        }
-    }
-
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
     }
 
     Scaffold(topBar = {
         TopAppBarWithBack(
-            title = "自由会話 (${actionPoints}pt)",
+            title = "",
             onBack = { navController.popBackStack() },
             titleColor = Color(0xFFE87C9A),
-            titleFontFamily = MplusRoundedFontFamily,
-            actions = {
-                IconButton(onClick = { showDeleteConfirm = !showDeleteConfirm }) {
-                    Icon(Icons.Default.DeleteOutline, contentDescription = "履歴削除", tint = Color(0xFFE87C9A))
-                }
-            }
+            titleFontFamily = MplusRoundedFontFamily
         )
     }) { padding ->
         Column(modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFFFF5F7))
             .padding(padding)) {
+            // 上部固定カード（薄く・スリム・使えるポイントを表示）
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFFFF1F6),
+                border = BorderStroke(1.dp, Color(0xFFF3D3DE))
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("💬 ひかりとおしゃべり", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD4618A), fontFamily = MplusRoundedFontFamily, modifier = Modifier.weight(1f))
+                    Text("使えるポイント ${actionPoints}pt", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD4618A), fontFamily = MplusRoundedFontFamily)
+                }
+            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(vertical = 8.dp)
             ) {
-                item {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        color = Color(0xFFFFE4EE),
-                        border = BorderStroke(1.dp, Color(0xFFEFB8CC))
-                    ) {
-                        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("💬 ひかりとおしゃべり", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD4618A), fontFamily = MplusRoundedFontFamily)
-                            Text("・1メッセージ = 1ポイント消費（2000歩で1ポイント）", fontSize = 11.sp, color = Color(0xFF9E6070))
-                            Text("・歩いた日数や歩数でひかりのセリフが変わります", fontSize = 11.sp, color = Color(0xFF9E6070))
-                            Text("・好感度が上がると口調が変わっていきます", fontSize = 11.sp, color = Color(0xFF9E6070))
-                        }
-                    }
-                }
                 items(messages.size) { i ->
                     val msg = messages[i]
                     val isUser = msg.role == "user"
@@ -5020,61 +5000,6 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                     enabled = !isLoading && inputText.isNotBlank()
                 ) {
                     Icon(Icons.Default.Send, contentDescription = "送信", tint = Color(0xFFE87C9A))
-                }
-            }
-
-            androidx.compose.animation.AnimatedVisibility(
-                visible = showDeleteConfirm,
-                enter = androidx.compose.animation.slideInVertically { it },
-                exit = androidx.compose.animation.slideOutVertically { it }
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFFF8F8F8),
-                    tonalElevation = 8.dp,
-                    shadowElevation = 8.dp
-                ) {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                        Text(
-                            "履歴を削除しますか？",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.DarkGray
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        LinearProgressIndicator(
-                            progress = { deleteProgress },
-                            modifier = Modifier.fillMaxWidth().height(4.dp),
-                            color = if (deleteProgress >= 1f) Color(0xFFE53935) else Color(0xFFFF8A80),
-                            trackColor = Color(0xFFEEEEEE)
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            TextButton(onClick = { showDeleteConfirm = false }) {
-                                Text("キャンセル", color = Color.Gray)
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Button(
-                                onClick = {
-                                    if (deleteProgress >= 1f) {
-                                        viewModel.clearFreeChatHistory()
-                                        showDeleteConfirm = false
-                                    }
-                                },
-                                enabled = deleteProgress >= 1f,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFFE53935),
-                                    disabledContainerColor = Color(0xFFBDBDBD)
-                                )
-                            ) {
-                                Text("削除", color = Color.White)
-                            }
-                        }
-                    }
                 }
             }
         }
