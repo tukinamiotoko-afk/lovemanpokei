@@ -4317,8 +4317,10 @@ fun parseReply(reply: String, loveCount: Int = 0): ParsedReply {
     val basyoId = basyoMatch?.groupValues?.get(1)
     if (basyoMatch != null) text = text.replace(basyoMatch.value, "").trim()
 
-    // [ACTION: text] — 地の文タグ
+    // [ACTION: text] — 地の文タグ。閉じ括弧がある通常ケースを優先し、
+    // 出力が途中で切れて ] が無い場合も末尾までを地の文として拾う（生タグの漏れ防止）。
     val actionMatch = Regex("""\[ACTION:\s*(.+?)\]""").find(text)
+        ?: Regex("""\[ACTION:\s*(.+)$""", RegexOption.DOT_MATCHES_ALL).find(text)
     val actionText = actionMatch?.groupValues?.get(1)?.trim()
     if (actionMatch != null) text = text.replace(actionMatch.value, "").trim()
 
@@ -4347,6 +4349,9 @@ fun parseReply(reply: String, loveCount: Int = 0): ParsedReply {
         "sad" -> -1
         else -> 0
     }
+
+    // 念のため：途中で切れて閉じ括弧の無い残存タグ（[EMOTION: / [BASYO: 等）を末尾ごと除去
+    text = text.replace(Regex("""\[[A-Z]+:[^\]]*$"""), "").trim()
 
     return ParsedReply(text.trim(), actionText, exprRes, exprName, loveChange, basyoId)
 }
@@ -4984,7 +4989,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps, viewModel.lifestyle, viewModel.favoriteDrink, viewModel.weakness, viewModel.bodyNotes, currentTurn = messages.count { it.role == "user" }, previousStreakDays = viewModel.getPreviousStreak()) + basyoNote + diaryNote
                                 viewModel.markHasEverChatted()
                                 viewModel.updateLastChatTime()
-                                val reply = callGeminiApi(systemPrompt, historySnapshot, text)
+                                val reply = callGeminiApi(systemPrompt, historySnapshot, text, maxTokens = 1000)
                                 val parsed = parseReply(reply, loveCount)
                                 messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName, parsed.actionText, parsed.basyoId))
                                 parsed.basyoId?.let { viewModel.unlockMemory(it) }
