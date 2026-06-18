@@ -42,7 +42,7 @@
         android:id="@+id/notif_dialogue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="13sp"
+        android:textSize="14sp"
         android:textColor="#FF000000"
         android:maxLines="1"
         android:ellipsize="end" />
