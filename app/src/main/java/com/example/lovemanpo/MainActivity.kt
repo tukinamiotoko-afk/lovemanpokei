@@ -1774,6 +1774,13 @@ fun HourlyWeatherSheet(weatherInfo: WeatherInfo, onDismiss: () -> Unit) {
                             fontWeight = FontWeight.Medium,
                             color = if (isNow) Color.White else Color(0xFF1565C0)
                         )
+                        if (entry.precipitationMm > 0.0) {
+                            Text(
+                                "${if (entry.precipitationMm < 1.0) String.format(java.util.Locale.US, "%.1f", entry.precipitationMm) else entry.precipitationMm.toInt().toString()}mm",
+                                fontSize = 9.sp,
+                                color = if (isNow) Color.White.copy(alpha = 0.85f) else Color(0xFF1565C0).copy(alpha = 0.75f)
+                            )
+                        }
                     }
                 }
             }
@@ -2873,7 +2880,7 @@ data class AggregatedData(val label: String, val steps: Int, val activeTimeMilli
 
 // ---- 天気 ----
 
-data class HourlyWeatherEntry(val hour: Int, val tempC: Double, val weatherCode: Int)
+data class HourlyWeatherEntry(val hour: Int, val tempC: Double, val weatherCode: Int, val precipitationMm: Double = 0.0)
 data class WeatherInfo(val tempC: Double, val weatherCode: Int, val hourly: List<HourlyWeatherEntry> = emptyList())
 
 fun wmoToDescription(code: Int): String = when (code) {
@@ -2900,7 +2907,7 @@ fun wmoToEmoji(code: Int): String = when (code) {
 suspend fun fetchWeather(lat: Double, lon: Double): WeatherInfo? =
     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         try {
-            val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code&hourly=temperature_2m,weather_code&timezone=auto&forecast_days=1")
+            val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code&hourly=temperature_2m,weather_code,precipitation&timezone=auto&forecast_days=1")
             val conn = url.openConnection() as HttpURLConnection
             conn.connectTimeout = 5000
             conn.readTimeout = 5000
@@ -2910,9 +2917,11 @@ suspend fun fetchWeather(lat: Double, lon: Double): WeatherInfo? =
             val times = hourlyJson.getJSONArray("time")
             val temps = hourlyJson.getJSONArray("temperature_2m")
             val codes = hourlyJson.getJSONArray("weather_code")
+            val precips = hourlyJson.optJSONArray("precipitation")
             val hourlyList = (0 until times.length()).mapNotNull { i ->
                 val h = times.getString(i).substringAfter("T").substringBefore(":").toIntOrNull() ?: return@mapNotNull null
-                HourlyWeatherEntry(h, temps.getDouble(i), codes.getInt(i))
+                val p = precips?.optDouble(i, 0.0) ?: 0.0
+                HourlyWeatherEntry(h, temps.getDouble(i), codes.getInt(i), p)
             }
             WeatherInfo(tempC = cur.getDouble("temperature_2m"), weatherCode = cur.getInt("weather_code"), hourly = hourlyList)
         } catch (e: Exception) { null }

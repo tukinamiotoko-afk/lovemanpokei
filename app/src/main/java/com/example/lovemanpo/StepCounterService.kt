@@ -19,6 +19,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.example.lovemanpo.R
 import kotlinx.coroutines.CoroutineScope
@@ -300,12 +301,19 @@ class StepCounterService : Service(), SensorEventListener {
         val dialogue = weatherDialogues[weatherCondition]
             ?: notificationDialogues.lastOrNull { steps >= it.thresholdSteps }?.text
             ?: "一緒に歩こっ！"
+
+        val remoteViews = RemoteViews(packageName, R.layout.notification_step_counter).apply {
+            setTextViewText(R.id.notif_steps, "今日 $steps 歩")
+            setTextViewText(R.id.notif_dialogue, dialogue)
+        }
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("ひかり")
             .setContentText(dialogue)
-            .setSubText("今日 $steps 歩")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(pendingIntent)
+            .setCustomContentView(remoteViews)
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setOngoing(true)
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_MAX)
