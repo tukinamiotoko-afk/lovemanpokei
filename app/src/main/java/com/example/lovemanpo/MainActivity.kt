@@ -268,6 +268,11 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getBoolean("DEBUG_INSTANT_DIARY_REPLY", false)
         set(value) = prefs.edit { putBoolean("DEBUG_INSTANT_DIARY_REPLY", value) }
 
+    // デバッグ用：ONにすると今日の日記を書いた後も続けて（過去日付に）日記を作成できる
+    var debugMultiDiary: Boolean
+        get() = prefs.getBoolean("DEBUG_MULTI_DIARY", false)
+        set(value) = prefs.edit { putBoolean("DEBUG_MULTI_DIARY", value) }
+
     var heightCm: Float
         get() = prefs.getFloat("HEIGHT_CM", 170f)
         set(value) = prefs.edit { putFloat("HEIGHT_CM", value) }
@@ -723,6 +728,12 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
     fun setDebugInstantDiaryReply(enabled: Boolean) {
         repository.debugInstantDiaryReply = enabled
         debugInstantDiaryReply.value = enabled
+    }
+
+    val debugMultiDiary = mutableStateOf(repository.debugMultiDiary)
+    fun setDebugMultiDiary(enabled: Boolean) {
+        repository.debugMultiDiary = enabled
+        debugMultiDiary.value = enabled
     }
 
     fun debugResetData() {
@@ -2108,6 +2119,24 @@ fun DebugScreen(navController: NavController, viewModel: StepViewModel) {
                             onCheckedChange = { viewModel.setDebugInstantDiaryReply(it) }
                         )
                     }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("連続で日記を書ける")
+                            Text(
+                                "ONにすると今日の分を書いた後も、空いている過去日付に続けて作成できます",
+                                fontSize = 12.sp,
+                                color = Color(0xFF888888)
+                            )
+                        }
+                        Switch(
+                            checked = viewModel.debugMultiDiary.value,
+                            onCheckedChange = { viewModel.setDebugMultiDiary(it) }
+                        )
+                    }
                 }
             }
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
@@ -2829,6 +2858,18 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
     }
 
     val instantDiaryReply = viewModel.debugInstantDiaryReply.value
+    val multiDiaryDebug = viewModel.debugMultiDiary.value
+    // 書き込み対象の日付。通常は今日。デバッグ連続作成ONなら空いている直近の過去日。
+    var writeDate by remember { mutableStateOf(today) }
+
+    // デバッグ連続作成用：まだ日記がない直近の日付を返す（今日→昨日→…）
+    fun nextEmptyDiaryDate(): String {
+        var d = LocalDate.now()
+        while (viewModel.repository.getUserDiary(d.toString()).isNotBlank()) {
+            d = d.minusDays(1)
+        }
+        return d.toString()
+    }
 
     // 指定日の日記に対する返信を生成して保存する（過去日・即時生成の両方で使用）
     fun generateDiaryReply(date: String) {
@@ -2894,10 +2935,13 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
             )
         },
         floatingActionButton = {
-            // 今日の日記をまだ書いていない場合のみFABを表示
-            if (!todayDiaryExists) {
+            // 通常は今日の日記が未記入のときのみ。デバッグ連続作成ONなら常に表示。
+            if (!todayDiaryExists || multiDiaryDebug) {
                 FloatingActionButton(
-                    onClick = { showWriteDialog = true },
+                    onClick = {
+                        writeDate = if (multiDiaryDebug) nextEmptyDiaryDate() else today
+                        showWriteDialog = true
+                    },
                     containerColor = pinkAccent,
                     contentColor = Color.White,
                     shape = CircleShape
@@ -2997,8 +3041,8 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                             Text("キャンセル", color = Color.Gray, fontFamily = MplusRoundedFontFamily)
                         }
                         Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("今日の日記", color = pinkAccent, fontSize = 17.sp, fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
-                            Text(formatDate(LocalDate.now(), DisplayPeriod.DAY), color = Color(0xFF999999), fontSize = 11.sp, fontFamily = MplusRoundedFontFamily)
+                            Text(if (writeDate == today) "今日の日記" else "日記", color = pinkAccent, fontSize = 17.sp, fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
+                            Text(formatDate(LocalDate.parse(writeDate), DisplayPeriod.DAY), color = Color(0xFF999999), fontSize = 11.sp, fontFamily = MplusRoundedFontFamily)
                         }
                         IconButton(onClick = { photoPickerLauncher.launch("image/*") }) {
                             Icon(Icons.Default.AddPhotoAlternate, contentDescription = "写真を追加", tint = pinkAccent)
@@ -3008,20 +3052,21 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                             onClick = {
                                 val text = writingText.trim()
                                 val photoUri = selectedDiaryPhotoUri
+                                val targetDate = writeDate
                                 if (text.isNotBlank()) {
                                     showWriteDialog = false
-                                    viewModel.saveUserDiary(today, text, selectedMood)
+                                    viewModel.saveUserDiary(targetDate, text, selectedMood)
                                     if (photoUri != null) {
                                         // 写真を保存してから（即時返信ONなら）返信を生成する
                                         scope.launch {
-                                            saveDiaryPhoto(context, today, photoUri)?.let { path ->
-                                                viewModel.repository.setUserDiaryPhotoPath(today, path)
+                                            saveDiaryPhoto(context, targetDate, photoUri)?.let { path ->
+                                                viewModel.repository.setUserDiaryPhotoPath(targetDate, path)
                                                 refreshKey++
                                             }
-                                            if (instantDiaryReply) generateDiaryReply(today)
+                                            if (instantDiaryReply) generateDiaryReply(targetDate)
                                         }
                                     } else if (instantDiaryReply) {
-                                        generateDiaryReply(today)
+                                        generateDiaryReply(targetDate)
                                     }
                                     writingText = ""
                                     selectedMood = ""
