@@ -80,7 +80,7 @@ class StepCounterService : Service(), SensorEventListener {
             NotificationDialogue(0,     "○○さん！今日も会えましたね♡ 一緒に歩きましょうね"),
             NotificationDialogue(1000,  "1000歩！○○さんのペースに合わせるのが好きですよ"),
             NotificationDialogue(3000,  "3000歩！○○さんの隣って歩きやすいなって思います"),
-            NotificationDialogue(5000,  "5000歩…○○さんと歩くのがクセになってしまいました"),
+            NotificationDialogue(5000,  "5000歩…○○さんと歩くのがクセになってきてしまいました"),
             NotificationDialogue(8000,  "8000歩！あとちょっとですよ、一緒に頑張りましょう！"),
             NotificationDialogue(10000, "1万歩達成！…○○さんのことが、その…なんでもないですよ！"),
             NotificationDialogue(20000, "2万歩！！何度でも言いますが、○○さんって本当にすごいですよ…！"),
@@ -105,8 +105,8 @@ class StepCounterService : Service(), SensorEventListener {
 
         enum class WeatherCondition { CLEAR, RAINY, SNOWY, STORMY }
         val weatherDialogues = mapOf(
-            WeatherCondition.RAINY  to "雨か…傘、持った？でも一緒に歩こう！",
-            WeatherCondition.SNOWY  to "雪！！テンション上がる〜！転ばないでね！",
+            WeatherCondition.RAINY to "雨か…傘、持った？でも一緒に歩こう！",
+            WeatherCondition.SNOWY to "雪！！テンション上がる〜！転ばないでね！",
             WeatherCondition.STORMY to "今日は無理しないでね…室内で運動でもいいよ！"
         )
         fun weatherCodeToCondition(code: Int): WeatherCondition = when (code) {
@@ -115,6 +115,7 @@ class StepCounterService : Service(), SensorEventListener {
             in listOf(95, 96, 99)                          -> WeatherCondition.STORMY
             else                                           -> WeatherCondition.CLEAR
         }
+
     }
 
     override fun onCreate() {
@@ -337,13 +338,18 @@ class StepCounterService : Service(), SensorEventListener {
         val playerName = repository.playerName.ifBlank { "あなた" }
         val loveCount = repository.loveCount
         val dialogues = dialoguesForLoveLevel(loveCount)
+        val stepDialogue = dialogues.lastOrNull { steps >= it.thresholdSteps } ?: dialogues.first()
         val weatherCondition = weatherCodeToCondition(repository.currentWeatherCode)
         val rawDialogue = weatherDialogues[weatherCondition]
-            ?: dialogues.lastOrNull { steps >= it.thresholdSteps }?.text
-            ?: dialogues.first().text
+            ?: stepDialogue.text
         val dialogue = rawDialogue.replace("○○", playerName)
 
         val remoteViews = RemoteViews(packageName, R.layout.notification_step_counter).apply {
+            setTextViewText(R.id.notif_steps, "今日 $steps 歩")
+            setTextViewText(R.id.notif_dialogue, dialogue)
+        }
+
+        val expandedRemoteViews = RemoteViews(packageName, R.layout.notification_step_counter_expanded).apply {
             setTextViewText(R.id.notif_steps, "今日 $steps 歩")
             setTextViewText(R.id.notif_dialogue, dialogue)
         }
@@ -354,6 +360,7 @@ class StepCounterService : Service(), SensorEventListener {
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(pendingIntent)
             .setCustomContentView(remoteViews)
+            .setCustomBigContentView(expandedRemoteViews)
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setOngoing(true)
             .setSilent(true)

@@ -42,6 +42,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -62,6 +63,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
@@ -80,9 +82,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.core.net.toUri
@@ -128,13 +133,18 @@ import androidx.core.view.WindowCompat // 必要
 import androidx.core.view.WindowInsetsCompat // 必要
 import androidx.core.view.WindowInsetsControllerCompat // 必要
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.location.LocationManager
+import android.util.Base64
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
+import java.io.File
 
 // --- 期間の定義 ---
 enum class DisplayPeriod(val label: String) {
@@ -227,6 +237,10 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getInt("CURRENT_WEATHER_CODE", -1)
         set(value) = prefs.edit { putInt("CURRENT_WEATHER_CODE", value) }
 
+    var currentTemperatureC: Float
+        get() = prefs.getFloat("CURRENT_TEMPERATURE_C", Float.NaN)
+        set(value) = prefs.edit { putFloat("CURRENT_TEMPERATURE_C", value) }
+
     // 日次日記（日付 → 要約テキスト）
     fun getDailyDiary(date: String): String = prefs.getString("DAILY_DIARY_$date", "") ?: ""
     fun setDailyDiary(date: String, text: String) = prefs.edit { putString("DAILY_DIARY_$date", text) }
@@ -236,6 +250,8 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
 
     fun getUserDiary(date: String): String = prefs.getString("USER_DIARY_$date", "") ?: ""
     fun setUserDiary(date: String, text: String) = prefs.edit { putString("USER_DIARY_$date", text) }
+    fun getUserDiaryPhotoPath(date: String): String = prefs.getString("USER_DIARY_PHOTO_$date", "") ?: ""
+    fun setUserDiaryPhotoPath(date: String, path: String) = prefs.edit { putString("USER_DIARY_PHOTO_$date", path) }
     fun getDiaryMood(date: String): String = prefs.getString("DIARY_MOOD_$date", "") ?: ""
     fun setDiaryMood(date: String, mood: String) = prefs.edit { putString("DIARY_MOOD_$date", mood) }
     fun getDiaryReply(date: String): String = prefs.getString("DIARY_REPLY_$date", "") ?: ""
@@ -467,6 +483,10 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
 
     fun saveCurrentDialogue(text: String) { repository.currentDialogue = text }
     fun saveWeatherCode(code: Int) { repository.currentWeatherCode = code }
+    fun saveWeatherInfo(info: WeatherInfo) {
+        repository.currentWeatherCode = info.weatherCode
+        repository.currentTemperatureC = info.tempC.toFloat()
+    }
 
     fun unlockMemory(id: String) {
         val updated = unlockedMemoryIds.value.toMutableSet().also { it.add(id) }
@@ -731,6 +751,14 @@ val MplusRoundedFontFamily = FontFamily(
     Font(R.font.mplus_rounded_regular, FontWeight.Normal),
     Font(R.font.mplus_rounded_bold, FontWeight.Bold),
     Font(R.font.mplus_rounded_extrabold, FontWeight.ExtraBold),
+)
+
+val DiaryFemaleFontFamily = FontFamily(
+    Font(R.font.zen_kurenaido_regular, FontWeight.Normal)
+)
+
+val DiaryMaleFontFamily = FontFamily(
+    Font(R.font.kaisei_decol_regular, FontWeight.Normal)
 )
 
 class MainActivity : ComponentActivity() {
@@ -1262,14 +1290,16 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         }
     }
 
-    val displayMessage = (touchedDialogue?.text ?: stepDialogue.text).replace("○○", playerName)
-    val displayExpression = touchedDialogue?.expr ?: stepDialogue.expr
+    val weatherDialogue = weatherInfo?.let { homeWeatherDialogue(it.weatherCode) }
+    val stepAchievementDialogue = stepDialogue.takeIf { it.thresholdSteps > 0 }
+    val displayMessage = (touchedDialogue?.text ?: stepAchievementDialogue?.text ?: weatherDialogue?.text ?: stepDialogue.text).replace("○○", playerName)
+    val displayExpression = touchedDialogue?.expr ?: stepAchievementDialogue?.expr ?: weatherDialogue?.expr ?: stepDialogue.expr
 
     LaunchedEffect(displayMessage, playerName) {
         viewModel.saveCurrentDialogue(displayMessage.replace("○○", playerName))
     }
     LaunchedEffect(weatherInfo) {
-        weatherInfo?.let { viewModel.saveWeatherCode(it.weatherCode) }
+        weatherInfo?.let { viewModel.saveWeatherInfo(it) }
     }
 
     HomeScreenContent(
@@ -2743,6 +2773,8 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
     val loveCount = viewModel.loveCount.intValue
     val todaySteps = viewModel.todaySteps.intValue
     val today = LocalDate.now().toString()
+    val context = LocalContext.current
+    val diaryFontFamily = if (viewModel.userGender.value == "女性") DiaryFemaleFontFamily else DiaryMaleFontFamily
 
     var refreshKey by remember { mutableIntStateOf(0) }
     val allDates = remember(refreshKey) { viewModel.repository.userDiaryDates.sortedDescending() }
@@ -2751,7 +2783,63 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
     var showWriteDialog by remember { mutableStateOf(false) }
     var writingText by remember { mutableStateOf("") }
     var selectedMood by remember { mutableStateOf("") }
+    var selectedDiaryPhotoUri by remember { mutableStateOf<String?>(null) }
     var loadingDates by remember { mutableStateOf(setOf<String>()) }
+    var checkedPendingReplies by remember { mutableStateOf(false) }
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        selectedDiaryPhotoUri = uri?.toString()
+    }
+
+    LaunchedEffect(allDates, checkedPendingReplies) {
+        if (checkedPendingReplies) return@LaunchedEffect
+        checkedPendingReplies = true
+        val todayDate = LocalDate.now()
+        val pendingDates = allDates
+            .filter { date ->
+                val diaryDate = runCatching { LocalDate.parse(date) }.getOrNull()
+                diaryDate != null &&
+                    diaryDate.isBefore(todayDate) &&
+                    viewModel.repository.getUserDiary(date).isNotBlank() &&
+                    viewModel.repository.getDiaryReply(date).isBlank()
+            }
+            .sorted()
+
+        pendingDates.forEach { date ->
+            loadingDates = loadingDates + date
+            scope.launch {
+                try {
+                    val diaryText = viewModel.repository.getUserDiary(date)
+                    val photoPath = viewModel.repository.getUserDiaryPhotoPath(date)
+                    val encodedPhoto = photoPath.takeIf { it.isNotBlank() }?.let { encodeImageFileForGemini(it) }
+                    val prompt = buildDiaryReplySystemPrompt(
+                        loveCount = loveCount,
+                        playerName = playerName,
+                        todaySteps = todaySteps,
+                        diaryText = diaryText,
+                        hasPhoto = encodedPhoto != null
+                    )
+                    val rawReply = callGeminiApi(
+                        systemPrompt = prompt,
+                        history = emptyList(),
+                        userMessage = "返事をください",
+                        maxTokens = 600,
+                        imageBase64 = encodedPhoto?.base64,
+                        imageMimeType = encodedPhoto?.mimeType
+                    )
+                    val emotionMatch = Regex("""\[EMOTION:(\w+)\]""").find(rawReply)
+                    val emotionTag = emotionMatch?.groupValues?.get(1) ?: "normal"
+                    val cleanReply = rawReply.replace(Regex("""\[EMOTION:\w+\]"""), "").trim()
+                    viewModel.saveDiaryReply(date, cleanReply, emotionTag)
+                } catch (_: Exception) {
+                    viewModel.saveDiaryReply(date, "昨日の日記、ちゃんと読んだよ。返事が遅くなってごめんね。また聞かせてください。", "normal")
+                }
+                loadingDates = loadingDates - date
+                refreshKey++
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -2795,10 +2883,12 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                     DiaryEntryCard(
                         date = date,
                         userText = viewModel.repository.getUserDiary(date),
+                        photoPath = viewModel.repository.getUserDiaryPhotoPath(date),
                         replyText = viewModel.repository.getDiaryReply(date),
                         emotion = viewModel.repository.getDiaryReplyEmotion(date),
                         isLoading = loadingDates.contains(date),
-                        loveCount = loveCount
+                        loveCount = loveCount,
+                        diaryFontFamily = diaryFontFamily
                     )
                 }
             }
@@ -2806,90 +2896,178 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
     }
 
     if (showWriteDialog) {
-        AlertDialog(
-            onDismissRequest = { showWriteDialog = false },
-            containerColor = Color.White,
-            title = { Text("今日の日記", fontFamily = MplusRoundedFontFamily, fontWeight = FontWeight.Bold, color = pinkAccent) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Dialog(
+            onDismissRequest = {
+                selectedDiaryPhotoUri = null
+                showWriteDialog = false
+            },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFFFFCF6)) {
+                Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = {
+                            selectedDiaryPhotoUri = null
+                            showWriteDialog = false
+                        }) {
+                            Text("キャンセル", color = Color.Gray, fontFamily = MplusRoundedFontFamily)
+                        }
+                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("今日の日記", color = pinkAccent, fontSize = 17.sp, fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
+                            Text(formatDate(LocalDate.now(), DisplayPeriod.DAY), color = Color(0xFF999999), fontSize = 11.sp, fontFamily = MplusRoundedFontFamily)
+                        }
+                        IconButton(onClick = { photoPickerLauncher.launch("image/*") }) {
+                            Icon(Icons.Default.AddPhotoAlternate, contentDescription = "写真を追加", tint = pinkAccent)
+                        }
+                        TextButton(
+                            enabled = writingText.isNotBlank(),
+                            onClick = {
+                                val text = writingText.trim()
+                                val photoUri = selectedDiaryPhotoUri
+                                if (text.isNotBlank()) {
+                                    showWriteDialog = false
+                                    viewModel.saveUserDiary(today, text, selectedMood)
+                                    photoUri?.let { uri ->
+                                        scope.launch {
+                                            saveDiaryPhoto(context, today, uri)?.let { path ->
+                                                viewModel.repository.setUserDiaryPhotoPath(today, path)
+                                                refreshKey++
+                                            }
+                                        }
+                                    }
+                                    loadingDates = loadingDates + today
+                                    writingText = ""
+                                    selectedMood = ""
+                                    selectedDiaryPhotoUri = null
+                                    refreshKey++
+                                    loadingDates = loadingDates - today
+                                }
+                            }
+                        ) {
+                            Text("保存", color = if (writingText.isNotBlank()) pinkAccent else Color.LightGray, fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         listOf("😊 よかった", "😐 ふつう", "😩 つかれた").forEach { label ->
                             val mood = label.substringAfter(" ")
                             val selected = selectedMood == mood
                             Surface(
                                 shape = RoundedCornerShape(20.dp),
-                                color = if (selected) pinkAccent else Color(0xFFF5F5F5),
-                                border = BorderStroke(1.dp, if (selected) pinkAccent else Color(0xFFDDDDDD)),
+                                color = if (selected) pinkAccent else Color(0xFFFFF4F8),
+                                border = BorderStroke(1.dp, if (selected) pinkAccent else Color(0xFFFFB7D0)),
                                 modifier = Modifier.clickable { selectedMood = mood }
                             ) {
-                                Text(label, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                Text(
+                                    label,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                     fontSize = 12.sp,
                                     color = if (selected) Color.White else Color(0xFF555555),
-                                    fontFamily = MplusRoundedFontFamily)
+                                    fontFamily = MplusRoundedFontFamily
+                                )
                             }
                         }
                     }
-                    OutlinedTextField(
-                        value = writingText,
-                        onValueChange = { if (it.length <= 300) writingText = it },
-                        modifier = Modifier.fillMaxWidth().height(160.dp),
-                        placeholder = { Text("今日あったことを書いてね…", color = Color.LightGray, fontFamily = MplusRoundedFontFamily, fontSize = 13.sp) },
-                        maxLines = 10,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = pinkAccent,
-                            unfocusedBorderColor = Color(0xFFFFB7D0)
-                        )
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val text = writingText.trim()
-                        if (text.isNotBlank()) {
-                            showWriteDialog = false
-                            viewModel.saveUserDiary(today, text, selectedMood)
-                            loadingDates = loadingDates + today
-                            writingText = ""
-                            selectedMood = ""
-                            refreshKey++
-                            scope.launch {
-                                try {
-                                    val prompt = buildDiaryReplySystemPrompt(
-                                        loveCount = loveCount,
-                                        playerName = playerName,
-                                        todaySteps = todaySteps,
-                                        diaryText = text,
-                                        hasPhoto = false
-                                    )
-                                    val rawReply = callGeminiApi(
-                                        systemPrompt = prompt,
-                                        history = emptyList(),
-                                        userMessage = "返事をください",
-                                        maxTokens = 600
-                                    )
-                                    val emotionMatch = Regex("""\[EMOTION:(\w+)\]""").find(rawReply)
-                                    val emotionTag = emotionMatch?.groupValues?.get(1) ?: "normal"
-                                    val cleanReply = rawReply.replace(Regex("""\[EMOTION:\w+\]"""), "").trim()
-                                    viewModel.saveDiaryReply(today, cleanReply, emotionTag)
-                                } catch (_: Exception) {
-                                    viewModel.saveDiaryReply(today, "今日もちゃんと日記、読んだよ。また明日ね。", "normal")
+
+                    selectedDiaryPhotoUri?.let {
+                        Surface(
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            color = Color(0xFFFFF4F8),
+                            border = BorderStroke(1.dp, Color(0xFFFFB7D0))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(start = 10.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Image, contentDescription = null, tint = pinkAccent, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("写真を選択済み", color = Color(0xFF555555), fontSize = 12.sp, fontFamily = MplusRoundedFontFamily)
+                                IconButton(onClick = { selectedDiaryPhotoUri = null }, modifier = Modifier.size(28.dp)) {
+                                    Icon(Icons.Default.Close, contentDescription = "写真を外す", tint = Color(0xFFBB8888), modifier = Modifier.size(16.dp))
                                 }
-                                loadingDates = loadingDates - today
-                                refreshKey++
                             }
                         }
-                    },
-                    enabled = writingText.isNotBlank(),
-                    colors = ButtonDefaults.buttonColors(containerColor = pinkAccent)
-                ) { Text("送る", fontFamily = MplusRoundedFontFamily) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showWriteDialog = false }) {
-                    Text("キャンセル", color = Color.Gray, fontFamily = MplusRoundedFontFamily)
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 20.dp, vertical = 12.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFFFFEFA))
+                            .border(1.dp, Color(0xFFFFD7E5), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                            .drawWithContent {
+                                val lineHeight = 26.sp.toPx()
+                                var y = 20.sp.toPx()
+                                while (y < size.height) {
+                                    drawLine(
+                                        color = Color(0xFFFFC7D8).copy(alpha = 0.65f),
+                                        start = Offset(0f, y),
+                                        end = Offset(size.width, y),
+                                        strokeWidth = 1.dp.toPx()
+                                    )
+                                    y += lineHeight
+                                }
+                                drawContent()
+                            }
+                    ) {
+                        BasicTextField(
+                            value = writingText,
+                            onValueChange = { if (it.length <= 300) writingText = it },
+                            modifier = Modifier.fillMaxSize(),
+                            textStyle = TextStyle(
+                                color = Color(0xFF333333),
+                                fontSize = 14.sp,
+                                lineHeight = 26.sp,
+                                fontFamily = diaryFontFamily,
+                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                lineHeightStyle = LineHeightStyle(
+                                    alignment = LineHeightStyle.Alignment.Center,
+                                    trim = LineHeightStyle.Trim.None
+                                )
+                            ),
+                            decorationBox = { innerTextField ->
+                                if (writingText.isEmpty()) {
+                                    Text(
+                                        "今日あったことをここに書いてね…",
+                                        modifier = Modifier.offset(y = 2.dp),
+                                        color = Color(0xFFBBBBBB),
+                                        fontSize = 14.sp,
+                                        lineHeight = 26.sp,
+                                        fontFamily = diaryFontFamily,
+                                        style = TextStyle(
+                                            platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                            lineHeightStyle = LineHeightStyle(
+                                                alignment = LineHeightStyle.Alignment.Center,
+                                                trim = LineHeightStyle.Trim.None
+                                            )
+                                        )
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        )
+                        Text(
+                            "${writingText.length}/300",
+                            modifier = Modifier.align(Alignment.BottomEnd).background(Color(0xCCFFFFFA)).padding(start = 6.dp, top = 2.dp),
+                            color = Color(0xFFBBBBBB),
+                            fontSize = 11.sp,
+                            fontFamily = MplusRoundedFontFamily
+                        )
+                    }
                 }
             }
-        )
+        }
     }
 }
 
@@ -2897,10 +3075,12 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
 fun DiaryEntryCard(
     date: String,
     userText: String,
+    photoPath: String = "",
     replyText: String,
     emotion: String,
     isLoading: Boolean,
-    loveCount: Int
+    loveCount: Int,
+    diaryFontFamily: FontFamily = MplusRoundedFontFamily
 ) {
     val pinkAccent = Color(0xFFFF6B9D)
     val parts = date.split("-")
@@ -2926,7 +3106,26 @@ fun DiaryEntryCard(
             Row(verticalAlignment = Alignment.Top) {
                 Icon(Icons.Default.Edit, contentDescription = null, tint = pinkAccent.copy(alpha = 0.7f), modifier = Modifier.size(14.dp).padding(top = 2.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(userText, fontSize = 13.sp, color = Color(0xFF333333), fontFamily = MplusRoundedFontFamily, lineHeight = 20.sp)
+                Text(userText, fontSize = 15.sp, color = Color(0xFF333333), fontFamily = diaryFontFamily, lineHeight = 22.sp)
+            }
+
+            if (photoPath.isNotBlank()) {
+                val diaryBitmap = remember(photoPath) {
+                    BitmapFactory.decodeFile(photoPath)?.asImageBitmap()
+                }
+                diaryBitmap?.let { image ->
+                    Spacer(Modifier.height(10.dp))
+                    Image(
+                        bitmap = image,
+                        contentDescription = "日記の写真",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 220.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFFFFF4F8)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
             }
 
             Row(
@@ -2955,8 +3154,15 @@ fun DiaryEntryCard(
                         contentScale = ContentScale.Crop
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(replyText, fontSize = 13.sp, color = Color(0xFF333333), fontFamily = MplusRoundedFontFamily, lineHeight = 20.sp)
+                    Text(replyText, fontSize = 15.sp, color = Color(0xFF333333), fontFamily = DiaryFemaleFontFamily, lineHeight = 22.sp)
                 }
+            } else {
+                Text(
+                    "ひかりからの返事は、明日手紙で届きます。",
+                    fontSize = 12.sp,
+                    color = Color(0xFFAAAAAA),
+                    fontFamily = MplusRoundedFontFamily
+                )
             }
         }
     }
@@ -3209,6 +3415,15 @@ fun wmoToEmoji(code: Int): String = when (code) {
     else -> "🌡️"
 }
 
+fun homeWeatherDialogue(code: Int): TouchDialogue = when (code) {
+    0, 1 -> TouchDialogue("今日は晴れていますね！絶好のお散歩日和ですよ♪", R.drawable.hikari_smile)
+    2, 3, 45, 48 -> TouchDialogue("曇っていますが歩きやすい気温です！", R.drawable.hikari_smile)
+    51, 53, 55, 61, 63, 65, 80, 81, 82 -> TouchDialogue("雨ですね…傘は持ちましたか？それでも一緒に歩きましょう！", R.drawable.hikari_think)
+    71, 73, 75, 77, 85, 86 -> TouchDialogue("雪ですよ！テンション上がりますね！転ばないでくださいね！", R.drawable.hikari_celebrate)
+    95, 96, 99 -> TouchDialogue("今日は無理しないでくださいね…室内で運動してもいいですよ！", R.drawable.hikari_think)
+    else -> TouchDialogue("曇っていますが歩きやすい気温です！", R.drawable.hikari_smile)
+}
+
 suspend fun fetchWeather(lat: Double, lon: Double): WeatherInfo? =
     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         try {
@@ -3299,9 +3514,9 @@ val touchDialoguesLv7 = listOf(
 )
 
 val touchDialoguesLv9 = listOf(
-    TouchDialogue("○○さんのそばにいると、落ち着きますよ…", R.drawable.hikari_blush),
-    TouchDialogue("ずっと隣にいてほしいです。…なんちゃって！", R.drawable.hikari_blush),
-    TouchDialogue("○○さんって、ちょっとズルいですよ。こんなに好きになってしまって。", R.drawable.hikari_blush)
+    TouchDialogue("○○さんのこと、大好きですよ。", R.drawable.hikari_blush),
+    TouchDialogue("ずっと一緒にいたいですよ、○○さんと。", R.drawable.hikari_blush),
+    TouchDialogue("○○さんといると、世界が明るく見える気がします。", R.drawable.hikari_smile)
 )
 
 val touchDialoguesLv10 = listOf(
@@ -3311,59 +3526,50 @@ val touchDialoguesLv10 = listOf(
 )
 
 val stepDialoguesLv1 = listOf(
-    StepDialogue(0,     "○○さん、今日もお散歩日和ですね！張り切っていきましょう！", R.drawable.hikari_smile),
-    StepDialogue(1000,  "1000歩達成！順調な滑り出しですよ、○○さん！", R.drawable.hikari_smile),
-    StepDialogue(3000,  "3000歩達成！○○さん、案外タフなんですね。", R.drawable.hikari_celebrate),
-    StepDialogue(5000,  "5000歩達成！正直この距離を歩けると思ってませんでした。すごいですね！", R.drawable.hikari_smile),
-    StepDialogue(8000,  "8000歩達成…！私、ちょっと足が限界かもです。えへへ", R.drawable.hikari_blush),
-    StepDialogue(10000, "1万歩達成！尊敬します。私もちょっと足が痛いです…えへへ", R.drawable.hikari_celebrate),
-    StepDialogue(20000, "2万歩達成！？もしかしてアスリートの方ですか…？", R.drawable.hikari_celebrate),
-    StepDialogue(30000, "3万歩達成…！もはや散歩の域を超えてますよ！今日はゆっくり休んでください！", R.drawable.hikari_smile)
+    StepDialogue(0,     "一緒に歩きましょう！", R.drawable.hikari_smile),
+    StepDialogue(1000,  "1000歩ですよ！いい感じです♪", R.drawable.hikari_smile),
+    StepDialogue(3000,  "3000歩達成です！", R.drawable.hikari_celebrate),
+    StepDialogue(5000,  "5000歩！すごいですね！", R.drawable.hikari_smile),
+    StepDialogue(8000,  "もうちょっとで1万歩ですよ！", R.drawable.hikari_blush),
+    StepDialogue(10000, "1万歩達成です！さすがですね♡", R.drawable.hikari_celebrate),
+    StepDialogue(20000, "2万歩…！信じられないです！", R.drawable.hikari_celebrate),
+    StepDialogue(30000, "もはや伝説ですよ…！", R.drawable.hikari_smile)
 )
 
 val stepDialoguesLv3 = listOf(
-    StepDialogue(0,     "○○さん！今日もがんばりましょうね♪ 私もついていきますよ！", R.drawable.hikari_smile),
-    StepDialogue(1000,  "1000歩達成！いい感じですよ〜！", R.drawable.hikari_smile),
-    StepDialogue(3000,  "3000歩達成！えへへ、○○さんと歩くの楽しいです！", R.drawable.hikari_smile),
-    StepDialogue(5000,  "5000歩達成！ここまで来れたの○○さんのおかげな気がします", R.drawable.hikari_blush),
-    StepDialogue(8000,  "8000歩達成！今日はぐっすり眠れそうですね。えへへ。", R.drawable.hikari_blush),
-    StepDialogue(10000, "やりました！ご褒美に何か食べに行きませんか？私パフェがいいです！", R.drawable.hikari_celebrate),
-    StepDialogue(20000, "2万歩達成！？○○さん、もしかしてアスリートか何かですか…？尊敬しちゃいます！", R.drawable.hikari_celebrate),
-    StepDialogue(30000, "3万歩達成…！今日はゆっくりお風呂に入って休んでくださいね。私も少し休みます…！", R.drawable.hikari_smile)
+    StepDialogue(0,     "おはようございます、○○さん！今日も一緒に歩きましょうね！", R.drawable.hikari_smile),
+    StepDialogue(1000,  "1000歩！今日もいい感じですよ♪", R.drawable.hikari_smile),
+    StepDialogue(3000,  "3000歩！○○さんと歩いていると楽しくて疲れも忘れてしまいます", R.drawable.hikari_smile),
+    StepDialogue(5000,  "5000歩…○○さんと歩いていると時間が経つのが早いですね〜", R.drawable.hikari_blush),
+    StepDialogue(8000,  "8000歩！あとちょっとで1万歩ですね。私も頑張ります！", R.drawable.hikari_blush),
+    StepDialogue(10000, "1万歩！…一緒に歩くの、なんか好きかもしれませんよ", R.drawable.hikari_celebrate),
+    StepDialogue(20000, "2万歩！？○○さんって本当にすごいですよ…ちゃんと尊敬しています", R.drawable.hikari_celebrate),
+    StepDialogue(30000, "3万歩…！○○さんの体力に毎回驚かされます。今日もありがとうございます", R.drawable.hikari_smile)
 )
 
 val stepDialoguesLv5 = listOf(
-    StepDialogue(0,     "おはよう、○○さん！今日も一緒に歩こうね！", R.drawable.hikari_smile),
-    StepDialogue(1000,  "1000歩達成！今日もいい感じだね♪", R.drawable.hikari_smile),
-    StepDialogue(3000,  "3000歩達成！○○さんと歩いてると楽しくて疲れも忘れちゃうな", R.drawable.hikari_smile),
-    StepDialogue(5000,  "5000歩達成…○○さんと歩いてると時間が経つの早いな〜", R.drawable.hikari_blush),
-    StepDialogue(8000,  "8000歩達成！あとちょっとで1万歩だね。私も頑張る！", R.drawable.hikari_celebrate),
-    StepDialogue(10000, "1万歩達成！…ねえ、一緒に歩くの、なんか好きかもしれない", R.drawable.hikari_blush),
-    StepDialogue(20000, "2万歩達成！？○○さんってほんとにすごいね…ちゃんと尊敬してるよ", R.drawable.hikari_celebrate),
-    StepDialogue(30000, "3万歩達成…！○○さんの体力に毎回驚かされます。今日もありがとう", R.drawable.hikari_smile)
+    StepDialogue(0,     "○○さん！今日も会えましたね♡ 一緒に歩きましょうね", R.drawable.hikari_smile),
+    StepDialogue(1000,  "1000歩！○○さんのペースに合わせるのが好きですよ", R.drawable.hikari_smile),
+    StepDialogue(3000,  "3000歩！○○さんの隣って歩きやすいなって思います", R.drawable.hikari_blush),
+    StepDialogue(5000,  "5000歩…○○さんと歩くのがクセになってきてしまいました", R.drawable.hikari_blush),
+    StepDialogue(8000,  "8000歩！あとちょっとですよ、一緒に頑張りましょう！", R.drawable.hikari_celebrate),
+    StepDialogue(10000, "1万歩達成！…○○さんのことが、その…なんでもないですよ！", R.drawable.hikari_blush),
+    StepDialogue(20000, "2万歩！！何度でも言いますが、○○さんって本当にすごいですよ…！", R.drawable.hikari_celebrate),
+    StepDialogue(30000, "3万歩…！○○さんのこと、もっと知りたくなってしまいます。", R.drawable.hikari_blush)
 )
 
 val stepDialoguesLv7 = listOf(
-    StepDialogue(0,     "○○さん！今日も会えた♡ 絶対一緒に歩くよ", R.drawable.hikari_smile),
-    StepDialogue(1000,  "1000歩達成！○○さんのペースに合わせるのが好きだよ", R.drawable.hikari_smile),
-    StepDialogue(3000,  "3000歩達成！ねえ、○○さんの隣って歩きやすいなって思う", R.drawable.hikari_blush),
-    StepDialogue(5000,  "5000歩達成…○○さんと歩くのクセになってきちゃった", R.drawable.hikari_blush),
-    StepDialogue(8000,  "8000歩達成！あとちょっとだよ、一緒に頑張ろ！", R.drawable.hikari_celebrate),
-    StepDialogue(10000, "1万歩達成！…ねえ、○○さんのことが、その…なんでもない！", R.drawable.hikari_blush),
-    StepDialogue(20000, "2万歩達成！！何度でも言うけど、○○さんって本当にすごいよ…！", R.drawable.hikari_celebrate),
-    StepDialogue(30000, "3万歩達成…！○○さんのこと、もっと知りたくなっちゃうな。", R.drawable.hikari_blush)
+    StepDialogue(0,     "おはようございます♡ ○○さんの隣で歩けること、とても幸せです", R.drawable.hikari_blush),
+    StepDialogue(1000,  "1000歩！○○さんと歩く1000歩は、なんか特別な感じがしますよ", R.drawable.hikari_blush),
+    StepDialogue(3000,  "3000歩…ずっとこのまま歩いていたいですよ", R.drawable.hikari_blush),
+    StepDialogue(5000,  "5000歩…ずっと、○○さんとこうして歩いていたいですよ", R.drawable.hikari_blush),
+    StepDialogue(8000,  "8000歩！○○さんのこと、ずっと応援していますよ♡", R.drawable.hikari_smile),
+    StepDialogue(10000, "1万歩！○○さんといたら、どこまでだって歩いていけそうです", R.drawable.hikari_celebrate),
+    StepDialogue(20000, "2万歩…！○○さんの頑張り、全部そばで見ていたいです", R.drawable.hikari_blush),
+    StepDialogue(30000, "3万歩…！もう、○○さんのことが大好きです。ずっと一緒に歩きましょうね", R.drawable.hikari_celebrate)
 )
 
-val stepDialoguesLv9 = listOf(
-    StepDialogue(0,     "おはよう♡ ○○さんの隣で歩けること、すごく幸せだよ", R.drawable.hikari_blush),
-    StepDialogue(1000,  "1000歩達成！○○さんと歩く1000歩は、なんか特別な感じがするよ", R.drawable.hikari_blush),
-    StepDialogue(3000,  "3000歩達成…ずっとこのまま歩いていたいな", R.drawable.hikari_blush),
-    StepDialogue(5000,  "5000歩達成…ずっと、○○さんとこうして歩いていたいな", R.drawable.hikari_blush),
-    StepDialogue(8000,  "8000歩達成！○○さんのこと、ずっと応援してるよ♡", R.drawable.hikari_smile),
-    StepDialogue(10000, "1万歩達成！○○さんといたら、どこまでだって歩いていけそうだよ", R.drawable.hikari_celebrate),
-    StepDialogue(20000, "2万歩達成…！○○さんの頑張り、全部そばで見てたいな", R.drawable.hikari_blush),
-    StepDialogue(30000, "3万歩達成…！もう、○○さんのこと大好きだよ。ずっと一緒に歩こうね", R.drawable.hikari_celebrate)
-)
+val stepDialoguesLv9 = stepDialoguesLv7
 
 fun homeStepDialogue(todaySteps: Int, loveCount: Int): StepDialogue {
     val list = when {
@@ -3382,7 +3588,6 @@ fun homeTouchDialogues(loveCount: Int): List<TouchDialogue> = when {
     loveCount >= 7  -> touchDialoguesLv7
     else            -> touchDialoguesLv5
 }
-
 fun calcTalkStage(loveCount: Int): Int = when {
     loveCount >= 9 -> 5; loveCount >= 7 -> 4; loveCount >= 5 -> 3; loveCount >= 3 -> 2; else -> 1
 }
@@ -4045,11 +4250,98 @@ suspend fun callGeminiApiForSummary(messages: List<ChatMessage>): String {
     )
 }
 
+data class EncodedImage(val base64: String, val mimeType: String)
+
+private suspend fun saveDiaryPhoto(context: Context, date: String, uriString: String): String? =
+    withContext(Dispatchers.IO) {
+        runCatching {
+            val uri = uriString.toUri()
+            val bitmap = context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it)
+            } ?: return@runCatching null
+
+            val scaledBitmap = scaleBitmapToMaxSize(bitmap, 1280)
+            if (scaledBitmap !== bitmap) bitmap.recycle()
+
+            val dir = File(context.filesDir, "diary_photos").apply { mkdirs() }
+            val file = File(dir, "$date.jpg")
+            ByteArrayOutputStream().use { output ->
+                scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 86, output)
+                file.writeBytes(output.toByteArray())
+            }
+            scaledBitmap.recycle()
+            file.absolutePath
+        }.getOrNull()
+    }
+
+private suspend fun encodeImageForGemini(context: Context, uriString: String): EncodedImage? =
+    withContext(Dispatchers.IO) {
+        runCatching {
+            val uri = uriString.toUri()
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, bounds)
+            }
+
+            val maxSize = 1024
+            var sampleSize = 1
+            while ((bounds.outWidth / sampleSize) > maxSize || (bounds.outHeight / sampleSize) > maxSize) {
+                sampleSize *= 2
+            }
+
+            val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+            val bitmap = context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, decodeOptions)
+            } ?: return@runCatching null
+
+            val scaledBitmap = scaleBitmapToMaxSize(bitmap, maxSize)
+            if (scaledBitmap !== bitmap) bitmap.recycle()
+
+            val output = ByteArrayOutputStream()
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 82, output)
+            scaledBitmap.recycle()
+
+            EncodedImage(
+                base64 = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP),
+                mimeType = "image/jpeg"
+            )
+        }.getOrNull()
+    }
+
+private suspend fun encodeImageFileForGemini(path: String): EncodedImage? =
+    withContext(Dispatchers.IO) {
+        runCatching {
+            val bitmap = BitmapFactory.decodeFile(path) ?: return@runCatching null
+            val scaledBitmap = scaleBitmapToMaxSize(bitmap, 1024)
+            if (scaledBitmap !== bitmap) bitmap.recycle()
+
+            val output = ByteArrayOutputStream()
+            scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 82, output)
+            scaledBitmap.recycle()
+
+            EncodedImage(
+                base64 = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP),
+                mimeType = "image/jpeg"
+            )
+        }.getOrNull()
+    }
+
+private fun scaleBitmapToMaxSize(bitmap: Bitmap, maxSize: Int): Bitmap {
+    val longest = maxOf(bitmap.width, bitmap.height)
+    if (longest <= maxSize) return bitmap
+    val scale = maxSize.toFloat() / longest.toFloat()
+    val width = (bitmap.width * scale).toInt().coerceAtLeast(1)
+    val height = (bitmap.height * scale).toInt().coerceAtLeast(1)
+    return Bitmap.createScaledBitmap(bitmap, width, height, true)
+}
+
 suspend fun callGeminiApi(
     systemPrompt: String,
     history: List<ChatMessage>,
     userMessage: String,
-    maxTokens: Int = 400
+    maxTokens: Int = 400,
+    imageBase64: String? = null,
+    imageMimeType: String? = null
 ): String = withContext(Dispatchers.IO) {
     val url = URL("https://lovemanpokei.tukinamiotoko.workers.dev")
     val conn = url.openConnection() as HttpURLConnection
@@ -4067,8 +4359,17 @@ suspend fun callGeminiApi(
         })
     }
     contents.put(JSONObject().apply {
+        val parts = JSONArray().put(JSONObject().apply { put("text", userMessage) })
+        if (imageBase64 != null && imageMimeType != null) {
+            parts.put(JSONObject().apply {
+                put("inlineData", JSONObject().apply {
+                    put("mimeType", imageMimeType)
+                    put("data", imageBase64)
+                })
+            })
+        }
         put("role", "user")
-        put("parts", JSONArray().put(JSONObject().apply { put("text", userMessage) }))
+        put("parts", parts)
     })
 
     val body = JSONObject().apply {
