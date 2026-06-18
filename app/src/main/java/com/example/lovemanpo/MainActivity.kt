@@ -3008,8 +3008,9 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                             .padding(horizontal = 14.dp, vertical = 10.dp)
                             .drawWithContent {
                                 val lineHeight = 26.sp.toPx()
-                                var y = 20.sp.toPx()
-                                while (y < size.height) {
+                                // 各テキスト行の下端に罫線を引き、文字が線の上に乗るようにする
+                                var y = lineHeight
+                                while (y <= size.height) {
                                     drawLine(
                                         color = Color(0xFFFFC7D8).copy(alpha = 0.65f),
                                         start = Offset(0f, y),
@@ -3032,7 +3033,7 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                                 fontFamily = diaryFontFamily,
                                 platformStyle = PlatformTextStyle(includeFontPadding = false),
                                 lineHeightStyle = LineHeightStyle(
-                                    alignment = LineHeightStyle.Alignment.Center,
+                                    alignment = LineHeightStyle.Alignment.Bottom,
                                     trim = LineHeightStyle.Trim.None
                                 )
                             ),
@@ -3040,7 +3041,6 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                                 if (writingText.isEmpty()) {
                                     Text(
                                         "今日あったことをここに書いてね…",
-                                        modifier = Modifier.offset(y = 2.dp),
                                         color = Color(0xFFBBBBBB),
                                         fontSize = 14.sp,
                                         lineHeight = 26.sp,
@@ -3048,7 +3048,7 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                                         style = TextStyle(
                                             platformStyle = PlatformTextStyle(includeFontPadding = false),
                                             lineHeightStyle = LineHeightStyle(
-                                                alignment = LineHeightStyle.Alignment.Center,
+                                                alignment = LineHeightStyle.Alignment.Bottom,
                                                 trim = LineHeightStyle.Trim.None
                                             )
                                         )
