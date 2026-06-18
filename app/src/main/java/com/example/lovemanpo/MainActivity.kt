@@ -263,6 +263,11 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getStringSet("USER_DIARY_DATES", emptySet()) ?: emptySet()
         set(value) = prefs.edit { putStringSet("USER_DIARY_DATES", value) }
 
+    // デバッグ用：ONにすると日記の返信を翌日ではなく即時生成する
+    var debugInstantDiaryReply: Boolean
+        get() = prefs.getBoolean("DEBUG_INSTANT_DIARY_REPLY", false)
+        set(value) = prefs.edit { putBoolean("DEBUG_INSTANT_DIARY_REPLY", value) }
+
     var heightCm: Float
         get() = prefs.getFloat("HEIGHT_CM", 170f)
         set(value) = prefs.edit { putFloat("HEIGHT_CM", value) }
@@ -712,6 +717,12 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
     fun debugAddActionPoints(amount: Int) {
         repository.totalEarnedPoints += amount
         totalEarnedPoints.intValue = repository.totalEarnedPoints
+    }
+
+    val debugInstantDiaryReply = mutableStateOf(repository.debugInstantDiaryReply)
+    fun setDebugInstantDiaryReply(enabled: Boolean) {
+        repository.debugInstantDiaryReply = enabled
+        debugInstantDiaryReply.value = enabled
     }
 
     fun debugResetData() {
@@ -2076,6 +2087,29 @@ fun DebugScreen(navController: NavController, viewModel: StepViewModel) {
                     }
                 }
             }
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "日記の返信", fontWeight = FontWeight.Bold)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("返信を即時生成する")
+                            Text(
+                                "ONにすると翌日ではなくその場で返信が届きます",
+                                fontSize = 12.sp,
+                                color = Color(0xFF888888)
+                            )
+                        }
+                        Switch(
+                            checked = viewModel.debugInstantDiaryReply.value,
+                            onCheckedChange = { viewModel.setDebugInstantDiaryReply(it) }
+                        )
+                    }
+                }
+            }
             Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text(text = "データリセット", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
@@ -2793,6 +2827,43 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
         selectedDiaryPhotoUri = uri?.toString()
     }
 
+    val instantDiaryReply = viewModel.debugInstantDiaryReply.value
+
+    // 指定日の日記に対する返信を生成して保存する（過去日・即時生成の両方で使用）
+    fun generateDiaryReply(date: String) {
+        loadingDates = loadingDates + date
+        scope.launch {
+            try {
+                val diaryText = viewModel.repository.getUserDiary(date)
+                val photoPath = viewModel.repository.getUserDiaryPhotoPath(date)
+                val encodedPhoto = photoPath.takeIf { it.isNotBlank() }?.let { encodeImageFileForGemini(it) }
+                val prompt = buildDiaryReplySystemPrompt(
+                    loveCount = loveCount,
+                    playerName = playerName,
+                    todaySteps = todaySteps,
+                    diaryText = diaryText,
+                    hasPhoto = encodedPhoto != null
+                )
+                val rawReply = callGeminiApi(
+                    systemPrompt = prompt,
+                    history = emptyList(),
+                    userMessage = "返事をください",
+                    maxTokens = 600,
+                    imageBase64 = encodedPhoto?.base64,
+                    imageMimeType = encodedPhoto?.mimeType
+                )
+                val emotionMatch = Regex("""\[EMOTION:(\w+)\]""").find(rawReply)
+                val emotionTag = emotionMatch?.groupValues?.get(1) ?: "normal"
+                val cleanReply = rawReply.replace(Regex("""\[EMOTION:\w+\]"""), "").trim()
+                viewModel.saveDiaryReply(date, cleanReply, emotionTag)
+            } catch (_: Exception) {
+                viewModel.saveDiaryReply(date, "昨日の日記、ちゃんと読んだよ。返事が遅くなってごめんね。また聞かせてください。", "normal")
+            }
+            loadingDates = loadingDates - date
+            refreshKey++
+        }
+    }
+
     LaunchedEffect(allDates, checkedPendingReplies) {
         if (checkedPendingReplies) return@LaunchedEffect
         checkedPendingReplies = true
@@ -2801,45 +2872,14 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
             .filter { date ->
                 val diaryDate = runCatching { LocalDate.parse(date) }.getOrNull()
                 diaryDate != null &&
-                    diaryDate.isBefore(todayDate) &&
+                    // 即時返信ONなら今日の日記も含める。OFFなら従来通り過去日のみ。
+                    (if (instantDiaryReply) !diaryDate.isAfter(todayDate) else diaryDate.isBefore(todayDate)) &&
                     viewModel.repository.getUserDiary(date).isNotBlank() &&
                     viewModel.repository.getDiaryReply(date).isBlank()
             }
             .sorted()
 
-        pendingDates.forEach { date ->
-            loadingDates = loadingDates + date
-            scope.launch {
-                try {
-                    val diaryText = viewModel.repository.getUserDiary(date)
-                    val photoPath = viewModel.repository.getUserDiaryPhotoPath(date)
-                    val encodedPhoto = photoPath.takeIf { it.isNotBlank() }?.let { encodeImageFileForGemini(it) }
-                    val prompt = buildDiaryReplySystemPrompt(
-                        loveCount = loveCount,
-                        playerName = playerName,
-                        todaySteps = todaySteps,
-                        diaryText = diaryText,
-                        hasPhoto = encodedPhoto != null
-                    )
-                    val rawReply = callGeminiApi(
-                        systemPrompt = prompt,
-                        history = emptyList(),
-                        userMessage = "返事をください",
-                        maxTokens = 600,
-                        imageBase64 = encodedPhoto?.base64,
-                        imageMimeType = encodedPhoto?.mimeType
-                    )
-                    val emotionMatch = Regex("""\[EMOTION:(\w+)\]""").find(rawReply)
-                    val emotionTag = emotionMatch?.groupValues?.get(1) ?: "normal"
-                    val cleanReply = rawReply.replace(Regex("""\[EMOTION:\w+\]"""), "").trim()
-                    viewModel.saveDiaryReply(date, cleanReply, emotionTag)
-                } catch (_: Exception) {
-                    viewModel.saveDiaryReply(date, "昨日の日記、ちゃんと読んだよ。返事が遅くなってごめんね。また聞かせてください。", "normal")
-                }
-                loadingDates = loadingDates - date
-                refreshKey++
-            }
-        }
+        pendingDates.forEach { date -> generateDiaryReply(date) }
     }
 
     Scaffold(
@@ -2933,20 +2973,22 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                                 if (text.isNotBlank()) {
                                     showWriteDialog = false
                                     viewModel.saveUserDiary(today, text, selectedMood)
-                                    photoUri?.let { uri ->
+                                    if (photoUri != null) {
+                                        // 写真を保存してから（即時返信ONなら）返信を生成する
                                         scope.launch {
-                                            saveDiaryPhoto(context, today, uri)?.let { path ->
+                                            saveDiaryPhoto(context, today, photoUri)?.let { path ->
                                                 viewModel.repository.setUserDiaryPhotoPath(today, path)
                                                 refreshKey++
                                             }
+                                            if (instantDiaryReply) generateDiaryReply(today)
                                         }
+                                    } else if (instantDiaryReply) {
+                                        generateDiaryReply(today)
                                     }
-                                    loadingDates = loadingDates + today
                                     writingText = ""
                                     selectedMood = ""
                                     selectedDiaryPhotoUri = null
                                     refreshKey++
-                                    loadingDates = loadingDates - today
                                 }
                             }
                         ) {
