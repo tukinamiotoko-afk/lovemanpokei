@@ -3514,9 +3514,9 @@ val touchDialoguesLv7 = listOf(
 )
 
 val touchDialoguesLv9 = listOf(
-    TouchDialogue("○○さんのこと、大好きですよ。", R.drawable.hikari_blush),
-    TouchDialogue("ずっと一緒にいたいですよ、○○さんと。", R.drawable.hikari_blush),
-    TouchDialogue("○○さんといると、世界が明るく見える気がします。", R.drawable.hikari_smile)
+    TouchDialogue("○○さんの声を聞くと、ほっとしますよ。", R.drawable.hikari_blush),
+    TouchDialogue("こうして一緒にいられる時間が、いちばん好きです。", R.drawable.hikari_blush),
+    TouchDialogue("○○さんのこと、いつも考えてしまうんですよ…", R.drawable.hikari_blush)
 )
 
 val touchDialoguesLv10 = listOf(
