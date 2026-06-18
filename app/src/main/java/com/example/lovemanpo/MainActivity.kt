@@ -1737,6 +1737,14 @@ fun HomeWeatherBanner(weatherInfo: WeatherInfo?) {
 @Composable
 fun HourlyWeatherSheet(weatherInfo: WeatherInfo, onDismiss: () -> Unit) {
     val currentHour = java.time.LocalTime.now().hour
+    val currentIndex = weatherInfo.hourly.indexOfFirst { it.hour == currentHour }.takeIf { it >= 0 } ?: 0
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    var selectedEntry by remember { mutableStateOf(weatherInfo.hourly.getOrNull(currentIndex)) }
+
+    LaunchedEffect(Unit) {
+        listState.animateScrollToItem(maxOf(0, currentIndex - 2))
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFFF5FBFF),
@@ -1744,21 +1752,30 @@ fun HourlyWeatherSheet(weatherInfo: WeatherInfo, onDismiss: () -> Unit) {
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 32.dp)) {
             Text("1時間ごとの天気", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF1565C0), modifier = Modifier.padding(bottom = 12.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            LazyRow(state = listState, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(weatherInfo.hourly) { entry ->
                     val isNow = entry.hour == currentHour
+                    val isSelected = selectedEntry?.hour == entry.hour
+                    val bgColor = when {
+                        isNow && isSelected -> Color(0xFF0288D1)
+                        isNow              -> Color(0xFF29B6F6)
+                        isSelected         -> Color(0xFF90CAF9)
+                        else               -> Color(0xFFE1F5FE)
+                    }
+                    val textColor = if (isNow || isSelected) Color.White else Color(0xFF1565C0)
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isNow) Color(0xFF29B6F6) else Color(0xFFE1F5FE))
+                            .background(bgColor)
+                            .clickable { selectedEntry = entry }
                             .padding(horizontal = 10.dp, vertical = 8.dp)
                     ) {
                         Text(
                             if (isNow) "今" else "${entry.hour}時",
                             fontSize = 11.sp,
-                            fontWeight = if (isNow) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isNow) Color.White else Color(0xFF1565C0)
+                            fontWeight = if (isNow || isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = textColor
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(wmoToEmoji(entry.weatherCode), fontSize = 20.sp)
@@ -1767,14 +1784,45 @@ fun HourlyWeatherSheet(weatherInfo: WeatherInfo, onDismiss: () -> Unit) {
                             "${entry.tempC.toInt()}°",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
-                            color = if (isNow) Color.White else Color(0xFF1565C0)
+                            color = textColor
                         )
-                        if (entry.precipitationMm > 0.0) {
-                            Text(
-                                "${if (entry.precipitationMm < 1.0) String.format(java.util.Locale.US, "%.1f", entry.precipitationMm) else entry.precipitationMm.toInt().toString()}mm",
-                                fontSize = 9.sp,
-                                color = if (isNow) Color.White.copy(alpha = 0.85f) else Color(0xFF1565C0).copy(alpha = 0.75f)
-                            )
+                    }
+                }
+            }
+
+            // 時間詳細パネル
+            selectedEntry?.let { entry ->
+                Spacer(Modifier.height(16.dp))
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color(0xFFE3F2FD),
+                    border = BorderStroke(1.dp, Color(0xFF90CAF9)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            if (entry.hour == currentHour) "現在（${entry.hour}時）" else "${entry.hour}時の天気",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = Color(0xFF1565C0)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                            Column {
+                                Text("天気", fontSize = 11.sp, color = Color(0xFF607D8B))
+                                Text("${wmoToEmoji(entry.weatherCode)} ${wmoToDescription(entry.weatherCode)}", fontSize = 13.sp, color = Color(0xFF1A1A1A))
+                            }
+                            Column {
+                                Text("気温", fontSize = 11.sp, color = Color(0xFF607D8B))
+                                Text("${entry.tempC.toInt()}°C", fontSize = 13.sp, color = Color(0xFF1A1A1A))
+                            }
+                            Column {
+                                Text("降水量", fontSize = 11.sp, color = Color(0xFF607D8B))
+                                val precipText = if (entry.precipitationMm < 1.0)
+                                    String.format(java.util.Locale.US, "%.1f", entry.precipitationMm)
+                                else entry.precipitationMm.toInt().toString()
+                                Text("${precipText}mm", fontSize = 13.sp, color = Color(0xFF1A1A1A))
+                            }
                         }
                     }
                 }
