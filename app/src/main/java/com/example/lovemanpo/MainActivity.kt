@@ -1262,7 +1262,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         }
     }
 
-    val displayMessage = touchedDialogue?.text ?: stepDialogue.text
+    val displayMessage = (touchedDialogue?.text ?: stepDialogue.text).replace("○○", playerName)
     val displayExpression = touchedDialogue?.expr ?: stepDialogue.expr
 
     LaunchedEffect(displayMessage, playerName) {
@@ -3287,21 +3287,27 @@ data class StepDialogue(val thresholdSteps: Int, val text: String, val expr: Int
 data class TouchDialogue(val text: String, val expr: Int)
 
 val touchDialoguesLv5 = listOf(
-    TouchDialogue("○○さんのこと、もっと知りたいな。", R.drawable.hikari_blush),
-    TouchDialogue("ねえ、今度海に行ってみたいな。二人で…なんちゃって！", R.drawable.hikari_blush),
-    TouchDialogue("一緒に歩いてると、なんか安心する。", R.drawable.hikari_smile)
+    TouchDialogue("○○さんのこと、もっと知りたいですよ。", R.drawable.hikari_blush),
+    TouchDialogue("一緒に歩いていると、なんか安心しますよ。", R.drawable.hikari_smile),
+    TouchDialogue("また一緒に出かけましょうね！", R.drawable.hikari_smile)
 )
 
 val touchDialoguesLv7 = listOf(
-    TouchDialogue("○○さんのそばにいると、落ち着くんだよね…", R.drawable.hikari_blush),
-    TouchDialogue("温泉って行ったことないんですよね。いつか連れてってもらえたりしますか？えへへ", R.drawable.hikari_blush),
-    TouchDialogue("○○さんって、ちょっとズルいよ。こんなに好きにさせて。", R.drawable.hikari_blush)
+    TouchDialogue("○○さんのそばにいると、落ち着きますよ…", R.drawable.hikari_blush),
+    TouchDialogue("ずっと隣にいてほしいです。…なんちゃって！", R.drawable.hikari_blush),
+    TouchDialogue("○○さんって、ちょっとズルいですよ。こんなに好きになってしまって。", R.drawable.hikari_blush)
 )
 
 val touchDialoguesLv9 = listOf(
-    TouchDialogue("○○さんのこと、大好きだよ。", R.drawable.hikari_blush),
-    TouchDialogue("旅館、来てよかったな…。○○さんと二人で、うれしい。", R.drawable.hikari_blush),
-    TouchDialogue("○○さんといると、世界が明るく見える気がする。", R.drawable.hikari_smile)
+    TouchDialogue("○○さんのそばにいると、落ち着きますよ…", R.drawable.hikari_blush),
+    TouchDialogue("ずっと隣にいてほしいです。…なんちゃって！", R.drawable.hikari_blush),
+    TouchDialogue("○○さんって、ちょっとズルいですよ。こんなに好きになってしまって。", R.drawable.hikari_blush)
+)
+
+val touchDialoguesLv10 = listOf(
+    TouchDialogue("○○さんのこと、大好きですよ。", R.drawable.hikari_blush),
+    TouchDialogue("ずっと一緒にいたいですよ、○○さんと。", R.drawable.hikari_blush),
+    TouchDialogue("○○さんといると、世界が明るく見える気がします。", R.drawable.hikari_smile)
 )
 
 val stepDialoguesLv1 = listOf(
@@ -3371,9 +3377,10 @@ fun homeStepDialogue(todaySteps: Int, loveCount: Int): StepDialogue {
 }
 
 fun homeTouchDialogues(loveCount: Int): List<TouchDialogue> = when {
-    loveCount >= 9 -> touchDialoguesLv9
-    loveCount >= 7 -> touchDialoguesLv7
-    else           -> touchDialoguesLv5
+    loveCount >= 10 -> touchDialoguesLv10
+    loveCount >= 9  -> touchDialoguesLv9
+    loveCount >= 7  -> touchDialoguesLv7
+    else            -> touchDialoguesLv5
 }
 
 fun calcTalkStage(loveCount: Int): Int = when {
