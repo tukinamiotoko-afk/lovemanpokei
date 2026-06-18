@@ -266,6 +266,10 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getLong("LAST_CHAT_TS", 0L)
         set(value) = prefs.edit { putLong("LAST_CHAT_TS", value) }
 
+    var lastGreetingSessionDate: String
+        get() = prefs.getString("LAST_GREETING_SESSION_DATE", "") ?: ""
+        set(value) = prefs.edit { putString("LAST_GREETING_SESSION_DATE", value) }
+
     var unlockedMemoryIds: Set<String>
         get() = prefs.getStringSet("UNLOCKED_MEMORY_IDS", emptySet()) ?: emptySet()
         set(value) = prefs.edit { putStringSet("UNLOCKED_MEMORY_IDS", value) }
@@ -539,6 +543,28 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
     fun clearFreeChatHistory() {
         freeChatMessages.clear()
         repository.freeChatHistoryJson = "[]"
+    }
+
+    private fun getSessionDate(): String {
+        val now = java.time.LocalTime.now()
+        val today = LocalDate.now()
+        return if (now.hour < 5) today.minusDays(1).toString() else today.toString()
+    }
+
+    fun checkAndSendMorningGreeting(): Pair<String, Int>? {
+        val sessionDate = getSessionDate()
+        if (repository.lastGreetingSessionDate == sessionDate) return null
+        repository.lastGreetingSessionDate = sessionDate
+        clearFreeChatHistory()
+        val name = repository.playerName
+        val love = loveCount.intValue
+        return when {
+            love <= 2 -> Pair("おはようございます、${name}さん。今日もよろしくお願いします。", R.drawable.osyaberi_normal)
+            love <= 4 -> Pair("おはようございます！今日も会えてよかったです♪", R.drawable.osyaberi_smile)
+            love <= 6 -> Pair("おはようございます♡ また来てくれたんですね！うれしいです。", R.drawable.osyaberi_sugokuegao)
+            love <= 8 -> Pair("おはようございます！…待っていましたよ、${name}さん♡", R.drawable.osyaberi_tereru)
+            else      -> Pair("…来てくれたんですね。おはようございます、${name}さん♡ 今日もそばにいてください。", R.drawable.osyaberi_koigokorowoidaku)
+        }
     }
 
     fun spendPointForChat(): Boolean {
@@ -4139,12 +4165,17 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 "${invite}に行こうよ！一緒に行こう♪",
                 R.drawable.osyaberi_sugokuegao
             ))
-        } else if (messages.isEmpty()) {
+        } else if (!viewModel.hasEverChatted) {
             messages.add(ChatMessage(
                 "assistant",
                 "ひかりがこちらに気づいて、ぱっと明るい顔になった。\n「あ、はじめまして！お散歩サークルに入ったひかりです。これからよろしくお願いします！一緒に歩きましょうね！」",
                 R.drawable.osyaberi_smile
             ))
+        } else {
+            val greeting = viewModel.checkAndSendMorningGreeting()
+            if (greeting != null) {
+                messages.add(ChatMessage("assistant", greeting.first, greeting.second))
+            }
         }
     }
 
