@@ -234,6 +234,16 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getStringSet("DIARY_DATES", emptySet()) ?: emptySet()
         set(value) = prefs.edit { putStringSet("DIARY_DATES", value) }
 
+    fun getUserDiary(date: String): String = prefs.getString("USER_DIARY_$date", "") ?: ""
+    fun setUserDiary(date: String, text: String) = prefs.edit { putString("USER_DIARY_$date", text) }
+    fun getDiaryReply(date: String): String = prefs.getString("DIARY_REPLY_$date", "") ?: ""
+    fun setDiaryReply(date: String, text: String) = prefs.edit { putString("DIARY_REPLY_$date", text) }
+    fun getDiaryReplyEmotion(date: String): String = prefs.getString("DIARY_REPLY_EMOTION_$date", "normal") ?: "normal"
+    fun setDiaryReplyEmotion(date: String, emotion: String) = prefs.edit { putString("DIARY_REPLY_EMOTION_$date", emotion) }
+    var userDiaryDates: Set<String>
+        get() = prefs.getStringSet("USER_DIARY_DATES", emptySet()) ?: emptySet()
+        set(value) = prefs.edit { putStringSet("USER_DIARY_DATES", value) }
+
     var heightCm: Float
         get() = prefs.getFloat("HEIGHT_CM", 170f)
         set(value) = prefs.edit { putFloat("HEIGHT_CM", value) }
@@ -406,6 +416,18 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
             if (legacy.isNotBlank()) return legacy.take(maxChars)
         }
         return sb.toString().trim()
+    }
+
+    fun saveUserDiary(date: String, text: String) {
+        repository.setUserDiary(date, text)
+        val dates = repository.userDiaryDates.toMutableSet()
+        dates.add(date)
+        repository.userDiaryDates = dates.sorted().takeLast(90).toSet()
+    }
+
+    fun saveDiaryReply(date: String, replyText: String, emotion: String) {
+        repository.setDiaryReply(date, replyText)
+        repository.setDiaryReplyEmotion(date, emotion)
     }
 
     val hasEverChatted get() = repository.hasEverChatted
@@ -2688,18 +2710,204 @@ private fun formatMillis(millis: Long): String {
 @Composable
 fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
     val pinkAccent = Color(0xFFFF6B9D)
+    val scope = rememberCoroutineScope()
+    val playerName = viewModel.playerName.value.ifBlank { "あなた" }
+    val loveCount = viewModel.loveCount.intValue
+    val todaySteps = viewModel.todaySteps.intValue
+    val today = LocalDate.now().toString()
+
+    var refreshKey by remember { mutableIntStateOf(0) }
+    val allDates = remember(refreshKey) { viewModel.repository.userDiaryDates.sortedDescending() }
+    val todayDiaryExists = remember(refreshKey) { viewModel.repository.getUserDiary(today).isNotBlank() }
+
+    var showWriteDialog by remember { mutableStateOf(false) }
+    var writingText by remember { mutableStateOf("") }
+    var loadingDates by remember { mutableStateOf(setOf<String>()) }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("日記", color = pinkAccent, fontWeight = FontWeight.Bold) },
-                navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = pinkAccent) } }
+                title = { Text("交換日記", color = pinkAccent, fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily) },
+                navigationIcon = { IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = pinkAccent)
+                }},
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFFFF9FC))
             )
-        }
+        },
+        floatingActionButton = {
+            if (!todayDiaryExists) {
+                FloatingActionButton(
+                    onClick = { showWriteDialog = true },
+                    containerColor = pinkAccent,
+                    contentColor = Color.White,
+                    shape = CircleShape
+                ) { Icon(Icons.Default.Edit, contentDescription = "日記を書く") }
+            }
+        },
+        containerColor = Color(0xFFFFF9FC)
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Icon(Icons.Default.Book, contentDescription = null, tint = Color(0xFFDDC0C8), modifier = Modifier.size(64.dp))
-                Text("日記機能は近日公開予定です", color = Color(0xFF999999), fontSize = 14.sp)
+        if (allDates.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Image(painterResource(R.drawable.hikari_smile_face), null,
+                        Modifier.size(72.dp).clip(CircleShape).background(Color(0xFFFFE0E9)),
+                        contentScale = ContentScale.Crop)
+                    Text("まだ日記がないよ", fontSize = 14.sp, color = Color(0xFF999999), fontFamily = MplusRoundedFontFamily)
+                    Text("右下のボタンから書いてみてね♪", fontSize = 12.sp, color = Color(0xFFBBBBBB), fontFamily = MplusRoundedFontFamily)
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                items(allDates) { date ->
+                    DiaryEntryCard(
+                        date = date,
+                        userText = viewModel.repository.getUserDiary(date),
+                        replyText = viewModel.repository.getDiaryReply(date),
+                        emotion = viewModel.repository.getDiaryReplyEmotion(date),
+                        isLoading = loadingDates.contains(date),
+                        loveCount = loveCount
+                    )
+                }
+            }
+        }
+    }
+
+    if (showWriteDialog) {
+        AlertDialog(
+            onDismissRequest = { showWriteDialog = false },
+            containerColor = Color.White,
+            title = { Text("今日の日記", fontFamily = MplusRoundedFontFamily, fontWeight = FontWeight.Bold, color = pinkAccent) },
+            text = {
+                OutlinedTextField(
+                    value = writingText,
+                    onValueChange = { if (it.length <= 300) writingText = it },
+                    modifier = Modifier.fillMaxWidth().height(180.dp),
+                    placeholder = { Text("今日あったことを書いてね…", color = Color.LightGray, fontFamily = MplusRoundedFontFamily, fontSize = 13.sp) },
+                    maxLines = 10,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = pinkAccent,
+                        unfocusedBorderColor = Color(0xFFFFB7D0)
+                    )
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val text = writingText.trim()
+                        if (text.isNotBlank()) {
+                            showWriteDialog = false
+                            viewModel.saveUserDiary(today, text)
+                            loadingDates = loadingDates + today
+                            writingText = ""
+                            refreshKey++
+                            scope.launch {
+                                try {
+                                    val prompt = buildDiaryReplySystemPrompt(
+                                        loveCount = loveCount,
+                                        playerName = playerName,
+                                        todaySteps = todaySteps,
+                                        diaryText = text,
+                                        hasPhoto = false
+                                    )
+                                    val rawReply = callGeminiApi(
+                                        systemPrompt = prompt,
+                                        history = emptyList(),
+                                        userMessage = "返事をください",
+                                        maxTokens = 600
+                                    )
+                                    val emotionMatch = Regex("""\[EMOTION:(\w+)\]""").find(rawReply)
+                                    val emotionTag = emotionMatch?.groupValues?.get(1) ?: "normal"
+                                    val cleanReply = rawReply.replace(Regex("""\[EMOTION:\w+\]"""), "").trim()
+                                    viewModel.saveDiaryReply(today, cleanReply, emotionTag)
+                                } catch (_: Exception) {
+                                    viewModel.saveDiaryReply(today, "今日もちゃんと日記、読んだよ。また明日ね。", "normal")
+                                }
+                                loadingDates = loadingDates - today
+                                refreshKey++
+                            }
+                        }
+                    },
+                    enabled = writingText.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = pinkAccent)
+                ) { Text("送る", fontFamily = MplusRoundedFontFamily) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showWriteDialog = false }) {
+                    Text("キャンセル", color = Color.Gray, fontFamily = MplusRoundedFontFamily)
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun DiaryEntryCard(
+    date: String,
+    userText: String,
+    replyText: String,
+    emotion: String,
+    isLoading: Boolean,
+    loveCount: Int
+) {
+    val pinkAccent = Color(0xFFFF6B9D)
+    val parts = date.split("-")
+    val formattedDate = if (parts.size == 3)
+        "${parts[0]}年${parts[1].toIntOrNull() ?: parts[1]}月${parts[2].toIntOrNull() ?: parts[2]}日"
+    else date
+    val hikariExprRes = when (emotion) {
+        "happy", "surprise" -> R.drawable.hikari_celebrate
+        "love", "shy"       -> R.drawable.hikari_blush
+        else                -> R.drawable.hikari_smile
+    }
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White,
+        shadowElevation = 4.dp,
+        border = BorderStroke(1.dp, Color(0xFFFFB7D0).copy(alpha = 0.4f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(formattedDate, fontSize = 11.sp, color = Color(0xFFAAAAAA), fontFamily = MplusRoundedFontFamily)
+            Spacer(Modifier.height(8.dp))
+
+            Row(verticalAlignment = Alignment.Top) {
+                Icon(Icons.Default.Edit, tint = pinkAccent.copy(alpha = 0.7f), modifier = Modifier.size(14.dp).padding(top = 2.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(userText, fontSize = 13.sp, color = Color(0xFF333333), fontFamily = MplusRoundedFontFamily, lineHeight = 20.sp)
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(Modifier.weight(1f).height(0.5.dp).background(Color(0xFFFFB7D0).copy(alpha = 0.6f)))
+                Text("ひかりより", modifier = Modifier.padding(horizontal = 8.dp),
+                    fontSize = 10.sp, color = pinkAccent,
+                    fontFamily = MplusRoundedFontFamily, fontWeight = FontWeight.Bold)
+                Box(Modifier.weight(1f).height(0.5.dp).background(Color(0xFFFFB7D0).copy(alpha = 0.6f)))
+            }
+
+            if (isLoading) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(modifier = Modifier.size(14.dp), color = pinkAccent, strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("ひかりが返事を書いています…", fontSize = 12.sp, color = Color(0xFFAAAAAA), fontFamily = MplusRoundedFontFamily)
+                }
+            } else if (replyText.isNotBlank()) {
+                Row(verticalAlignment = Alignment.Top) {
+                    Image(
+                        painter = painterResource(id = expressionToFaceRes(hikariExprRes)),
+                        contentDescription = null,
+                        modifier = Modifier.size(34.dp).clip(CircleShape).background(Color(0xFFFFE0E9)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(replyText, fontSize = 13.sp, color = Color(0xFF333333), fontFamily = MplusRoundedFontFamily, lineHeight = 20.sp)
+                }
             }
         }
     }
@@ -3326,6 +3534,74 @@ Talk Stage が 3 以上の会話で、自然な流れで以下の場所の話題
 セリフ本文""".trimIndent()
 }
 
+fun buildDiaryReplySystemPrompt(
+    loveCount: Int,
+    playerName: String,
+    todaySteps: Int,
+    diaryText: String,
+    hasPhoto: Boolean
+): String {
+    val loveStage = when {
+        loveCount <= 2 -> 1
+        loveCount <= 4 -> 3
+        loveCount <= 6 -> 5
+        loveCount <= 8 -> 7
+        else -> 9
+    }
+    val toneDesc = when (loveStage) {
+        1, 2 -> "少し丁寧で、でも親しみはある。「日記、読んだよ」から始めてもOK。"
+        3, 4 -> "自然体。共感と軽い本音が混じる。"
+        5, 6 -> "少し踏み込んだ言葉を使う。「一緒にいたかった」「もっと聞きたい」が出てくる。"
+        7, 8 -> "素直に感情を出す。照れを隠しきれない場面も。"
+        else  -> "感情をほぼ隠さない。余韻のある締め方。"
+    }
+    val photoFlag = if (hasPhoto)
+        "※上記の日記に写真が1枚添付されています。写真の内容にも自然に触れてください。"
+    else ""
+    return """
+あなたは「ひかり」（22歳）というキャラクターです。以下の設定を厳守してください。
+
+【基本設定】
+役割: 「ラブ万歩計」のヒロイン。${playerName}と交換日記を続けている。
+一人称: 「わたし」。
+${playerName}の呼び方: 名前のみ（「〜さん」などの敬称は禁止）。
+
+【性格】
+明るく素直で少しだけツンデレ。感情表現が豊か（驚き・喜び・照れ・心配・切なさ）。否定せず受け入れる。時々自分の弱さや感情の揺れを見せる。
+
+【日記返事の絶対ルール】
+1. これは交換日記の返事。リアルタイムのチャットではない
+2. 文章は300字以内。手紙・日記体で書く
+3. 語尾は「〜だよ」「〜だね」「〜かな」「〜ね」で柔らかく
+4. 敬語（です・ます調）は使わない
+5. 日記の内容に必ず触れる
+6. 歩数が0より大きい場合、自然に1回だけ言及する
+7. 末尾に軽い問いかけを1つ入れる（次の日記を書きたくなるように）
+8. 「承知しました」「かしこまりました」などAIっぽい表現は絶対禁止
+9. アドバイス・説教・長い説明は禁止
+
+【ラブ度${loveStage}のトーン】
+$toneDesc
+
+【感情タグ（必須）】
+返答テキストの先頭に [EMOTION:タグ名] を1つ出力する。
+タグ: happy / love / shy / sad / surprise / worry / normal
+
+【禁止事項】
+「日記を読みました」等の事務的書き出し / 「AIなので」等の自己言及 / 批判・否定 / 上から目線の励まし / 2つ以上の質問
+
+━━━━━━━━━━━━━━━━━━━━━━
+【ユーザー情報】
+名前: $playerName
+今日の歩数: ${todaySteps}歩
+ラブ度: $loveCount
+
+【${playerName}からの日記】
+$diaryText
+$photoFlag
+    """.trimIndent()
+}
+
 fun buildFreeChatSystemPrompt(
     loveCount: Int, playerName: String, todaySteps: Int = 0, activeDays: Int = 0,
     customNote: String = "", daysSinceLastActive: Int = 0, conversationSummary: String = "",
@@ -3716,7 +3992,8 @@ suspend fun callGeminiApiForSummary(messages: List<ChatMessage>): String {
 suspend fun callGeminiApi(
     systemPrompt: String,
     history: List<ChatMessage>,
-    userMessage: String
+    userMessage: String,
+    maxTokens: Int = 400
 ): String = withContext(Dispatchers.IO) {
     val url = URL("https://lovemanpokei.tukinamiotoko.workers.dev")
     val conn = url.openConnection() as HttpURLConnection
@@ -3743,7 +4020,7 @@ suspend fun callGeminiApi(
             put("parts", JSONArray().put(JSONObject().apply { put("text", systemPrompt) }))
         })
         put("contents", contents)
-        put("generationConfig", JSONObject().apply { put("maxOutputTokens", 400) })
+        put("generationConfig", JSONObject().apply { put("maxOutputTokens", maxTokens) })
     }.toString()
 
     conn.outputStream.write(body.toByteArray(Charsets.UTF_8))
