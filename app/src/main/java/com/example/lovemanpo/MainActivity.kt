@@ -2890,7 +2890,7 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                     systemPrompt = prompt,
                     history = emptyList(),
                     userMessage = "返事をください",
-                    maxTokens = 1200,
+                    maxTokens = 2000,
                     imageBase64 = encodedPhoto?.base64,
                     imageMimeType = encodedPhoto?.mimeType
                 )
