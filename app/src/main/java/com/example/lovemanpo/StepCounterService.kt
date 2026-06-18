@@ -55,16 +55,53 @@ class StepCounterService : Service(), SensorEventListener {
         private const val TAG = "StepCounterService"
 
         data class NotificationDialogue(val thresholdSteps: Int, val text: String)
-        val notificationDialogues = listOf(
-            NotificationDialogue(0,     "一緒に歩こっ！"),
-            NotificationDialogue(1000,  "1000歩！いい感じ♪"),
-            NotificationDialogue(3000,  "3000歩だよ！"),
-            NotificationDialogue(5000,  "5000歩！すごい！"),
-            NotificationDialogue(8000,  "もうちょっとで1万歩！"),
-            NotificationDialogue(10000, "1万歩達成！さすが♡"),
-            NotificationDialogue(20000, "2万歩…！ありえない！"),
-            NotificationDialogue(30000, "もはや伝説…！")
+
+        val notificationDialoguesLv5 = listOf(
+            NotificationDialogue(0,     "一緒に歩きましょう！"),
+            NotificationDialogue(1000,  "1000歩ですよ！いい感じです♪"),
+            NotificationDialogue(3000,  "3000歩達成です！"),
+            NotificationDialogue(5000,  "5000歩！すごいですね！"),
+            NotificationDialogue(8000,  "もうちょっとで1万歩ですよ！"),
+            NotificationDialogue(10000, "1万歩達成です！さすがですね♡"),
+            NotificationDialogue(20000, "2万歩…！信じられないです！"),
+            NotificationDialogue(30000, "もはや伝説ですよ…！")
         )
+        val notificationDialoguesLv7 = listOf(
+            NotificationDialogue(0,     "おはようございます、○○さん！今日も一緒に歩きましょうね！"),
+            NotificationDialogue(1000,  "1000歩！今日もいい感じですよ♪"),
+            NotificationDialogue(3000,  "3000歩！○○さんと歩いていると楽しくて疲れも忘れてしまいます"),
+            NotificationDialogue(5000,  "5000歩…○○さんと歩いていると時間が経つのが早いですね〜"),
+            NotificationDialogue(8000,  "8000歩！あとちょっとで1万歩ですね。私も頑張ります！"),
+            NotificationDialogue(10000, "1万歩！…一緒に歩くの、なんか好きかもしれませんよ"),
+            NotificationDialogue(20000, "2万歩！？○○さんって本当にすごいですよ…ちゃんと尊敬しています"),
+            NotificationDialogue(30000, "3万歩…！○○さんの体力に毎回驚かされます。今日もありがとうございます")
+        )
+        val notificationDialoguesLv9 = listOf(
+            NotificationDialogue(0,     "○○さん！今日も会えましたね♡ 一緒に歩きましょうね"),
+            NotificationDialogue(1000,  "1000歩！○○さんのペースに合わせるのが好きですよ"),
+            NotificationDialogue(3000,  "3000歩！○○さんの隣って歩きやすいなって思います"),
+            NotificationDialogue(5000,  "5000歩…○○さんと歩くのがクセになってしまいました"),
+            NotificationDialogue(8000,  "8000歩！あとちょっとですよ、一緒に頑張りましょう！"),
+            NotificationDialogue(10000, "1万歩達成！…○○さんのことが、その…なんでもないですよ！"),
+            NotificationDialogue(20000, "2万歩！！何度でも言いますが、○○さんって本当にすごいですよ…！"),
+            NotificationDialogue(30000, "3万歩…！○○さんのこと、もっと知りたくなってしまいます。")
+        )
+        val notificationDialoguesLv10 = listOf(
+            NotificationDialogue(0,     "おはようございます♡ ○○さんの隣で歩けること、とても幸せです"),
+            NotificationDialogue(1000,  "1000歩！○○さんと歩く1000歩は、なんか特別な感じがしますよ"),
+            NotificationDialogue(3000,  "3000歩…ずっとこのまま歩いていたいですよ"),
+            NotificationDialogue(5000,  "5000歩…ずっと、○○さんとこうして歩いていたいですよ"),
+            NotificationDialogue(8000,  "8000歩！○○さんのこと、ずっと応援していますよ♡"),
+            NotificationDialogue(10000, "1万歩！○○さんといたら、どこまでだって歩いていけそうです"),
+            NotificationDialogue(20000, "2万歩…！○○さんの頑張り、全部そばで見ていたいです"),
+            NotificationDialogue(30000, "3万歩…！もう、○○さんのことが大好きです。ずっと一緒に歩きましょうね")
+        )
+        fun dialoguesForLoveLevel(loveCount: Int) = when {
+            loveCount >= 10 -> notificationDialoguesLv10
+            loveCount >= 9  -> notificationDialoguesLv9
+            loveCount >= 7  -> notificationDialoguesLv7
+            else            -> notificationDialoguesLv5
+        }
 
         enum class WeatherCondition { CLEAR, RAINY, SNOWY, STORMY }
         val weatherDialogues = mapOf(
@@ -297,10 +334,14 @@ class StepCounterService : Service(), SensorEventListener {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        val playerName = repository.playerName.ifBlank { "あなた" }
+        val loveCount = repository.loveCount
+        val dialogues = dialoguesForLoveLevel(loveCount)
         val weatherCondition = weatherCodeToCondition(repository.currentWeatherCode)
-        val dialogue = weatherDialogues[weatherCondition]
-            ?: notificationDialogues.lastOrNull { steps >= it.thresholdSteps }?.text
-            ?: "一緒に歩こっ！"
+        val rawDialogue = weatherDialogues[weatherCondition]
+            ?: dialogues.lastOrNull { steps >= it.thresholdSteps }?.text
+            ?: dialogues.first().text
+        val dialogue = rawDialogue.replace("○○", playerName)
 
         val remoteViews = RemoteViews(packageName, R.layout.notification_step_counter).apply {
             setTextViewText(R.id.notif_steps, "今日 $steps 歩")
