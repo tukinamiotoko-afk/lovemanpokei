@@ -1698,40 +1698,82 @@ fun HomeCommentBanner(expr: Int, message: String, onClick: () -> Unit = {}) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeWeatherBanner(weatherInfo: WeatherInfo?) {
     if (weatherInfo == null) return
     val emoji = wmoToEmoji(weatherInfo.weatherCode)
     val desc  = wmoToDescription(weatherInfo.weatherCode)
     val temp  = String.format(java.util.Locale.US, "%.0f", weatherInfo.tempC)
+    var showSheet by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
             .shadow(elevation = 4.dp, shape = RoundedCornerShape(12.dp))
             .clip(RoundedCornerShape(12.dp))
-            .background(
-                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                    listOf(Color(0xFFE3F6FE), Color(0xFFB3E5FC))
-                )
-            )
+            .background(brush = Brush.verticalGradient(listOf(Color(0xFFE3F6FE), Color(0xFFB3E5FC))))
             .border(1.dp, Color(0xFF4FC3F7).copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+            .clickable { showSheet = true }
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
             Text(emoji, fontSize = 22.sp)
             Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                text = "$desc · $temp°C",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF1565C0)
-            )
+            Text(text = "$desc · $temp°C", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF1565C0))
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color(0xFF1565C0), modifier = Modifier.size(16.dp))
+        }
+    }
+
+    if (showSheet && weatherInfo.hourly.isNotEmpty()) {
+        HourlyWeatherSheet(weatherInfo = weatherInfo, onDismiss = { showSheet = false })
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HourlyWeatherSheet(weatherInfo: WeatherInfo, onDismiss: () -> Unit) {
+    val currentHour = java.time.LocalTime.now().hour
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFFF5FBFF),
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 32.dp)) {
+            Text("1時間ごとの天気", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF1565C0), modifier = Modifier.padding(bottom = 12.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(weatherInfo.hourly) { entry ->
+                    val isNow = entry.hour == currentHour
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isNow) Color(0xFF29B6F6) else Color(0xFFE1F5FE))
+                            .padding(horizontal = 10.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            if (isNow) "今" else "${entry.hour}時",
+                            fontSize = 11.sp,
+                            fontWeight = if (isNow) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isNow) Color.White else Color(0xFF1565C0)
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(wmoToEmoji(entry.weatherCode), fontSize = 20.sp)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "${entry.tempC.toInt()}°",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = if (isNow) Color.White else Color(0xFF1565C0)
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -2828,7 +2870,8 @@ data class AggregatedData(val label: String, val steps: Int, val activeTimeMilli
 
 // ---- 天気 ----
 
-data class WeatherInfo(val tempC: Double, val weatherCode: Int)
+data class HourlyWeatherEntry(val hour: Int, val tempC: Double, val weatherCode: Int)
+data class WeatherInfo(val tempC: Double, val weatherCode: Int, val hourly: List<HourlyWeatherEntry> = emptyList())
 
 fun wmoToDescription(code: Int): String = when (code) {
     0 -> "晴れ"; 1 -> "ほぼ晴れ"; 2 -> "一部くもり"; 3 -> "くもり"
@@ -2854,13 +2897,21 @@ fun wmoToEmoji(code: Int): String = when (code) {
 suspend fun fetchWeather(lat: Double, lon: Double): WeatherInfo? =
     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         try {
-            val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code&timezone=auto&forecast_days=1")
+            val url = URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,weather_code&hourly=temperature_2m,weather_code&timezone=auto&forecast_days=1")
             val conn = url.openConnection() as HttpURLConnection
             conn.connectTimeout = 5000
             conn.readTimeout = 5000
-            val text = conn.inputStream.bufferedReader().readText()
-            val cur = JSONObject(text).getJSONObject("current")
-            WeatherInfo(tempC = cur.getDouble("temperature_2m"), weatherCode = cur.getInt("weather_code"))
+            val json = JSONObject(conn.inputStream.bufferedReader().readText())
+            val cur = json.getJSONObject("current")
+            val hourlyJson = json.getJSONObject("hourly")
+            val times = hourlyJson.getJSONArray("time")
+            val temps = hourlyJson.getJSONArray("temperature_2m")
+            val codes = hourlyJson.getJSONArray("weather_code")
+            val hourlyList = (0 until times.length()).mapNotNull { i ->
+                val h = times.getString(i).substringAfter("T").substringBefore(":").toIntOrNull() ?: return@mapNotNull null
+                HourlyWeatherEntry(h, temps.getDouble(i), codes.getInt(i))
+            }
+            WeatherInfo(tempC = cur.getDouble("temperature_2m"), weatherCode = cur.getInt("weather_code"), hourly = hourlyList)
         } catch (e: Exception) { null }
     }
 
