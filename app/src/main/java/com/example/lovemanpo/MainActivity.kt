@@ -71,6 +71,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
@@ -2998,6 +2999,10 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                         }
                     }
 
+                    // テキストの実際の行の高さ(px)。罫線間隔をこれに合わせることで
+                    // カーソル(高さ=行の高さ)が罫線を突き破らないようにする。
+                    var diaryLineHeightPx by remember { mutableStateOf(0f) }
+                    val fallbackLineHeightPx = with(LocalDensity.current) { 26.sp.toPx() }
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -3007,7 +3012,7 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                             .border(1.dp, Color(0xFFFFD7E5), RoundedCornerShape(8.dp))
                             .padding(horizontal = 14.dp, vertical = 10.dp)
                             .drawWithContent {
-                                val lineHeight = 26.sp.toPx()
+                                val lineHeight = if (diaryLineHeightPx > 0f) diaryLineHeightPx else fallbackLineHeightPx
                                 // 各テキスト行の下端に罫線を引き、文字が線の上に乗るようにする
                                 var y = lineHeight
                                 while (y <= size.height) {
@@ -3037,6 +3042,11 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                                     trim = LineHeightStyle.Trim.None
                                 )
                             ),
+                            onTextLayout = { result ->
+                                if (result.lineCount > 0) {
+                                    diaryLineHeightPx = result.getLineBottom(0) - result.getLineTop(0)
+                                }
+                            },
                             decorationBox = { innerTextField ->
                                 if (writingText.isEmpty()) {
                                     Text(
