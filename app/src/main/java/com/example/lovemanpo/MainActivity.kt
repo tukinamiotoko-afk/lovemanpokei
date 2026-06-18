@@ -1690,12 +1690,7 @@ fun HomeCommentBanner(expr: Int, message: String, onClick: () -> Unit = {}) {
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
-                    }
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
-                    Text(message, fontSize = 10.sp, color = Color(0xFF1A1A1A))
+                    Text(message, fontSize = 12.sp, color = Color(0xFF1A1A1A))
                 }
         }
     }

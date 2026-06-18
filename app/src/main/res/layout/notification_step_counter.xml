@@ -18,14 +18,14 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="ひかり"
-            android:textSize="16sp"
+            android:textSize="12sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/notif_steps"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="16sp"
+            android:textSize="12sp"
             android:textStyle="bold" />
 
     </LinearLayout>
@@ -34,7 +34,7 @@
         android:id="@+id/notif_dialogue"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="12sp"
+        android:textSize="14sp"
         android:maxLines="1"
         android:ellipsize="end" />
 
