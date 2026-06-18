@@ -2816,6 +2816,7 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
     val todayDiaryExists = remember(refreshKey) { viewModel.repository.getUserDiary(today).isNotBlank() }
 
     var showWriteDialog by remember { mutableStateOf(false) }
+    var selectedDate by remember { mutableStateOf<String?>(null) }  // 詳細表示する日付
     var writingText by remember { mutableStateOf("") }
     var selectedMood by remember { mutableStateOf("") }
     var selectedDiaryPhotoUri by remember { mutableStateOf<String?>(null) }
@@ -2848,7 +2849,7 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                     systemPrompt = prompt,
                     history = emptyList(),
                     userMessage = "返事をください",
-                    maxTokens = 600,
+                    maxTokens = 1200,
                     imageBase64 = encodedPhoto?.base64,
                     imageMimeType = encodedPhoto?.mimeType
                 )
@@ -2893,6 +2894,7 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
             )
         },
         floatingActionButton = {
+            // 今日の日記をまだ書いていない場合のみFABを表示
             if (!todayDiaryExists) {
                 FloatingActionButton(
                     onClick = { showWriteDialog = true },
@@ -2918,22 +2920,58 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                // 今日の日記を書いたなら「書いた」バナーを先頭に表示
+                if (todayDiaryExists) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFFFFEEF4))
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text("✏️", fontSize = 18.sp)
+                            Text(
+                                "今日の日記を書きました",
+                                fontSize = 13.sp,
+                                color = pinkAccent,
+                                fontFamily = MplusRoundedFontFamily,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
                 items(allDates) { date ->
-                    DiaryEntryCard(
+                    DiaryDateCard(
                         date = date,
-                        userText = viewModel.repository.getUserDiary(date),
-                        photoPath = viewModel.repository.getUserDiaryPhotoPath(date),
-                        replyText = viewModel.repository.getDiaryReply(date),
-                        emotion = viewModel.repository.getDiaryReplyEmotion(date),
+                        mood = viewModel.repository.getDiaryMood(date),
+                        previewText = viewModel.repository.getUserDiary(date),
+                        hasReply = viewModel.repository.getDiaryReply(date).isNotBlank(),
                         isLoading = loadingDates.contains(date),
-                        loveCount = loveCount,
-                        diaryFontFamily = diaryFontFamily
+                        onClick = { selectedDate = date }
                     )
                 }
             }
         }
+    }
+
+    // 日記詳細ダイアログ
+    selectedDate?.let { date ->
+        DiaryDetailDialog(
+            date = date,
+            userText = viewModel.repository.getUserDiary(date),
+            photoPath = viewModel.repository.getUserDiaryPhotoPath(date),
+            mood = viewModel.repository.getDiaryMood(date),
+            replyText = viewModel.repository.getDiaryReply(date),
+            emotion = viewModel.repository.getDiaryReplyEmotion(date),
+            isLoading = loadingDates.contains(date),
+            diaryFontFamily = diaryFontFamily,
+            onDismiss = { selectedDate = null }
+        )
     }
 
     if (showWriteDialog) {
@@ -3114,6 +3152,203 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                             modifier = Modifier.align(Alignment.BottomEnd).background(Color(0xCCFFFFFA)).padding(start = 6.dp, top = 2.dp),
                             color = Color(0xFFBBBBBB),
                             fontSize = 11.sp,
+                            fontFamily = MplusRoundedFontFamily
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 一覧用コンパクトカード（タップで詳細を開く）
+@Composable
+fun DiaryDateCard(
+    date: String,
+    mood: String,
+    previewText: String,
+    hasReply: Boolean,
+    isLoading: Boolean,
+    onClick: () -> Unit
+) {
+    val pinkAccent = Color(0xFFFF6B9D)
+    val parts = date.split("-")
+    val formattedDate = if (parts.size == 3)
+        "${parts[1].toIntOrNull() ?: parts[1]}月${parts[2].toIntOrNull() ?: parts[2]}日"
+    else date
+    val moodEmoji = when (mood) {
+        "よかった" -> "😊"
+        "ふつう"   -> "😐"
+        "つかれた" -> "😩"
+        else       -> "📖"
+    }
+
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = Color.White,
+        shadowElevation = 3.dp,
+        border = BorderStroke(1.dp, Color(0xFFFFB7D0).copy(alpha = 0.35f)),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // 左：日付ブロック
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(44.dp)) {
+                Text(moodEmoji, fontSize = 20.sp)
+                Text(formattedDate, fontSize = 10.sp, color = Color(0xFFAAAAAA), fontFamily = MplusRoundedFontFamily)
+            }
+            // 中：本文プレビュー
+            Text(
+                text = previewText.take(40).let { if (previewText.length > 40) "$it…" else it },
+                modifier = Modifier.weight(1f),
+                fontSize = 13.sp,
+                color = Color(0xFF444444),
+                fontFamily = MplusRoundedFontFamily,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            // 右：返信ステータス
+            when {
+                isLoading -> CircularProgressIndicator(modifier = Modifier.size(16.dp), color = pinkAccent, strokeWidth = 2.dp)
+                hasReply  -> Text("💌", fontSize = 16.sp)
+                else      -> Text("📬", fontSize = 16.sp)
+            }
+        }
+    }
+}
+
+// 詳細表示ダイアログ（全文＋ひかりの返信）
+@Composable
+fun DiaryDetailDialog(
+    date: String,
+    userText: String,
+    photoPath: String,
+    mood: String,
+    replyText: String,
+    emotion: String,
+    isLoading: Boolean,
+    diaryFontFamily: FontFamily,
+    onDismiss: () -> Unit
+) {
+    val pinkAccent = Color(0xFFFF6B9D)
+    val parts = date.split("-")
+    val formattedDate = if (parts.size == 3)
+        "${parts[0]}年${parts[1].toIntOrNull() ?: parts[1]}月${parts[2].toIntOrNull() ?: parts[2]}日"
+    else date
+    val hikariExprRes = when (emotion) {
+        "happy", "surprise" -> R.drawable.hikari_celebrate
+        "love", "shy"       -> R.drawable.hikari_blush
+        else                -> R.drawable.hikari_smile
+    }
+    val moodEmoji = when (mood) {
+        "よかった" -> "😊 よかった"
+        "ふつう"   -> "😐 ふつう"
+        "つかれた" -> "😩 つかれた"
+        else       -> ""
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFFFFCF6)) {
+            Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+                // ヘッダー
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "閉じる", tint = pinkAccent)
+                    }
+                    Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(formattedDate, color = pinkAccent, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
+                        if (moodEmoji.isNotBlank()) {
+                            Text(moodEmoji, fontSize = 11.sp, color = Color(0xFF999999), fontFamily = MplusRoundedFontFamily)
+                        }
+                    }
+                    Spacer(Modifier.width(48.dp))
+                }
+                HorizontalDivider(color = Color(0xFFFFD7E5), thickness = 0.5.dp)
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // 日記本文
+                    Text(
+                        userText,
+                        fontSize = 15.sp,
+                        color = Color(0xFF333333),
+                        fontFamily = diaryFontFamily,
+                        lineHeight = 26.sp
+                    )
+
+                    // 写真（あれば）
+                    if (photoPath.isNotBlank()) {
+                        val bitmap = remember(photoPath) { BitmapFactory.decodeFile(photoPath)?.asImageBitmap() }
+                        bitmap?.let {
+                            Image(
+                                bitmap = it,
+                                contentDescription = "日記の写真",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 260.dp)
+                                    .clip(RoundedCornerShape(12.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+
+                    // 区切り
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(Modifier.weight(1f).height(0.5.dp).background(Color(0xFFFFB7D0).copy(alpha = 0.6f)))
+                        Text(
+                            "ひかりより",
+                            modifier = Modifier.padding(horizontal = 10.dp),
+                            fontSize = 11.sp,
+                            color = pinkAccent,
+                            fontFamily = MplusRoundedFontFamily,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Box(Modifier.weight(1f).height(0.5.dp).background(Color(0xFFFFB7D0).copy(alpha = 0.6f)))
+                    }
+
+                    // ひかりの返信
+                    when {
+                        isLoading -> Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = pinkAccent, strokeWidth = 2.dp)
+                            Spacer(Modifier.width(10.dp))
+                            Text("ひかりが返事を書いています…", fontSize = 13.sp, color = Color(0xFFAAAAAA), fontFamily = MplusRoundedFontFamily)
+                        }
+                        replyText.isNotBlank() -> Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Image(
+                                painter = painterResource(id = expressionToFaceRes(hikariExprRes)),
+                                contentDescription = null,
+                                modifier = Modifier.size(38.dp).clip(CircleShape).background(Color(0xFFFFE0E9)),
+                                contentScale = ContentScale.Crop
+                            )
+                            Text(
+                                replyText,
+                                fontSize = 15.sp,
+                                color = Color(0xFF333333),
+                                fontFamily = DiaryFemaleFontFamily,
+                                lineHeight = 24.sp
+                            )
+                        }
+                        else -> Text(
+                            "ひかりからの返事は、明日手紙で届きます。",
+                            fontSize = 13.sp,
+                            color = Color(0xFFAAAAAA),
                             fontFamily = MplusRoundedFontFamily
                         )
                     }
