@@ -18,7 +18,7 @@
             android:layout_height="wrap_content"
             android:text="ひかり"
             android:textSize="14sp"
-            android:textStyle="bold"
+            android:textFontWeight="600"
             android:textColor="#FF000000" />
 
         <TextView
