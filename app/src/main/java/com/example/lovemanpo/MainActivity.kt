@@ -294,7 +294,7 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
 }
 
 // --- ViewModel ---
-class StepViewModel(private val repository: StepRepository) : ViewModel() {
+class StepViewModel(val repository: StepRepository) : ViewModel() {
     val allStepRecords = mutableStateOf<List<StepRecord>>(emptyList())
     val hourlyStepRecords = mutableStateOf<List<HourlyStepRecord>>(emptyList())
     val todaySteps = mutableIntStateOf(0)
@@ -2924,7 +2924,7 @@ fun DiaryEntryCard(
             Spacer(Modifier.height(8.dp))
 
             Row(verticalAlignment = Alignment.Top) {
-                Icon(Icons.Default.Edit, tint = pinkAccent.copy(alpha = 0.7f), modifier = Modifier.size(14.dp).padding(top = 2.dp))
+                Icon(Icons.Default.Edit, contentDescription = null, tint = pinkAccent.copy(alpha = 0.7f), modifier = Modifier.size(14.dp).padding(top = 2.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(userText, fontSize = 13.sp, color = Color(0xFF333333), fontFamily = MplusRoundedFontFamily, lineHeight = 20.sp)
             }
