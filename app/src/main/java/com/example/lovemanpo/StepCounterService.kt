@@ -301,9 +301,9 @@ class StepCounterService : Service(), SensorEventListener {
             ?: notificationDialogues.lastOrNull { steps >= it.thresholdSteps }?.text
             ?: "一緒に歩こっ！"
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("今日 $steps 歩")
+            .setContentTitle("ひかり")
             .setContentText(dialogue)
-            .setSubText("ひかり")
+            .setSubText("今日 $steps 歩")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
