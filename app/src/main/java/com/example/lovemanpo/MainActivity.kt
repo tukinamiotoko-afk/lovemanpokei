@@ -236,6 +236,8 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
 
     fun getUserDiary(date: String): String = prefs.getString("USER_DIARY_$date", "") ?: ""
     fun setUserDiary(date: String, text: String) = prefs.edit { putString("USER_DIARY_$date", text) }
+    fun getDiaryMood(date: String): String = prefs.getString("DIARY_MOOD_$date", "") ?: ""
+    fun setDiaryMood(date: String, mood: String) = prefs.edit { putString("DIARY_MOOD_$date", mood) }
     fun getDiaryReply(date: String): String = prefs.getString("DIARY_REPLY_$date", "") ?: ""
     fun setDiaryReply(date: String, text: String) = prefs.edit { putString("DIARY_REPLY_$date", text) }
     fun getDiaryReplyEmotion(date: String): String = prefs.getString("DIARY_REPLY_EMOTION_$date", "normal") ?: "normal"
@@ -418,8 +420,9 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
         return sb.toString().trim()
     }
 
-    fun saveUserDiary(date: String, text: String) {
+    fun saveUserDiary(date: String, text: String, mood: String = "") {
         repository.setUserDiary(date, text)
+        if (mood.isNotBlank()) repository.setDiaryMood(date, mood)
         val dates = repository.userDiaryDates.toMutableSet()
         dates.add(date)
         repository.userDiaryDates = dates.sorted().takeLast(90).toSet()
@@ -2722,6 +2725,7 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
 
     var showWriteDialog by remember { mutableStateOf(false) }
     var writingText by remember { mutableStateOf("") }
+    var selectedMood by remember { mutableStateOf("") }
     var loadingDates by remember { mutableStateOf(setOf<String>()) }
 
     Scaffold(
@@ -2782,17 +2786,36 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
             containerColor = Color.White,
             title = { Text("今日の日記", fontFamily = MplusRoundedFontFamily, fontWeight = FontWeight.Bold, color = pinkAccent) },
             text = {
-                OutlinedTextField(
-                    value = writingText,
-                    onValueChange = { if (it.length <= 300) writingText = it },
-                    modifier = Modifier.fillMaxWidth().height(180.dp),
-                    placeholder = { Text("今日あったことを書いてね…", color = Color.LightGray, fontFamily = MplusRoundedFontFamily, fontSize = 13.sp) },
-                    maxLines = 10,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = pinkAccent,
-                        unfocusedBorderColor = Color(0xFFFFB7D0)
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("😊 よかった", "😐 ふつう", "😩 つかれた").forEach { label ->
+                            val mood = label.substringAfter(" ")
+                            val selected = selectedMood == mood
+                            Surface(
+                                shape = RoundedCornerShape(20.dp),
+                                color = if (selected) pinkAccent else Color(0xFFF5F5F5),
+                                border = BorderStroke(1.dp, if (selected) pinkAccent else Color(0xFFDDDDDD)),
+                                modifier = Modifier.clickable { selectedMood = mood }
+                            ) {
+                                Text(label, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    fontSize = 12.sp,
+                                    color = if (selected) Color.White else Color(0xFF555555),
+                                    fontFamily = MplusRoundedFontFamily)
+                            }
+                        }
+                    }
+                    OutlinedTextField(
+                        value = writingText,
+                        onValueChange = { if (it.length <= 300) writingText = it },
+                        modifier = Modifier.fillMaxWidth().height(160.dp),
+                        placeholder = { Text("今日あったことを書いてね…", color = Color.LightGray, fontFamily = MplusRoundedFontFamily, fontSize = 13.sp) },
+                        maxLines = 10,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = pinkAccent,
+                            unfocusedBorderColor = Color(0xFFFFB7D0)
+                        )
                     )
-                )
+                }
             },
             confirmButton = {
                 Button(
@@ -2800,9 +2823,10 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                         val text = writingText.trim()
                         if (text.isNotBlank()) {
                             showWriteDialog = false
-                            viewModel.saveUserDiary(today, text)
+                            viewModel.saveUserDiary(today, text, selectedMood)
                             loadingDates = loadingDates + today
                             writingText = ""
+                            selectedMood = ""
                             refreshKey++
                             scope.launch {
                                 try {
@@ -4281,7 +4305,13 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 val absenceSteps = viewModel.getStepsDuringAbsence(hoursAway)
                                 val unlockedBasyo = viewModel.unlockedMemoryIds.value
                                 val basyoNote = if (unlockedBasyo.isNotEmpty()) "\n解錠済みBASYO（再出力禁止）: ${unlockedBasyo.joinToString(",")}" else ""
-                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps, viewModel.lifestyle, viewModel.favoriteDrink, viewModel.weakness, viewModel.bodyNotes, currentTurn = messages.count { it.role == "user" }, previousStreakDays = viewModel.getPreviousStreak()) + basyoNote
+                                val yesterday = java.time.LocalDate.now().minusDays(1).toString()
+                                val yestMood = viewModel.repository.getDiaryMood(yesterday)
+                                val yestHint = viewModel.repository.getUserDiary(yesterday).take(50)
+                                val diaryNote = if (yestMood.isNotBlank() && yestHint.isNotBlank())
+                                    "\n【昨日の日記】気分：$yestMood　内容：「$yestHint」\n自然な流れで一度だけ触れてもいい。しつこく聞かない。"
+                                else ""
+                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps, viewModel.lifestyle, viewModel.favoriteDrink, viewModel.weakness, viewModel.bodyNotes, currentTurn = messages.count { it.role == "user" }, previousStreakDays = viewModel.getPreviousStreak()) + basyoNote + diaryNote
                                 viewModel.markHasEverChatted()
                                 viewModel.updateLastChatTime()
                                 val reply = callGeminiApi(systemPrompt, historySnapshot, text)
