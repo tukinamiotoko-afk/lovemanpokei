@@ -100,6 +100,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -133,7 +134,22 @@ enum class DisplayPeriod(val label: String) {
 }
 
 // --- データ保存（リポジトリ） ---
-class StepRepository(private val stepDao: StepDao, private val prefs: SharedPreferences) {
+// 5AM cutoff で「ゲーム上の日付」を返す
+fun getGameDate(): String {
+    val now = LocalDateTime.now()
+    val date = if (now.hour < 5) now.toLocalDate().minusDays(1) else now.toLocalDate()
+    return date.toString()
+}
+
+fun getDailyGreeting(loveCount: Int, playerName: String): String = when {
+    loveCount <= 2 -> "おはよう、${playerName}。今日もよろしくね。"
+    loveCount <= 4 -> "おはよう！今日も会えてよかった♪"
+    loveCount <= 6 -> "おはよう♡ また来てくれた！うれしいな。"
+    loveCount <= 8 -> "おはよ！…待ってたよ、${playerName}♡"
+    else           -> "…来てくれた。おはよう、${playerName}♡ 今日もそばにいてね。"
+}
+
+class StepRepository(private val stepDao: StepDao, private val chatMessageDao: ChatMessageDao, private val prefs: SharedPreferences) {
     var cumulativeSteps: Int
         get() = prefs.getInt("CUMULATIVE_STEPS", 0)
         set(value) = prefs.edit { putInt("CUMULATIVE_STEPS", value) }
@@ -203,6 +219,23 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
     suspend fun getHourlyRecords(date: String): List<HourlyStepRecord> {
         return stepDao.getHourlyRecordsForDay(date)
     }
+
+    fun shouldShowDailyGreeting(): Boolean {
+        val today = getGameDate()
+        return prefs.getString("LAST_GREETING_DATE", "") != today
+    }
+
+    fun markGreetingShown() {
+        prefs.edit { putString("LAST_GREETING_DATE", getGameDate()) }
+    }
+
+    suspend fun saveChatMessage(role: String, content: String) {
+        chatMessageDao.insert(
+            ChatMessageEntity(role = role, content = content, gameDate = getGameDate(), timestamp = System.currentTimeMillis())
+        )
+    }
+
+    suspend fun loadAllChatMessages(): List<ChatMessageEntity> = chatMessageDao.getAll()
 
     fun resetAllData() {
         prefs.edit { clear() }
@@ -333,6 +366,15 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
         repository.loveCount = loveCount.intValue
     }
 
+    suspend fun loadChatMessages(): List<ChatMessage> =
+        repository.loadAllChatMessages().map { ChatMessage(it.role, it.content, it.gameDate) }
+
+    suspend fun saveChatMessage(role: String, content: String) = repository.saveChatMessage(role, content)
+
+    fun shouldShowDailyGreeting(): Boolean = repository.shouldShowDailyGreeting()
+
+    fun markGreetingShown() = repository.markGreetingShown()
+
     fun loadAllRecords() {
         viewModelScope.launch {
             allStepRecords.value = repository.getAllStepRecords().sortedBy { it.date }
@@ -450,7 +492,7 @@ class MainActivity : ComponentActivity() {
         windowInsetsController.hide(WindowInsetsCompat.Type.navigationBars())
 
         val database = AppDatabase.getDatabase(this)
-        val repository = StepRepository(database.stepDao(), getSharedPreferences("lovemanpo_prefs", MODE_PRIVATE))
+        val repository = StepRepository(database.stepDao(), database.chatMessageDao(), getSharedPreferences("lovemanpo_prefs", MODE_PRIVATE))
         val viewModelFactory = StepViewModelFactory(repository)
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
@@ -2434,7 +2476,7 @@ data class AggregatedData(val label: String, val steps: Int, val activeTimeMilli
 
 // ---- AI チャット共通 ----
 
-data class ChatMessage(val role: String, val content: String)
+data class ChatMessage(val role: String, val content: String, val date: String = "")
 
 data class OdekakeLocation(val id: String, val name: String, val emoji: String)
 
@@ -2496,6 +2538,23 @@ suspend fun callOpenAiApi(
         .getString("content")
 }
 
+@Composable
+fun DateDivider(gameDate: String) {
+    val label = try {
+        val d = LocalDate.parse(gameDate)
+        val dow = arrayOf("月", "火", "水", "木", "金", "土", "日")[d.dayOfWeek.value - 1]
+        "${d.monthValue}月${d.dayOfMonth}日（$dow）"
+    } catch (e: Exception) { gameDate }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray)
+        Text(label, fontSize = 11.sp, color = Color.Gray, modifier = Modifier.padding(horizontal = 10.dp))
+        HorizontalDivider(modifier = Modifier.weight(1f), color = Color.LightGray)
+    }
+}
+
 // ---- 自由会話画面 ----
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -2510,6 +2569,19 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+
+    // 履歴ロード＋毎日の挨拶
+    LaunchedEffect(Unit) {
+        val history = viewModel.loadChatMessages()
+        messages.addAll(history)
+        if (viewModel.shouldShowDailyGreeting()) {
+            viewModel.markGreetingShown()
+            val greeting = getDailyGreeting(loveCount, playerName)
+            val today = getGameDate()
+            messages.add(ChatMessage("assistant", greeting, today))
+            viewModel.saveChatMessage("assistant", greeting)
+        }
+    }
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
@@ -2529,6 +2601,10 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             ) {
                 items(messages.size) { i ->
                     val msg = messages[i]
+                    val prevDate = if (i > 0) messages[i - 1].date else null
+                    if (msg.date.isNotEmpty() && msg.date != prevDate) {
+                        DateDivider(msg.date)
+                    }
                     val isUser = msg.role == "user"
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -2586,16 +2662,19 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             return@IconButton
                         }
                         errorMessage = null
-                        val userMsg = ChatMessage("user", text)
+                        val today = getGameDate()
+                        val userMsg = ChatMessage("user", text, today)
                         messages.add(userMsg)
                         inputText = ""
                         isLoading = true
                         val historySnapshot = messages.dropLast(1).toList()
                         scope.launch {
+                            viewModel.saveChatMessage("user", text)
                             try {
                                 val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName)
                                 val reply = callOpenAiApi(apiKey, systemPrompt, historySnapshot, text)
-                                messages.add(ChatMessage("assistant", reply))
+                                messages.add(ChatMessage("assistant", reply, today))
+                                viewModel.saveChatMessage("assistant", reply)
                             } catch (e: Exception) {
                                 errorMessage = "エラーが発生しました: ${e.message}"
                             } finally {
