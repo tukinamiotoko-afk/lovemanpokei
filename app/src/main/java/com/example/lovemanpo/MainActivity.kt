@@ -142,11 +142,11 @@ fun getGameDate(): String {
 }
 
 fun getDailyGreeting(loveCount: Int, playerName: String): String = when {
-    loveCount <= 2 -> "おはよう、${playerName}。今日もよろしくね。"
-    loveCount <= 4 -> "おはよう！今日も会えてよかった♪"
-    loveCount <= 6 -> "おはよう♡ また来てくれた！うれしいな。"
-    loveCount <= 8 -> "おはよ！…待ってたよ、${playerName}♡"
-    else           -> "…来てくれた。おはよう、${playerName}♡ 今日もそばにいてね。"
+    loveCount <= 2 -> "おはようございます、${playerName}さん。今日もよろしくお願いします。"
+    loveCount <= 4 -> "おはようございます！今日も会えてよかったです♪"
+    loveCount <= 6 -> "おはようございます♡ また来てくれたんですね！うれしいです。"
+    loveCount <= 8 -> "おはようございます！…待っていましたよ、${playerName}さん♡"
+    else           -> "…来てくれたんですね。おはようございます、${playerName}さん♡ 今日もそばにいてください。"
 }
 
 class StepRepository(private val stepDao: StepDao, private val chatMessageDao: ChatMessageDao, private val prefs: SharedPreferences) {

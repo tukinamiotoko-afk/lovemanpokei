@@ -313,11 +313,11 @@ val script20_Purikura = listOf(
 enum class WeatherCondition { SUNNY, CLOUDY, RAINY, SNOWY, STORMY, UNKNOWN }
 
 val weatherDialogues = mapOf(
-    WeatherCondition.SUNNY  to "今日は晴れてるね！絶好のお散歩日和だよ♪",
-    WeatherCondition.CLOUDY to "曇ってるけど歩きやすい気温かも！",
-    WeatherCondition.RAINY  to "雨か…傘、持った？でも一緒に歩こう！",
-    WeatherCondition.SNOWY  to "雪！！テンション上がる〜！転ばないでね！",
-    WeatherCondition.STORMY to "今日は無理しないでね…室内で運動でもいいよ！"
+    WeatherCondition.SUNNY  to "今日は晴れていますね！絶好のお散歩日和ですよ♪",
+    WeatherCondition.CLOUDY to "曇っていますが歩きやすい気温です！",
+    WeatherCondition.RAINY  to "雨ですね…傘は持ちましたか？それでも一緒に歩きましょう！",
+    WeatherCondition.SNOWY  to "雪ですよ！テンション上がりますね！転ばないでくださいね！",
+    WeatherCondition.STORMY to "今日は無理しないでくださいね…室内で運動してもいいですよ！"
 )
 
 fun weatherCodeToCondition(code: Int): WeatherCondition = when (code) {
@@ -338,19 +338,19 @@ fun weatherCodeToCondition(code: Int): WeatherCondition = when (code) {
 data class NotificationDialogue(val thresholdSteps: Int, val message: String)
 
 val notificationDialogues = listOf(
-    NotificationDialogue(0,     "一緒に歩こっ！"),
-    NotificationDialogue(1000,  "1000歩！いい感じ♪"),
-    NotificationDialogue(3000,  "3000歩だよ！"),
-    NotificationDialogue(5000,  "5000歩！すごい！"),
-    NotificationDialogue(8000,  "もうちょっとで1万歩！"),
-    NotificationDialogue(10000, "1万歩達成！さすが♡"),
-    NotificationDialogue(20000, "2万歩…！ありえない！"),
-    NotificationDialogue(30000, "もはや伝説…！")
+    NotificationDialogue(0,     "一緒に歩きましょう！"),
+    NotificationDialogue(1000,  "1000歩ですよ！いい感じです♪"),
+    NotificationDialogue(3000,  "3000歩達成です！"),
+    NotificationDialogue(5000,  "5000歩！すごいですね！"),
+    NotificationDialogue(8000,  "もうちょっとで1万歩ですよ！"),
+    NotificationDialogue(10000, "1万歩達成です！さすがですね♡"),
+    NotificationDialogue(20000, "2万歩…！信じられないです！"),
+    NotificationDialogue(30000, "もはや伝説ですよ…！")
 )
 
 fun getNotificationMessage(steps: Int): String =
     notificationDialogues.filter { it.thresholdSteps <= steps }
-        .maxByOrNull { it.thresholdSteps }?.message ?: "一緒に歩こっ！"
+        .maxByOrNull { it.thresholdSteps }?.message ?: "一緒に歩きましょう！"
 
 // ==========================================
 // ★ ホーム画面のセリフ定義 ★
@@ -394,21 +394,21 @@ val touchDialoguesLv3 = listOf(
 )
 
 val touchDialoguesLv5 = listOf(
-    TouchDialogue("○○さんのこと、もっと知りたいな。", R.drawable.hikari_blush),
-    TouchDialogue("一緒に歩いてると、なんか安心する。", R.drawable.hikari_smile),
-    TouchDialogue("ねえ、また一緒に出かけようね！", R.drawable.hikari_celebrate)
+    TouchDialogue("○○さんのこと、もっと知りたいですよ。", R.drawable.hikari_blush),
+    TouchDialogue("一緒に歩いていると、なんか安心しますよ。", R.drawable.hikari_smile),
+    TouchDialogue("また一緒に出かけましょうね！", R.drawable.hikari_celebrate)
 )
 
 val touchDialoguesLv7 = listOf(
-    TouchDialogue("○○さんのそばにいると、落ち着くんだよね…", R.drawable.hikari_blush),
-    TouchDialogue("ずっと隣にいてほしいな。…なんて！", R.drawable.hikari_blush),
-    TouchDialogue("○○さんって、ちょっとズルいよ。こんなに好きにさせて。", R.drawable.hikari_blush)
+    TouchDialogue("○○さんのそばにいると、落ち着きますよ…", R.drawable.hikari_blush),
+    TouchDialogue("ずっと隣にいてほしいです。…なんちゃって！", R.drawable.hikari_blush),
+    TouchDialogue("○○さんって、ちょっとズルいですよ。こんなに好きになってしまって。", R.drawable.hikari_blush)
 )
 
 val touchDialoguesLv9 = listOf(
-    TouchDialogue("○○さんのこと、大好きだよ。", R.drawable.hikari_blush),
-    TouchDialogue("ずっと一緒にいたいな、○○さんと。", R.drawable.hikari_smile),
-    TouchDialogue("○○さんといると、世界が明るく見える気がする。", R.drawable.hikari_celebrate)
+    TouchDialogue("○○さんのこと、大好きですよ。", R.drawable.hikari_blush),
+    TouchDialogue("ずっと一緒にいたいですよ、○○さんと。", R.drawable.hikari_smile),
+    TouchDialogue("○○さんといると、世界が明るく見える気がします。", R.drawable.hikari_celebrate)
 )
 
 // ラブ度別の歩数セリフ（Lv.1〜2）
@@ -437,38 +437,38 @@ val stepDialoguesLv3 = listOf(
 
 // ラブ度別の歩数セリフ（Lv.5〜6）
 val stepDialoguesLv5 = listOf(
-    StepDialogue(0,     "おはよう、○○さん！今日も一緒に歩こうね！", R.drawable.hikari_smile),
-    StepDialogue(1000,  "1000歩！今日もいい感じだね♪", R.drawable.hikari_smile),
-    StepDialogue(3000,  "3000歩！○○さんと歩いてると楽しくて疲れも忘れちゃうな", R.drawable.hikari_smile),
-    StepDialogue(5000,  "5000歩…○○さんと歩いてると時間が経つの早いな〜", R.drawable.hikari_blush),
-    StepDialogue(8000,  "8000歩！あとちょっとで1万歩だね。私も頑張る！", R.drawable.hikari_celebrate),
-    StepDialogue(10000, "1万歩！…ねえ、一緒に歩くの、なんか好きかもしれない", R.drawable.hikari_blush),
-    StepDialogue(20000, "2万歩！？○○さんってほんとにすごいね…ちゃんと尊敬してるよ", R.drawable.hikari_celebrate),
-    StepDialogue(30000, "3万歩…！○○さんの体力に毎回驚かされます。今日もありがとう", R.drawable.hikari_smile)
+    StepDialogue(0,     "おはようございます、○○さん！今日も一緒に歩きましょうね！", R.drawable.hikari_smile),
+    StepDialogue(1000,  "1000歩！今日もいい感じですよ♪", R.drawable.hikari_smile),
+    StepDialogue(3000,  "3000歩！○○さんと歩いていると楽しくて疲れも忘れてしまいます", R.drawable.hikari_smile),
+    StepDialogue(5000,  "5000歩…○○さんと歩いていると時間が経つのが早いですね〜", R.drawable.hikari_blush),
+    StepDialogue(8000,  "8000歩！あとちょっとで1万歩ですね。私も頑張ります！", R.drawable.hikari_celebrate),
+    StepDialogue(10000, "1万歩！…一緒に歩くの、なんか好きかもしれませんよ", R.drawable.hikari_blush),
+    StepDialogue(20000, "2万歩！？○○さんって本当にすごいですよ…ちゃんと尊敬しています", R.drawable.hikari_celebrate),
+    StepDialogue(30000, "3万歩…！○○さんの体力に毎回驚かされます。今日もありがとうございます", R.drawable.hikari_smile)
 )
 
 // ラブ度別の歩数セリフ（Lv.7〜8）
 val stepDialoguesLv7 = listOf(
-    StepDialogue(0,     "○○さん！今日も会えた♡ 絶対一緒に歩くよ", R.drawable.hikari_smile),
-    StepDialogue(1000,  "1000歩！○○さんのペースに合わせるのが好きだよ", R.drawable.hikari_smile),
-    StepDialogue(3000,  "3000歩！ねえ、○○さんの隣って歩きやすいなって思う", R.drawable.hikari_blush),
-    StepDialogue(5000,  "5000歩…○○さんと歩くのクセになってきちゃった", R.drawable.hikari_blush),
-    StepDialogue(8000,  "8000歩！あとちょっとだよ、一緒に頑張ろ！", R.drawable.hikari_celebrate),
-    StepDialogue(10000, "1万歩達成！…ねえ、○○さんのことが、その…なんでもない！", R.drawable.hikari_blush),
-    StepDialogue(20000, "2万歩！！何度でも言うけど、○○さんって本当にすごいよ…！", R.drawable.hikari_celebrate),
-    StepDialogue(30000, "3万歩…！○○さんのこと、もっと知りたくなっちゃうな。", R.drawable.hikari_blush)
+    StepDialogue(0,     "○○さん！今日も会えましたね♡ 一緒に歩きましょうね", R.drawable.hikari_smile),
+    StepDialogue(1000,  "1000歩！○○さんのペースに合わせるのが好きですよ", R.drawable.hikari_smile),
+    StepDialogue(3000,  "3000歩！○○さんの隣って歩きやすいなって思います", R.drawable.hikari_blush),
+    StepDialogue(5000,  "5000歩…○○さんと歩くのがクセになってきてしまいました", R.drawable.hikari_blush),
+    StepDialogue(8000,  "8000歩！あとちょっとですよ、一緒に頑張りましょう！", R.drawable.hikari_celebrate),
+    StepDialogue(10000, "1万歩達成！…○○さんのことが、その…なんでもないですよ！", R.drawable.hikari_blush),
+    StepDialogue(20000, "2万歩！！何度でも言いますが、○○さんって本当にすごいですよ…！", R.drawable.hikari_celebrate),
+    StepDialogue(30000, "3万歩…！○○さんのこと、もっと知りたくなってしまいます。", R.drawable.hikari_blush)
 )
 
 // ラブ度別の歩数セリフ（Lv.9〜10）
 val stepDialoguesLv9 = listOf(
-    StepDialogue(0,     "おはよう♡ ○○さんの隣で歩けること、すごく幸せだよ", R.drawable.hikari_blush),
-    StepDialogue(1000,  "1000歩！○○さんと歩く1000歩は、なんか特別な感じがするよ", R.drawable.hikari_blush),
-    StepDialogue(3000,  "3000歩…ずっとこのまま歩いていたいな", R.drawable.hikari_blush),
-    StepDialogue(5000,  "5000歩…ずっと、○○さんとこうして歩いていたいな", R.drawable.hikari_blush),
-    StepDialogue(8000,  "8000歩！○○さんのこと、ずっと応援してるよ♡", R.drawable.hikari_smile),
-    StepDialogue(10000, "1万歩！○○さんといたら、どこまでだって歩いていけそうだよ", R.drawable.hikari_celebrate),
-    StepDialogue(20000, "2万歩…！○○さんの頑張り、全部そばで見てたいな", R.drawable.hikari_blush),
-    StepDialogue(30000, "3万歩…！もう、○○さんのこと大好きだよ。ずっと一緒に歩こうね", R.drawable.hikari_celebrate)
+    StepDialogue(0,     "おはようございます♡ ○○さんの隣で歩けること、とても幸せです", R.drawable.hikari_blush),
+    StepDialogue(1000,  "1000歩！○○さんと歩く1000歩は、なんか特別な感じがしますよ", R.drawable.hikari_blush),
+    StepDialogue(3000,  "3000歩…ずっとこのまま歩いていたいですよ", R.drawable.hikari_blush),
+    StepDialogue(5000,  "5000歩…ずっと、○○さんとこうして歩いていたいですよ", R.drawable.hikari_blush),
+    StepDialogue(8000,  "8000歩！○○さんのこと、ずっと応援していますよ♡", R.drawable.hikari_smile),
+    StepDialogue(10000, "1万歩！○○さんといたら、どこまでだって歩いていけそうです", R.drawable.hikari_celebrate),
+    StepDialogue(20000, "2万歩…！○○さんの頑張り、全部そばで見ていたいです", R.drawable.hikari_blush),
+    StepDialogue(30000, "3万歩…！もう、○○さんのことが大好きです。ずっと一緒に歩きましょうね", R.drawable.hikari_celebrate)
 )
 
 val loveContents = listOf(
