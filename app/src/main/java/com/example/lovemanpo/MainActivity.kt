@@ -555,7 +555,6 @@ class StepViewModel(private val repository: StepRepository) : ViewModel() {
         val sessionDate = getSessionDate()
         if (repository.lastGreetingSessionDate == sessionDate) return null
         repository.lastGreetingSessionDate = sessionDate
-        clearFreeChatHistory()
         val name = repository.playerName
         val love = loveCount.intValue
         return when {
