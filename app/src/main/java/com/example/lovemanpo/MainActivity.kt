@@ -4870,22 +4870,15 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     }
 
     Scaffold { padding ->
-        Box(modifier = Modifier
+        Column(modifier = Modifier
             .fillMaxSize()
-            .padding(bottom = padding.calculateBottomPadding())
+            .background(Color(0xFFFFF5F7))
+            .padding(padding)
+            .statusBarsPadding()
         ) {
-            // キャラクター画像（画面いっぱい・背景）
+            // 上部バー（矢印 + ステータス）
             val lastAssistantMsg = messages.lastOrNull { it.role == "assistant" }
             val lastExprRes = lastAssistantMsg?.expressionRes ?: R.drawable.osyaberi_smile
-            Image(
-                painter = painterResource(lastExprRes),
-                contentDescription = "ひかり",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Fit
-            )
-
-            Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
-            // 上部バー（矢印 + ステータス）
             val loveLabel = when {
                 loveCount >= 9 -> "深愛"
                 loveCount >= 7 -> "恋愛中"
@@ -4912,6 +4905,16 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 Spacer(modifier = Modifier.weight(1f))
                 Text(String.format(java.util.Locale.US, "%,d", todaySteps) + "歩", fontSize = 11.sp, color = Color(0xFF4FC3F7), fontWeight = FontWeight.Bold)
             }
+
+            // キャラクター画像（上部固定）
+            Image(
+                painter = painterResource(lastExprRes),
+                contentDescription = "ひかり",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp),
+                contentScale = ContentScale.Fit
+            )
 
             LazyColumn(
                 state = listState,
@@ -5049,8 +5052,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                     Icon(Icons.Default.Send, contentDescription = "送信", tint = Color(0xFFE87C9A))
                 }
             }
-            } // Column
-        } // Box
+        } // Column
     } // Scaffold
 
     if (pendingLevelUp > 0) {
