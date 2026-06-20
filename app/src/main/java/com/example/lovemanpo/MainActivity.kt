@@ -4958,11 +4958,18 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                     Text(msg.content.take(400), color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = serifModifier)
                                 } else {
                                     // 旧フォーマット後方互換: 「」で地の文/セリフを分割
-                                    parseMessageSegments(msg.content.take(400)).forEach { seg ->
-                                        if (seg.isNarration) {
-                                            Text(seg.text, color = Color(0xFF555555), fontSize = 12.sp, lineHeight = 20.sp, modifier = Modifier.padding(vertical = 2.dp))
-                                        } else {
-                                            Text(seg.text, color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = serifModifier)
+                                    val segments = parseMessageSegments(msg.content.take(400))
+                                    val hasSerif = segments.any { !it.isNarration }
+                                    if (!hasSerif) {
+                                        // 「」なし → 全文をセリフとして扱う
+                                        Text(msg.content.take(400), color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = serifModifier)
+                                    } else {
+                                        segments.forEach { seg ->
+                                            if (seg.isNarration) {
+                                                Text(seg.text, color = Color(0xFF555555), fontSize = 12.sp, lineHeight = 20.sp, modifier = Modifier.padding(vertical = 2.dp))
+                                            } else {
+                                                Text(seg.text, color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = serifModifier)
+                                            }
                                         }
                                     }
                                 }
