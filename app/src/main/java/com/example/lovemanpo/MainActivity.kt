@@ -4939,9 +4939,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                     .padding(vertical = 4.dp)
                                     .border(
                                         width = 2.dp,
-                                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                            listOf(Color(0xFFFFB8D0), Color(0xFFC07FD4))
-                                        ),
+                                        color = Color(0xFFFFB8D0),
                                         shape = RoundedCornerShape(20.dp)
                                     )
                                     .clip(RoundedCornerShape(20.dp))
