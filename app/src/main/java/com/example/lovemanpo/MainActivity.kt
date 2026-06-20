@@ -4998,7 +4998,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps, viewModel.lifestyle, viewModel.favoriteDrink, viewModel.weakness, viewModel.bodyNotes, currentTurn = messages.count { it.role == "user" }, previousStreakDays = viewModel.getPreviousStreak()) + basyoNote + diaryNote
                                 viewModel.markHasEverChatted()
                                 viewModel.updateLastChatTime()
-                                val reply = callGeminiApi(systemPrompt, historySnapshot, text, maxTokens = 1000)
+                                val reply = callGeminiApi(systemPrompt, historySnapshot, text, maxTokens = 1500)
                                 val parsed = parseReply(reply, loveCount)
                                 messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName, parsed.actionText, parsed.basyoId))
                                 parsed.basyoId?.let { viewModel.unlockMemory(it) }
