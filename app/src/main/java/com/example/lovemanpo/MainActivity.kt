@@ -4917,15 +4917,14 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 items(messages.size) { i ->
                     val msg = messages[i]
                     val isUser = msg.role == "user"
+                    val msgModifier = Modifier
+                        .padding(vertical = 2.dp)
+                        .border(1.dp, Color(0xFFFFB8D0), RoundedCornerShape(12.dp))
+                        .background(Color(0xFFFFF0F5), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                     if (isUser) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFFE87C9A),
-                                modifier = Modifier.widthIn(max = 280.dp)
-                            ) {
-                                Text(msg.content, modifier = Modifier.padding(10.dp), color = Color.White, fontSize = 14.sp)
-                            }
+                            Text(msg.content, modifier = Modifier.widthIn(max = 280.dp).then(msgModifier), color = Color(0xFF2C2C2C), fontSize = 14.sp)
                         }
                     } else {
                         Column(
@@ -4949,16 +4948,12 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             Column(modifier = Modifier.padding(horizontal = 4.dp)) {
                                 if (msg.actionText != null) {
                                     // 新フォーマット: [ACTION] が地の文
-                                    Text(msg.actionText, color = Color(0xFF555555), fontSize = 12.sp, lineHeight = 20.sp, modifier = Modifier.padding(vertical = 2.dp))
-                                    Text(msg.content.take(400), color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = Modifier.padding(vertical = 2.dp).border(1.dp, Color(0xFFFFB8D0), RoundedCornerShape(8.dp)).background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
+                                    Text(msg.actionText, color = Color(0xFF555555), fontSize = 12.sp, lineHeight = 20.sp, modifier = msgModifier)
+                                    Text(msg.content.take(400), color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = msgModifier)
                                 } else {
                                     // 旧フォーマット後方互換: 「」で地の文/セリフを分割
                                     parseMessageSegments(msg.content.take(400)).forEach { seg ->
-                                        if (seg.isNarration) {
-                                            Text(seg.text, color = Color(0xFF555555), fontSize = 12.sp, lineHeight = 20.sp, modifier = Modifier.padding(vertical = 2.dp))
-                                        } else {
-                                            Text(seg.text, color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = Modifier.padding(vertical = 2.dp).border(1.dp, Color(0xFFFFB8D0), RoundedCornerShape(8.dp)).background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
-                                        }
+                                        Text(seg.text, color = if (seg.isNarration) Color(0xFF555555) else Color(0xFF2C2C2C), fontSize = if (seg.isNarration) 12.sp else 13.sp, lineHeight = if (seg.isNarration) 20.sp else 22.sp, modifier = msgModifier)
                                     }
                                 }
                             }
