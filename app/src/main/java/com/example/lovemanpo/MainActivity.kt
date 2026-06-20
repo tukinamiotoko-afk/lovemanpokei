@@ -1868,8 +1868,32 @@ fun HintSdHikari(modifier: Modifier = Modifier) {
 }
 
 
+fun splitMessageIntoPages(text: String): List<String> {
+    val maxChars = 44
+    if (text.length <= maxChars) return listOf(text)
+    val sentences = text.split(Regex("(?<=[。！？!?])")).filter { it.isNotBlank() }
+    if (sentences.isEmpty()) return text.chunked(maxChars)
+    val result = mutableListOf<String>()
+    var page = StringBuilder()
+    for (s in sentences) {
+        if (page.isEmpty() || page.length + s.length <= maxChars) {
+            page.append(s)
+        } else {
+            if (page.isNotBlank()) result.add(page.toString())
+            page = StringBuilder(s)
+        }
+    }
+    if (page.isNotBlank()) result.add(page.toString())
+    return result.ifEmpty { text.chunked(maxChars) }
+}
+
 @Composable
 fun HomeCommentBanner(expr: Int, message: String, onClick: () -> Unit = {}) {
+    val pages = remember(message) { splitMessageIntoPages(message) }
+    var pageIndex by remember(message) { mutableStateOf(0) }
+    val currentText = pages.getOrElse(pageIndex) { message }
+    val multiPage = pages.size > 1
+
     Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0)), modifier = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }) {
         Row(modifier = Modifier.padding(10.dp).height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
                 Image(painter = painterResource(id = expressionToFaceRes(expr)), contentDescription = null, modifier = Modifier
@@ -1887,10 +1911,31 @@ fun HomeCommentBanner(expr: Int, message: String, onClick: () -> Unit = {}) {
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
+                        if (!multiPage) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
-                    Text(message, fontSize = 12.sp, color = Color(0xFF1A1A1A))
+                    Text(currentText, fontSize = 12.sp, color = Color(0xFF1A1A1A), maxLines = 2)
+                    if (multiPage) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                contentDescription = "前へ",
+                                tint = if (pageIndex > 0) Color(0xFFFF6B9D) else Color.LightGray,
+                                modifier = Modifier.size(18.dp).clickable(enabled = pageIndex > 0) { pageIndex-- }
+                            )
+                            Text("${pageIndex + 1}/${pages.size}", fontSize = 10.sp, color = Color.Gray, modifier = Modifier.padding(horizontal = 4.dp))
+                            Icon(
+                                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "次へ",
+                                tint = if (pageIndex < pages.size - 1) Color(0xFFFF6B9D) else Color.LightGray,
+                                modifier = Modifier.size(18.dp).clickable(enabled = pageIndex < pages.size - 1) { pageIndex++ }
+                            )
+                        }
+                    }
                 }
         }
     }
