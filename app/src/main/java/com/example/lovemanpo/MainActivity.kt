@@ -4897,7 +4897,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             }
             val currentBasyoName = messages.lastOrNull { it.basyoId != null }?.basyoId?.let { id ->
                 memoryItems.find { it.id == id }?.name
-            }
+            } ?: "駅前"
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -4913,15 +4913,13 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "戻る", tint = Color.White)
                 }
                 Text("Lv.$loveCount", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(loveLabel, fontSize = 11.sp, color = Color.White.copy(alpha = 0.85f))
-                Spacer(modifier = Modifier.width(10.dp))
-                Text("❤ $heartCount/15", fontSize = 11.sp, color = Color.White)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("💬$actionPoints", fontSize = 11.sp, color = Color.White)
                 Spacer(modifier = Modifier.weight(1f))
-                if (currentBasyoName != null) {
-                    Text("📍$currentBasyoName", fontSize = 11.sp, color = Color.White.copy(alpha = 0.9f))
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
+                Text("📍$currentBasyoName", fontSize = 11.sp, color = Color.White.copy(alpha = 0.9f))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(String.format(java.util.Locale.US, "%,d", todaySteps) + "歩", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
             }
 
