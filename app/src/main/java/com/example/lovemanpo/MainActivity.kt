@@ -2152,22 +2152,23 @@ fun DebugScreen(navController: NavController, viewModel: StepViewModel) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     val maxTok by viewModel.debugChatMaxTokens
-                    Text(text = "おしゃべり返答文字数", fontWeight = FontWeight.Bold)
-                    Text("最大トークン数: $maxTok", fontSize = 13.sp, color = Color(0xFF555555))
-                    Slider(
-                        value = maxTok.toFloat(),
-                        onValueChange = { viewModel.setDebugChatMaxTokens(it.toInt()) },
-                        valueRange = 10f..2000f,
-                        steps = 38,
-                        colors = androidx.compose.material3.SliderDefaults.colors(
-                            thumbColor = Color(0xFFE87C9A),
-                            activeTrackColor = Color(0xFFFFB8D0)
-                        )
+                    var tokenInput by remember { mutableStateOf(maxTok.toString()) }
+                    Text(text = "おしゃべり返答トークン数", fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = tokenInput,
+                        onValueChange = { v ->
+                            tokenInput = v.filter { it.isDigit() }
+                            tokenInput.toIntOrNull()?.let { viewModel.setDebugChatMaxTokens(it) }
+                        },
+                        label = { Text("maxTokens") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { viewModel.setDebugChatMaxTokens(300) }, modifier = Modifier.weight(1f)) { Text("短め(300)") }
-                        Button(onClick = { viewModel.setDebugChatMaxTokens(800) }, modifier = Modifier.weight(1f)) { Text("普通(800)") }
-                        Button(onClick = { viewModel.setDebugChatMaxTokens(1500) }, modifier = Modifier.weight(1f)) { Text("長め(1500)") }
+                        Button(onClick = { viewModel.setDebugChatMaxTokens(30); tokenInput = "30" }, modifier = Modifier.weight(1f)) { Text("30") }
+                        Button(onClick = { viewModel.setDebugChatMaxTokens(300); tokenInput = "300" }, modifier = Modifier.weight(1f)) { Text("300") }
+                        Button(onClick = { viewModel.setDebugChatMaxTokens(1500); tokenInput = "1500" }, modifier = Modifier.weight(1f)) { Text("1500") }
                     }
                 }
             }
@@ -4384,8 +4385,10 @@ fun parseReply(reply: String, loveCount: Int = 0): ParsedReply {
         else -> 0
     }
 
-    // 途中で切れた残存タグを除去（[EMOT / [EMOTION: / [EMOTION:hap 等すべて対応）
+    // 途中で切れた残存タグを除去（[EMOT / [EMOTION: 等）
     text = text.replace(Regex("""\[[A-Z][^\]]*$"""), "").trim()
+    // 末尾に孤立した開き括弧が残っている場合も除去（「 / （ 等）
+    text = text.replace(Regex("""[「『（\(「]\s*$"""), "").trim()
 
     return ParsedReply(text.trim(), actionText, exprRes, exprName, loveChange, basyoId, locationName)
 }
