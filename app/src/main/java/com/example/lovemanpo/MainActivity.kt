@@ -5034,18 +5034,17 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                             else -> "話題を広げる返答"
                                         }
                                         val systemPrompt = """
-あなたはユーザー（一人称：僕）の代わりに返答文を1文だけ生成するAIです。
-以下のひかりのセリフに対して、ユーザーが口頭で言う自然な話し言葉の返答を1文（30文字以内）で生成してください。
-文体は必ず話し言葉・タメ口。書き言葉・丁寧語・です・ます調は禁止。
-視点は必ずユーザー（僕）。ひかり視点・「彼」「あなた」・名前の呼びかけ・タグ・記号・絵文字は禁止。
-返答文のみ出力し、説明・括弧・前置きは不要。
+以下のひかりのセリフに対して、ユーザー（一人称：僕）が言う${kind}を話し言葉・タメ口で1文だけ出力してください。
+出力は日本語の文章のみ。説明・記号・括弧・前置き・改行は一切禁止。
 
 ひかりのセリフ：「${lastHikariMsg.take(200)}」
-生成する返答の種類：$kind
 """.trimIndent()
-                                        val result = callGeminiApi(systemPrompt, emptyList(), "返答を生成してください", maxTokens = 200)
+                                        val raw = callGeminiApi(systemPrompt, emptyList(), kind, maxTokens = 500)
+                                        // 複数行返った場合は最初の非空行のみ使用、「」があれば中身を抽出
+                                        val firstLine = raw.lines().firstOrNull { it.isNotBlank() }?.trim() ?: raw.trim()
+                                        val cleaned = Regex("^「(.+)」$").find(firstLine)?.groupValues?.get(1) ?: firstLine
                                         templateLoading = null
-                                        sendMessage(result.trim())
+                                        sendMessage(cleaned)
                                     } catch (_: Exception) {
                                         templateLoading = null
                                     }
