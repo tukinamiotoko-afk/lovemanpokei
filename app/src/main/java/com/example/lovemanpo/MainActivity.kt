@@ -4798,7 +4798,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     var templateLoading by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showTopicSheet by remember { mutableStateOf(false) }
-    var pendingTopic by remember { mutableStateOf("") }
+    var topicLoading by remember { mutableStateOf(false) }
     var currentLocation by remember { mutableStateOf("駅前") }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -4832,8 +4832,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 val diaryNote = if (yestMood.isNotBlank() && yestHint.isNotBlank())
                     "\n【昨日の日記】気分：$yestMood　内容：「$yestHint」\n自然な流れで一度だけ触れてもいい。しつこく聞かない。"
                 else ""
-                val topicForThisTurn = pendingTopic.also { pendingTopic = "" }
-                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps, viewModel.lifestyle, viewModel.favoriteDrink, viewModel.weakness, viewModel.bodyNotes, selectedTheme = topicForThisTurn, currentTurn = messages.count { it.role == "user" }, previousStreakDays = viewModel.getPreviousStreak()) + basyoNote + diaryNote
+                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps, viewModel.lifestyle, viewModel.favoriteDrink, viewModel.weakness, viewModel.bodyNotes, currentTurn = messages.count { it.role == "user" }, previousStreakDays = viewModel.getPreviousStreak()) + basyoNote + diaryNote
                 viewModel.markHasEverChatted()
                 viewModel.updateLastChatTime()
                 val reply = callGeminiApi(systemPrompt, historySnapshot, text, maxTokens = 1500)
@@ -5107,30 +5106,49 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             "休日の過ごし方", "子供の頃の思い出", "将来やりたいこと", "仕事・学校の話"
         )
         AlertDialog(
-            onDismissRequest = { showTopicSheet = false },
+            onDismissRequest = { if (!topicLoading) showTopicSheet = false },
             containerColor = Color(0xFFFFF0F5),
             shape = RoundedCornerShape(20.dp),
             title = {
                 Text("話題を選ぶ", fontWeight = FontWeight.Bold, color = Color(0xFFE87C9A), fontSize = 16.sp)
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    topics.forEach { topic ->
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFFFE4EE),
-                            border = BorderStroke(1.dp, Color(0xFFFFB8D0)),
-                            modifier = Modifier.fillMaxWidth().clickable {
-                                pendingTopic = topic
-                                showTopicSheet = false
+                if (topicLoading) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color(0xFFE87C9A))
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        topics.forEach { topic ->
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFFFE4EE),
+                                border = BorderStroke(1.dp, Color(0xFFFFB8D0)),
+                                modifier = Modifier.fillMaxWidth().clickable {
+                                    topicLoading = true
+                                    scope.launch {
+                                        try {
+                                            val prompt = "「${topic}」について、僕（ユーザー）がひかりに話しかける自然な話し言葉の1文（30文字以内）を出力してください。出力は日本語の文章のみ。説明・記号・括弧・前置き・改行は一切禁止。"
+                                            val raw = callGeminiApi(prompt, emptyList(), topic, maxTokens = 500)
+                                            val firstLine = raw.lines().firstOrNull { it.isNotBlank() }?.trim() ?: raw.trim()
+                                            val cleaned = Regex("^「(.+)」$").find(firstLine)?.groupValues?.get(1) ?: firstLine
+                                            showTopicSheet = false
+                                            sendMessage(cleaned)
+                                        } catch (_: Exception) {
+                                            showTopicSheet = false
+                                        } finally {
+                                            topicLoading = false
+                                        }
+                                    }
+                                }
+                            ) {
+                                Text(
+                                    topic,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                    fontSize = 14.sp,
+                                    color = Color(0xFFD4618A)
+                                )
                             }
-                        ) {
-                            Text(
-                                topic,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                                fontSize = 14.sp,
-                                color = Color(0xFFD4618A)
-                            )
                         }
                     }
                 }
