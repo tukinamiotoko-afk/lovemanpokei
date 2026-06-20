@@ -1429,6 +1429,43 @@ fun HomeScreenContent(
                 }
             }
 
+            // 情報カード（上部・細め）
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+                    .shadow(8.dp, RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(Color(0xFFF0F8FF), Color(0xFFD6EEFF))
+                        )
+                    )
+            ) {
+                Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                    val formattedMessage = dialogueMessage.replace("○○", playerName)
+                    HomeCommentBanner(expressionRes, formattedMessage, onClick = onCharacterClick)
+                    HomeWeatherBanner(weatherInfo)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "今日の歩数", String.format(java.util.Locale.US, "%,d", todaySteps) + "歩", null, Color(0xFFE87C9A))
+                        }
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, null, Color(0xFFF06292))
+                        }
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "歩行距離", distanceStr, null, Color(0xFF4FC3F7))
+                        }
+                        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
+            }
+
+            // キャラクター画像（上部固定）
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)) {
@@ -1437,49 +1474,11 @@ fun HomeScreenContent(
                     contentDescription = "ひかり",
                     modifier = Modifier
                         .fillMaxHeight(1.0f)
-                        .align(Alignment.BottomCenter),
+                        .align(Alignment.TopCenter),
                     contentScale = ContentScale.Fit
                 )
 
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(start = 16.dp, top = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    HomeStepCircleGauge(todaySteps, stepGaugeProgress)
-                }
-
                 HintSdHikari(modifier = Modifier.align(Alignment.BottomStart).offset(x = (-20).dp))
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .offset(y = (-30).dp)
-                    .shadow(8.dp, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                    .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                    .background(
-                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                            listOf(Color(0xFFF0F8FF), Color(0xFFD6EEFF))
-                        )
-                    )
-            ) {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    val formattedMessage = dialogueMessage.replace("○○", playerName)
-                    HomeCommentBanner(expressionRes, formattedMessage, onClick = onCharacterClick)
-                    HomeWeatherBanner(weatherInfo)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, null, Color(0xFFF06292))
-                        HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "歩行距離", distanceStr, null, Color(0xFF4FC3F7))
-                        HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
-                    }
-                    Spacer(modifier = Modifier.height(44.dp))
-                }
             }
         } // outer Column
 
