@@ -268,9 +268,9 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getBoolean("DEBUG_INSTANT_DIARY_REPLY", false)
         set(value) = prefs.edit { putBoolean("DEBUG_INSTANT_DIARY_REPLY", value) }
 
-    var debugChatMaxTokens: Int
-        get() = prefs.getInt("DEBUG_CHAT_MAX_TOKENS", 1500)
-        set(value) = prefs.edit { putInt("DEBUG_CHAT_MAX_TOKENS", value) }
+    var debugChatMaxChars: Int
+        get() = prefs.getInt("DEBUG_CHAT_MAX_CHARS", 150)
+        set(value) = prefs.edit { putInt("DEBUG_CHAT_MAX_CHARS", value) }
 
     // デバッグ用：ONにすると今日の日記を書いた後も続けて（過去日付に）日記を作成できる
     var debugMultiDiary: Boolean
@@ -740,10 +740,10 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
         debugMultiDiary.value = enabled
     }
 
-    val debugChatMaxTokens = mutableIntStateOf(repository.debugChatMaxTokens)
-    fun setDebugChatMaxTokens(value: Int) {
-        repository.debugChatMaxTokens = value
-        debugChatMaxTokens.intValue = value
+    val debugChatMaxChars = mutableIntStateOf(repository.debugChatMaxChars)
+    fun setDebugChatMaxChars(value: Int) {
+        repository.debugChatMaxChars = value
+        debugChatMaxChars.intValue = value
     }
 
     fun debugResetData() {
@@ -2151,24 +2151,24 @@ fun DebugScreen(navController: NavController, viewModel: StepViewModel) {
             }
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val maxTok by viewModel.debugChatMaxTokens
-                    var tokenInput by remember { mutableStateOf(maxTok.toString()) }
-                    Text(text = "おしゃべり返答トークン数", fontWeight = FontWeight.Bold)
+                    val maxChars by viewModel.debugChatMaxChars
+                    var charsInput by remember { mutableStateOf(maxChars.toString()) }
+                    Text(text = "おしゃべり返答文字数", fontWeight = FontWeight.Bold)
                     OutlinedTextField(
-                        value = tokenInput,
+                        value = charsInput,
                         onValueChange = { v ->
-                            tokenInput = v.filter { it.isDigit() }
-                            tokenInput.toIntOrNull()?.let { viewModel.setDebugChatMaxTokens(it) }
+                            charsInput = v.filter { it.isDigit() }
+                            charsInput.toIntOrNull()?.let { viewModel.setDebugChatMaxChars(it) }
                         },
-                        label = { Text("maxTokens") },
+                        label = { Text("最大文字数") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { viewModel.setDebugChatMaxTokens(30); tokenInput = "30" }, modifier = Modifier.weight(1f)) { Text("30") }
-                        Button(onClick = { viewModel.setDebugChatMaxTokens(300); tokenInput = "300" }, modifier = Modifier.weight(1f)) { Text("300") }
-                        Button(onClick = { viewModel.setDebugChatMaxTokens(1500); tokenInput = "1500" }, modifier = Modifier.weight(1f)) { Text("1500") }
+                        Button(onClick = { viewModel.setDebugChatMaxChars(30); charsInput = "30" }, modifier = Modifier.weight(1f)) { Text("30字") }
+                        Button(onClick = { viewModel.setDebugChatMaxChars(100); charsInput = "100" }, modifier = Modifier.weight(1f)) { Text("100字") }
+                        Button(onClick = { viewModel.setDebugChatMaxChars(150); charsInput = "150" }, modifier = Modifier.weight(1f)) { Text("150字") }
                     }
                 }
             }
@@ -4036,7 +4036,7 @@ fun buildSystemPrompt(
 前提: 会話は常に「今日の散歩の途中」という設定。外の空気・歩くこと・景色・体の感覚を自然に織り交ぜる。
 
 【話し方の絶対ルール】
-1. セリフは150文字以内（ストリーク節目・特別指示がある場合のみ200文字まで）
+1. セリフは${maxChars}文字以内（ストリーク節目・特別指示がある場合のみ${maxChars + 50}文字まで）
 2. 語尾は丁寧な敬語を使う。
 3. 感嘆詞を自然に使う。
 4. 「承知しました」「かしこまりました」などAIっぽい表現は絶対禁止。
@@ -4230,7 +4230,7 @@ fun buildFreeChatSystemPrompt(
     customNote: String = "", daysSinceLastActive: Int = 0, conversationSummary: String = "",
     hoursSinceLastChat: Int = 0, streakDays: Int = 0, stepsDuringAbsence: Int = 0,
     lifestyle: String = "", favoriteDrink: String = "", weakness: String = "", bodyNotes: String = "",
-    currentTurn: Int = 1, previousStreakDays: Int = 0, selectedTheme: String = ""
+    currentTurn: Int = 1, previousStreakDays: Int = 0, selectedTheme: String = "", maxChars: Int = 150
 ) = buildSystemPrompt(loveCount, playerName, "散歩中",
     todaySteps, activeDays, customNote, daysSinceLastActive, conversationSummary,
     hoursSinceLastChat, streakDays, stepsDuringAbsence, lifestyle, favoriteDrink, weakness, bodyNotes,
@@ -4840,7 +4840,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showTopicSheet by remember { mutableStateOf(false) }
     var topicLoading by remember { mutableStateOf(false) }
-    val debugMaxTokens by viewModel.debugChatMaxTokens
+    val debugMaxChars by viewModel.debugChatMaxChars
     var currentLocation by remember { mutableStateOf("駅前") }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -4874,10 +4874,10 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 val diaryNote = if (yestMood.isNotBlank() && yestHint.isNotBlank())
                     "\n【昨日の日記】気分：$yestMood　内容：「$yestHint」\n自然な流れで一度だけ触れてもいい。しつこく聞かない。"
                 else ""
-                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps, viewModel.lifestyle, viewModel.favoriteDrink, viewModel.weakness, viewModel.bodyNotes, currentTurn = messages.count { it.role == "user" }, previousStreakDays = viewModel.getPreviousStreak()) + basyoNote + diaryNote
+                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps, viewModel.lifestyle, viewModel.favoriteDrink, viewModel.weakness, viewModel.bodyNotes, currentTurn = messages.count { it.role == "user" }, previousStreakDays = viewModel.getPreviousStreak(), maxChars = debugMaxChars) + basyoNote + diaryNote
                 viewModel.markHasEverChatted()
                 viewModel.updateLastChatTime()
-                val reply = callGeminiApi(systemPrompt, historySnapshot, text, maxTokens = debugMaxTokens)
+                val reply = callGeminiApi(systemPrompt, historySnapshot, text, maxTokens = 1500)
                 val parsed = parseReply(reply, loveCount)
                 parsed.locationName?.let { currentLocation = it }
                 messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName, parsed.actionText, parsed.basyoId))
