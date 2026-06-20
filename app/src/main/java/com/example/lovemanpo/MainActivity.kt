@@ -1363,9 +1363,9 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             scope.launch {
                 try {
                     val prompt = """あなたは「ひかり」（22歳）。${playerName}さんと散歩中の話し相手。
-1〜2文で自然に返す。敬語。AIっぽい表現禁止。「${playerName}さん」と「さん」付けで呼ぶ。「今一緒に歩いている」視点で話す。
+40〜80文字で自然に返す。敬語。AIっぽい表現禁止。「${playerName}さん」と「さん」付けで呼ぶ。「今一緒に歩いている」視点で話す。
 今日の歩数：${todaySteps}歩。"""
-                    val reply = callGeminiApi(prompt, emptyList(), text, maxTokens = 200)
+                    val reply = callGeminiApi(prompt, emptyList(), text, maxTokens = 300)
                     homeChatReply = reply.trim()
                 } catch (_: Exception) {
                     homeChatReply = null
