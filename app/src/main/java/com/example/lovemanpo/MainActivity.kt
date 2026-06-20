@@ -1396,6 +1396,8 @@ fun HomeScreenContent(
     onMemoriesClick: () -> Unit = {},
     onDebugClick: () -> Unit
 ) {
+    var showWeatherSheet by remember { mutableStateOf(false) }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = bgRes),
@@ -1436,6 +1438,18 @@ fun HomeScreenContent(
                         iconColor = Color.Red,
                         onClick = onDebugClick
                     )
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.White,
+                        modifier = Modifier.size(30.dp).clickable(enabled = weatherInfo != null) { showWeatherSheet = true }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = if (weatherInfo != null) wmoToEmoji(weatherInfo.weatherCode) else "☁",
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
                 }
             }
 
@@ -1478,7 +1492,6 @@ fun HomeScreenContent(
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     val formattedMessage = dialogueMessage.replace("○○", playerName)
                     HomeCommentBanner(expressionRes, formattedMessage, onClick = onCharacterClick)
-                    HomeWeatherBanner(weatherInfo)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -1504,6 +1517,10 @@ fun HomeScreenContent(
             onMemories = onMemoriesClick,
             selectedScreen = "home"
         )
+
+        if (showWeatherSheet && weatherInfo != null && weatherInfo.hourly.isNotEmpty()) {
+            HourlyWeatherSheet(weatherInfo = weatherInfo, onDismiss = { showWeatherSheet = false })
+        }
     }
 } // ← ここで HomeScreenContent が終わる
 
