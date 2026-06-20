@@ -1457,10 +1457,6 @@ fun HomeScreenContent(
                     HomeTopCircleButton(Icons.Default.Notifications)
                     HomeTopCircleButton(Icons.Default.Settings)
                     HomeTopCircleButton(
-                        icon = Icons.Default.Refresh,
-                        onClick = onRefreshDialogue
-                    )
-                    HomeTopCircleButton(
                         icon = Icons.Default.BugReport,
                         containerColor = Color.Red.copy(alpha = 0.1f),
                         iconColor = Color.Red,
@@ -1483,7 +1479,8 @@ fun HomeScreenContent(
 
             Box(modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)) {
+                .weight(1f)
+                .padding(bottom = 30.dp)) {
                 Image(
                     painter = painterResource(id = expressionRes),
                     contentDescription = "ひかり",
@@ -1496,7 +1493,7 @@ fun HomeScreenContent(
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(start = 16.dp, top = 8.dp),
+                        .padding(start = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
@@ -1519,7 +1516,7 @@ fun HomeScreenContent(
             ) {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     val formattedMessage = dialogueMessage.replace("○○", playerName)
-                    HomeCommentBanner(expressionRes, formattedMessage, onClick = onCharacterClick)
+                    HomeCommentBanner(expressionRes, formattedMessage, onRefresh = onRefreshDialogue, onClick = onCharacterClick)
 
                     var homeInput by remember { mutableStateOf("") }
                     Row(
@@ -1889,12 +1886,13 @@ fun splitMessageIntoPages(text: String): List<String> {
 }
 
 @Composable
-fun HomeCommentBanner(expr: Int, message: String, onClick: () -> Unit = {}) {
+fun HomeCommentBanner(expr: Int, message: String, onRefresh: (() -> Unit)? = null, onClick: () -> Unit = {}) {
     val pages = remember(message) { splitMessageIntoPages(message) }
     var pageIndex by remember(message) { mutableStateOf(0) }
     val currentText = pages.getOrElse(pageIndex) { message }
     val multiPage = pages.size > 1
 
+    Box {
     Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0)), modifier = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }) {
         Row(modifier = Modifier.padding(10.dp).height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
                 Image(painter = painterResource(id = expressionToFaceRes(expr)), contentDescription = null, modifier = Modifier
@@ -1940,6 +1938,19 @@ fun HomeCommentBanner(expr: Int, message: String, onClick: () -> Unit = {}) {
                 }
         }
     }
+    if (onRefresh != null) {
+        Icon(
+            Icons.Default.Refresh,
+            contentDescription = "更新",
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(6.dp)
+                .size(14.dp)
+                .clickable { onRefresh() },
+            tint = Color(0xFFFFB7D0)
+        )
+    }
+    } // Box
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
