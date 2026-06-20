@@ -268,6 +268,10 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getBoolean("DEBUG_INSTANT_DIARY_REPLY", false)
         set(value) = prefs.edit { putBoolean("DEBUG_INSTANT_DIARY_REPLY", value) }
 
+    var debugChatMaxTokens: Int
+        get() = prefs.getInt("DEBUG_CHAT_MAX_TOKENS", 1500)
+        set(value) = prefs.edit { putInt("DEBUG_CHAT_MAX_TOKENS", value) }
+
     // デバッグ用：ONにすると今日の日記を書いた後も続けて（過去日付に）日記を作成できる
     var debugMultiDiary: Boolean
         get() = prefs.getBoolean("DEBUG_MULTI_DIARY", false)
@@ -734,6 +738,12 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
     fun setDebugMultiDiary(enabled: Boolean) {
         repository.debugMultiDiary = enabled
         debugMultiDiary.value = enabled
+    }
+
+    val debugChatMaxTokens = mutableIntStateOf(repository.debugChatMaxTokens)
+    fun setDebugChatMaxTokens(value: Int) {
+        repository.debugChatMaxTokens = value
+        debugChatMaxTokens.intValue = value
     }
 
     fun debugResetData() {
@@ -2136,6 +2146,28 @@ fun DebugScreen(navController: NavController, viewModel: StepViewModel) {
                             checked = viewModel.debugMultiDiary.value,
                             onCheckedChange = { viewModel.setDebugMultiDiary(it) }
                         )
+                    }
+                }
+            }
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val maxTok by viewModel.debugChatMaxTokens
+                    Text(text = "おしゃべり返答文字数", fontWeight = FontWeight.Bold)
+                    Text("最大トークン数: $maxTok", fontSize = 13.sp, color = Color(0xFF555555))
+                    Slider(
+                        value = maxTok.toFloat(),
+                        onValueChange = { viewModel.setDebugChatMaxTokens(it.toInt()) },
+                        valueRange = 100f..2000f,
+                        steps = 37,
+                        colors = androidx.compose.material3.SliderDefaults.colors(
+                            thumbColor = Color(0xFFE87C9A),
+                            activeTrackColor = Color(0xFFFFB8D0)
+                        )
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { viewModel.setDebugChatMaxTokens(300) }, modifier = Modifier.weight(1f)) { Text("短め(300)") }
+                        Button(onClick = { viewModel.setDebugChatMaxTokens(800) }, modifier = Modifier.weight(1f)) { Text("普通(800)") }
+                        Button(onClick = { viewModel.setDebugChatMaxTokens(1500) }, modifier = Modifier.weight(1f)) { Text("長め(1500)") }
                     }
                 }
             }
@@ -4805,8 +4837,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showTopicSheet by remember { mutableStateOf(false) }
     var topicLoading by remember { mutableStateOf(false) }
-    var showDebugPanel by remember { mutableStateOf(false) }
-    var debugMaxTokens by remember { mutableIntStateOf(1500) }
+    val debugMaxTokens by viewModel.debugChatMaxTokens
     var currentLocation by remember { mutableStateOf("駅前") }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -5016,37 +5047,6 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             CircularProgressIndicator(modifier = Modifier.size(28.dp), color = Color(0xFFE87C9A), strokeWidth = 2.dp)
                         }
                     }
-                }
-            }
-
-            // デバッグパネル
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "🛠 DEBUG",
-                    fontSize = 10.sp,
-                    color = Color(0xFFAAAAAA),
-                    modifier = Modifier.clickable { showDebugPanel = !showDebugPanel }
-                )
-                if (showDebugPanel) {
-                    Spacer(Modifier.width(8.dp))
-                    Text("最大トークン: $debugMaxTokens", fontSize = 10.sp, color = Color(0xFF888888))
-                    Spacer(Modifier.width(4.dp))
-                    Slider(
-                        value = debugMaxTokens.toFloat(),
-                        onValueChange = { debugMaxTokens = it.toInt() },
-                        valueRange = 100f..2000f,
-                        steps = 37,
-                        modifier = Modifier.weight(1f).height(24.dp),
-                        colors = androidx.compose.material3.SliderDefaults.colors(
-                            thumbColor = Color(0xFFE87C9A),
-                            activeTrackColor = Color(0xFFFFB8D0)
-                        )
-                    )
                 }
             }
 
