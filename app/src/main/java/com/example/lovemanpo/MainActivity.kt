@@ -4788,6 +4788,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     val messages = viewModel.freeChatMessages
     var inputText by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
+    var templateLoading by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -4935,11 +4936,12 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 }
             }
 
-            // テンプレートボタン
-            val templates = listOf(
-                "😊" to "それちょっと嬉しかった",
-                "🤔" to "なんでそう思ったの？",
-                "✨" to "それでどうなったの？"
+            // テンプレート生成ボタン
+            val lastHikariMsg = messages.lastOrNull { it.role == "assistant" }?.content ?: ""
+            val templateDefs = listOf(
+                "共感する" to "😊",
+                "理由を聞く" to "🤔",
+                "話を広げる" to "✨"
             )
             Row(
                 modifier = Modifier
@@ -4947,21 +4949,41 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                templates.forEach { (emoji, text) ->
+                templateDefs.forEach { (label, emoji) ->
+                    val isThisLoading = templateLoading == label
                     Surface(
                         shape = RoundedCornerShape(20.dp),
                         color = Color(0xFFFFF0F5),
                         border = BorderStroke(1.dp, Color(0xFFFFB8D0)),
                         modifier = Modifier
                             .weight(1f)
-                            .clickable { inputText = text }
+                            .clickable(enabled = templateLoading == null && !isLoading && lastHikariMsg.isNotBlank()) {
+                                templateLoading = label
+                                scope.launch {
+                                    try {
+                                        val instruction = when (label) {
+                                            "共感する" -> "ユーザーが以下のメッセージに共感を示す自然な返答を日本語で1文（30文字以内）生成してください。タグ・記号・絵文字は不要。"
+                                            "理由を聞く" -> "ユーザーが以下のメッセージに対して理由や気持ちを尋ねる自然な質問を日本語で1文（30文字以内）生成してください。タグ・記号・絵文字は不要。"
+                                            else -> "ユーザーが以下のメッセージの話題を広げるような自然な返答を日本語で1文（30文字以内）生成してください。タグ・記号・絵文字は不要。"
+                                        }
+                                        val result = callGeminiApi(instruction, emptyList(), lastHikariMsg.take(200), maxTokens = 80)
+                                        inputText = result.trim()
+                                    } catch (_: Exception) {} finally {
+                                        templateLoading = null
+                                    }
+                                }
+                            }
                     ) {
                         Column(
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text(emoji, fontSize = 16.sp)
-                            Text(text, fontSize = 9.sp, color = Color(0xFFD4618A), textAlign = TextAlign.Center, lineHeight = 13.sp)
+                            if (isThisLoading) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color(0xFFE87C9A), strokeWidth = 2.dp)
+                            } else {
+                                Text(emoji, fontSize = 16.sp)
+                            }
+                            Text(label, fontSize = 9.sp, color = Color(0xFFD4618A), textAlign = TextAlign.Center, lineHeight = 13.sp)
                         }
                     }
                 }
