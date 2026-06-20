@@ -4935,6 +4935,38 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 }
             }
 
+            // テンプレートボタン
+            val templates = listOf(
+                "😊" to "それちょっと嬉しかった",
+                "🤔" to "なんでそう思ったの？",
+                "✨" to "それでどうなったの？"
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                templates.forEach { (emoji, text) ->
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color(0xFFFFF0F5),
+                        border = BorderStroke(1.dp, Color(0xFFFFB8D0)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { inputText = text }
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(emoji, fontSize = 16.sp)
+                            Text(text, fontSize = 9.sp, color = Color(0xFFD4618A), textAlign = TextAlign.Center, lineHeight = 13.sp)
+                        }
+                    }
+                }
+            }
+
             errorMessage?.let {
                 Text(it, color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp))
             }
