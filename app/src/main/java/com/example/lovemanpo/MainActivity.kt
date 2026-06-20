@@ -2157,8 +2157,8 @@ fun DebugScreen(navController: NavController, viewModel: StepViewModel) {
                     Slider(
                         value = maxTok.toFloat(),
                         onValueChange = { viewModel.setDebugChatMaxTokens(it.toInt()) },
-                        valueRange = 200f..2000f,
-                        steps = 35,
+                        valueRange = 10f..2000f,
+                        steps = 38,
                         colors = androidx.compose.material3.SliderDefaults.colors(
                             thumbColor = Color(0xFFE87C9A),
                             activeTrackColor = Color(0xFFFFB8D0)
