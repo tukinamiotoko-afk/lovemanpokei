@@ -4890,20 +4890,24 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White.copy(alpha = 0.85f))
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                            listOf(Color(0xFFFF8FB1), Color(0xFFD4618A), Color(0xFF9B59B6))
+                        )
+                    )
                     .padding(end = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "戻る", tint = Color(0xFFD4618A))
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "戻る", tint = Color.White)
                 }
-                Text("Lv.$loveCount", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7B5C3E))
+                Text("Lv.$loveCount", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(loveLabel, fontSize = 11.sp, color = Color(0xFFB08060))
+                Text(loveLabel, fontSize = 11.sp, color = Color.White.copy(alpha = 0.85f))
                 Spacer(modifier = Modifier.width(10.dp))
-                Text("❤ $heartCount/15", fontSize = 11.sp, color = Color(0xFFE87C9A))
+                Text("❤ $heartCount/15", fontSize = 11.sp, color = Color.White)
                 Spacer(modifier = Modifier.weight(1f))
-                Text(String.format(java.util.Locale.US, "%,d", todaySteps) + "歩", fontSize = 11.sp, color = Color(0xFF4FC3F7), fontWeight = FontWeight.Bold)
+                Text(String.format(java.util.Locale.US, "%,d", todaySteps) + "歩", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
             }
 
             // キャラクター画像（上部固定）
@@ -4912,7 +4916,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 contentDescription = "ひかり",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(220.dp),
+                    .height(280.dp),
                 contentScale = ContentScale.Fit
             )
 
