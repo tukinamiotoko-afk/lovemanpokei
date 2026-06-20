@@ -4869,49 +4869,49 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
     }
 
-    Scaffold(topBar = {
-        TopAppBarWithBack(
-            title = "",
-            onBack = { navController.popBackStack() },
-            titleColor = Color(0xFFE87C9A),
-            titleFontFamily = MplusRoundedFontFamily
-        )
-    }) { padding ->
-        Column(modifier = Modifier
+    Scaffold { padding ->
+        Box(modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFFFF5F7))
-            .padding(padding)) {
-            // 上部固定カード（使えるポイントを表示）
-            Surface(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = Color(0xFFFFF1F6),
-                border = BorderStroke(1.dp, Color(0xFFF3D3DE))
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("💬 ひかりとおしゃべり", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD4618A), fontFamily = MplusRoundedFontFamily, modifier = Modifier.weight(1f))
-                    Text("使えるポイント ${actionPoints}pt", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD4618A), fontFamily = MplusRoundedFontFamily)
-                }
-            }
-
-            // キャラクター画像（上部固定）
+            .padding(bottom = padding.calculateBottomPadding())
+        ) {
+            // キャラクター画像（画面いっぱい・背景）
             val lastAssistantMsg = messages.lastOrNull { it.role == "assistant" }
             val lastExprRes = lastAssistantMsg?.expressionRes ?: R.drawable.osyaberi_smile
-            val lastExprName = lastAssistantMsg?.exprName
             Image(
                 painter = painterResource(lastExprRes),
                 contentDescription = "ひかり",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(160.dp),
+                modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Fit
             )
 
-            // ステータスカード（上部・細め・歩数付き）
-            ChatStatusCard(loveCount = loveCount, heartCount = heartCount, lastExprName = lastExprName, todaySteps = todaySteps)
+            Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+            // 上部バー（矢印 + ステータス）
+            val loveLabel = when {
+                loveCount >= 9 -> "深愛"
+                loveCount >= 7 -> "恋愛中"
+                loveCount >= 5 -> "好き"
+                loveCount >= 3 -> "仲良し"
+                loveCount >= 1 -> "知り合い"
+                else           -> "はじめまして"
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White.copy(alpha = 0.85f))
+                    .padding(end = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "戻る", tint = Color(0xFFD4618A))
+                }
+                Text("Lv.$loveCount", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7B5C3E))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(loveLabel, fontSize = 11.sp, color = Color(0xFFB08060))
+                Spacer(modifier = Modifier.width(10.dp))
+                Text("❤ $heartCount/15", fontSize = 11.sp, color = Color(0xFFE87C9A))
+                Spacer(modifier = Modifier.weight(1f))
+                Text(String.format(java.util.Locale.US, "%,d", todaySteps) + "歩", fontSize = 11.sp, color = Color(0xFF4FC3F7), fontWeight = FontWeight.Bold)
+            }
 
             LazyColumn(
                 state = listState,
@@ -5049,8 +5049,9 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                     Icon(Icons.Default.Send, contentDescription = "送信", tint = Color(0xFFE87C9A))
                 }
             }
-        }
-    }
+            } // Column
+        } // Box
+    } // Scaffold
 
     if (pendingLevelUp > 0) {
         LevelUpDialog(
