@@ -343,7 +343,7 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
     val currentActionPoints =
         derivedStateOf { totalEarnedPoints.intValue - spentActionPoints.intValue }
     val stepGaugeProgress = derivedStateOf { (todaySteps.intValue.toFloat() / 5000f).coerceAtMost(1f) }
-    val heartGaugeProgress = derivedStateOf { heartCount.intValue.toFloat() / 15f }
+    val heartGaugeProgress = derivedStateOf { heartCount.intValue.toFloat() / 10f }
 
     val strideLength: Float
         get() {
@@ -614,7 +614,7 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
     }
 
     fun checkAndApplyLevelUp() {
-        if (heartCount.intValue < 15) return
+        if (heartCount.intValue < 10) return
         val nextLevel = loveCount.intValue + 1
         if (nextLevel > 10) return
         val wall = loveLevelWalls.find { it.level == nextLevel }
@@ -634,13 +634,13 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
     fun consumeOdekakeInvite(): String? = pendingOdekakeInvite.value.also { pendingOdekakeInvite.value = null }
 
     fun earnHeart() {
-        if (heartCount.intValue >= 15) {
+        if (heartCount.intValue >= 10) {
             checkAndApplyLevelUp()
             return
         }
         heartCount.intValue++
         repository.heartCount = heartCount.intValue
-        if (heartCount.intValue >= 15) {
+        if (heartCount.intValue >= 10) {
             checkAndApplyLevelUp()
         }
     }
@@ -4427,7 +4427,7 @@ fun ChatStatusCard(loveCount: Int, heartCount: Int, lastExprName: String?, today
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("ハート", fontSize = 9.sp, color = Color(0xFF9E8B75))
-                    Text("$heartCount / 15", fontSize = 9.sp, color = Color(0xFFE87C9A))
+                    Text("$heartCount / 10", fontSize = 9.sp, color = Color(0xFFE87C9A))
                 }
                 Spacer(modifier = Modifier.height(3.dp))
                 Box(
@@ -4439,7 +4439,7 @@ fun ChatStatusCard(loveCount: Int, heartCount: Int, lastExprName: String?, today
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(fraction = (heartCount / 15f).coerceIn(0f, 1f))
+                            .fillMaxWidth(fraction = (heartCount / 10f).coerceIn(0f, 1f))
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(4.dp))
                             .background(Color(0xFFE87C9A))
@@ -4797,6 +4797,8 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     var isLoading by remember { mutableStateOf(false) }
     var templateLoading by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showTopicSheet by remember { mutableStateOf(false) }
+    var pendingTopic by remember { mutableStateOf("") }
     var currentLocation by remember { mutableStateOf("駅前") }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -4830,7 +4832,8 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 val diaryNote = if (yestMood.isNotBlank() && yestHint.isNotBlank())
                     "\n【昨日の日記】気分：$yestMood　内容：「$yestHint」\n自然な流れで一度だけ触れてもいい。しつこく聞かない。"
                 else ""
-                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps, viewModel.lifestyle, viewModel.favoriteDrink, viewModel.weakness, viewModel.bodyNotes, currentTurn = messages.count { it.role == "user" }, previousStreakDays = viewModel.getPreviousStreak()) + basyoNote + diaryNote
+                val topicForThisTurn = pendingTopic.also { pendingTopic = "" }
+                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps, viewModel.lifestyle, viewModel.favoriteDrink, viewModel.weakness, viewModel.bodyNotes, selectedTheme = topicForThisTurn, currentTurn = messages.count { it.role == "user" }, previousStreakDays = viewModel.getPreviousStreak()) + basyoNote + diaryNote
                 viewModel.markHasEverChatted()
                 viewModel.updateLastChatTime()
                 val reply = callGeminiApi(systemPrompt, historySnapshot, text, maxTokens = 1500)
@@ -4921,7 +4924,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(loveLabel, fontSize = 11.sp, color = Color.White.copy(alpha = 0.85f))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("❤$heartCount/15", fontSize = 11.sp, color = Color.White)
+                Text("❤$heartCount/10", fontSize = 11.sp, color = Color.White)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("💬$actionPoints", fontSize = 11.sp, color = Color.White)
                 Spacer(modifier = Modifier.weight(1f))
@@ -5074,6 +5077,9 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             Row(modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { showTopicSheet = true }) {
+                    Icon(Icons.Default.List, contentDescription = "話題", tint = Color(0xFFE87C9A))
+                }
                 OutlinedTextField(
                     value = inputText,
                     onValueChange = { if (it.length <= 250) inputText = it },
@@ -5093,6 +5099,45 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             }
         } // Column
     } // Scaffold
+
+    if (showTopicSheet) {
+        val topics = listOf(
+            "今日の散歩コース", "行ってみたい場所", "好きな季節",
+            "最近のマイブーム", "好きな食べ物", "音楽・映画",
+            "休日の過ごし方", "子供の頃の思い出", "将来やりたいこと", "仕事・学校の話"
+        )
+        AlertDialog(
+            onDismissRequest = { showTopicSheet = false },
+            containerColor = Color(0xFFFFF0F5),
+            shape = RoundedCornerShape(20.dp),
+            title = {
+                Text("話題を選ぶ", fontWeight = FontWeight.Bold, color = Color(0xFFE87C9A), fontSize = 16.sp)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    topics.forEach { topic ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFFFE4EE),
+                            border = BorderStroke(1.dp, Color(0xFFFFB8D0)),
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                pendingTopic = topic
+                                showTopicSheet = false
+                            }
+                        ) {
+                            Text(
+                                topic,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                fontSize = 14.sp,
+                                color = Color(0xFFD4618A)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {}
+        )
+    }
 
     if (pendingLevelUp > 0) {
         LevelUpDialog(
