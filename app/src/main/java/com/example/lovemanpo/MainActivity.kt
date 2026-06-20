@@ -4805,6 +4805,8 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showTopicSheet by remember { mutableStateOf(false) }
     var topicLoading by remember { mutableStateOf(false) }
+    var showDebugPanel by remember { mutableStateOf(false) }
+    var debugMaxTokens by remember { mutableIntStateOf(1500) }
     var currentLocation by remember { mutableStateOf("駅前") }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
@@ -4841,7 +4843,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps, viewModel.lifestyle, viewModel.favoriteDrink, viewModel.weakness, viewModel.bodyNotes, currentTurn = messages.count { it.role == "user" }, previousStreakDays = viewModel.getPreviousStreak()) + basyoNote + diaryNote
                 viewModel.markHasEverChatted()
                 viewModel.updateLastChatTime()
-                val reply = callGeminiApi(systemPrompt, historySnapshot, text, maxTokens = 1500)
+                val reply = callGeminiApi(systemPrompt, historySnapshot, text, maxTokens = debugMaxTokens)
                 val parsed = parseReply(reply, loveCount)
                 parsed.locationName?.let { currentLocation = it }
                 messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName, parsed.actionText, parsed.basyoId))
@@ -5014,6 +5016,37 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             CircularProgressIndicator(modifier = Modifier.size(28.dp), color = Color(0xFFE87C9A), strokeWidth = 2.dp)
                         }
                     }
+                }
+            }
+
+            // デバッグパネル
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "🛠 DEBUG",
+                    fontSize = 10.sp,
+                    color = Color(0xFFAAAAAA),
+                    modifier = Modifier.clickable { showDebugPanel = !showDebugPanel }
+                )
+                if (showDebugPanel) {
+                    Spacer(Modifier.width(8.dp))
+                    Text("最大トークン: $debugMaxTokens", fontSize = 10.sp, color = Color(0xFF888888))
+                    Spacer(Modifier.width(4.dp))
+                    Slider(
+                        value = debugMaxTokens.toFloat(),
+                        onValueChange = { debugMaxTokens = it.toInt() },
+                        valueRange = 100f..2000f,
+                        steps = 37,
+                        modifier = Modifier.weight(1f).height(24.dp),
+                        colors = androidx.compose.material3.SliderDefaults.colors(
+                            thumbColor = Color(0xFFE87C9A),
+                            activeTrackColor = Color(0xFFFFB8D0)
+                        )
+                    )
                 }
             }
 
