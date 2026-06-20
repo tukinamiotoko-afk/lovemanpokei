@@ -4112,6 +4112,7 @@ Talk Stage が 3 以上の会話で、自然な流れで以下の場所の話題
 【出力フォーマット（毎ターン厳守）】
 [EMOTION:タグ名]
 [BASYO:場所ID]（条件を満たす時のみ）
+[LOCATION:場所名]（会話の中で特定の場所に言及した時のみ。「公園」「駅前のカフェ」など日本語で短く。言及がない場合は出力しない）
 セリフ本文
 
 """.trimIndent()
@@ -4269,7 +4270,7 @@ fun exprNameToRes(name: String): Int = when (name) {
     else                     -> R.drawable.osyaberi_normal
 }
 
-data class ParsedReply(val text: String, val actionText: String?, val exprRes: Int, val exprName: String, val loveChange: Int, val basyoId: String? = null)
+data class ParsedReply(val text: String, val actionText: String?, val exprRes: Int, val exprName: String, val loveChange: Int, val basyoId: String? = null, val locationName: String? = null)
 
 fun emotionToRes(emotion: String, loveCount: Int = 0): Int = when (emotion) {
     "happy"    -> R.drawable.osyaberi_sugokuegao
@@ -4307,6 +4308,11 @@ fun parseReply(reply: String, loveCount: Int = 0): ParsedReply {
     val basyoId = basyoMatch?.groupValues?.get(1)
     if (basyoMatch != null) text = text.replace(basyoMatch.value, "").trim()
 
+    // [LOCATION:場所名] — 現在地表示更新
+    val locationMatch = Regex("""\[LOCATION:([^\]]+)\]""").find(text)
+    val locationName = locationMatch?.groupValues?.get(1)?.trim()
+    if (locationMatch != null) text = text.replace(locationMatch.value, "").trim()
+
     // [ACTION: text] — 地の文タグ。閉じ括弧ありを優先。
     // フォールバック: ] も改行もない場合は同一行分だけ取得（DOT_MATCHES_ALL は使わない—改行を越えるとセリフ本文ごと消えるため）。
     val actionMatch = Regex("""\[ACTION:\s*(.+?)\]""").find(text)
@@ -4343,7 +4349,7 @@ fun parseReply(reply: String, loveCount: Int = 0): ParsedReply {
     // 念のため：途中で切れて閉じ括弧の無い残存タグ（[EMOTION: / [BASYO: 等）を末尾ごと除去
     text = text.replace(Regex("""\[[A-Z]+:[^\]]*$"""), "").trim()
 
-    return ParsedReply(text.trim(), actionText, exprRes, exprName, loveChange, basyoId)
+    return ParsedReply(text.trim(), actionText, exprRes, exprName, loveChange, basyoId, locationName)
 }
 
 data class MessageSegment(val text: String, val isNarration: Boolean)
@@ -4791,6 +4797,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     var isLoading by remember { mutableStateOf(false) }
     var templateLoading by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var currentLocation by remember { mutableStateOf("駅前") }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
@@ -4828,6 +4835,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 viewModel.updateLastChatTime()
                 val reply = callGeminiApi(systemPrompt, historySnapshot, text, maxTokens = 1500)
                 val parsed = parseReply(reply, loveCount)
+                parsed.locationName?.let { currentLocation = it }
                 messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName, parsed.actionText, parsed.basyoId))
                 parsed.basyoId?.let { viewModel.unlockMemory(it) }
                 when (parsed.loveChange) {
@@ -4895,9 +4903,6 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 loveCount >= 1 -> "知り合い"
                 else           -> "はじめまして"
             }
-            val currentBasyoName = messages.lastOrNull { it.basyoId != null }?.basyoId?.let { id ->
-                memoryItems.find { it.id == id }?.name
-            } ?: "駅前"
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -4918,7 +4923,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("💬$actionPoints", fontSize = 11.sp, color = Color.White)
                 Spacer(modifier = Modifier.weight(1f))
-                Text("📍$currentBasyoName", fontSize = 11.sp, color = Color.White.copy(alpha = 0.9f))
+                Text("📍$currentLocation", fontSize = 11.sp, color = Color.White.copy(alpha = 0.9f))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(String.format(java.util.Locale.US, "%,d", todaySteps) + "歩", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
             }
