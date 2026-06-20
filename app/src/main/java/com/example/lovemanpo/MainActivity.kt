@@ -1923,7 +1923,7 @@ fun HomeCommentBanner(expr: Int, message: String, onRefresh: (() -> Unit)? = nul
                         if (!multiPage) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
-                    Text(currentText, fontSize = 12.sp, color = Color(0xFF1A1A1A), maxLines = 2)
+                    Text(currentText, fontSize = 12.sp, color = Color(0xFF1A1A1A), maxLines = 2, overflow = TextOverflow.Ellipsis)
                     if (multiPage) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
@@ -3025,6 +3025,8 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
     var refreshKey by remember { mutableIntStateOf(0) }
     val allDates = remember(refreshKey) { viewModel.repository.userDiaryDates.sortedDescending() }
     val todayDiaryExists = remember(refreshKey) { viewModel.repository.getUserDiary(today).isNotBlank() }
+    val allStepRecords by viewModel.allStepRecords
+    val stepsByDate = remember(allStepRecords) { allStepRecords.associate { it.date to it.stepCount } }
 
     var showWriteDialog by remember { mutableStateOf(false) }
     var selectedDate by remember { mutableStateOf<String?>(null) }  // 詳細表示する日付
@@ -3178,6 +3180,7 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                         previewText = viewModel.repository.getUserDiary(date),
                         hasReply = viewModel.repository.getDiaryReply(date).isNotBlank(),
                         isLoading = loadingDates.contains(date),
+                        stepCount = stepsByDate[date] ?: 0,
                         onClick = { selectedDate = date }
                     )
                 }
@@ -3195,6 +3198,7 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
             replyText = viewModel.repository.getDiaryReply(date),
             emotion = viewModel.repository.getDiaryReplyEmotion(date),
             isLoading = loadingDates.contains(date),
+            stepCount = stepsByDate[date] ?: 0,
             diaryFontFamily = diaryFontFamily,
             onDismiss = { selectedDate = null }
         )
@@ -3396,6 +3400,7 @@ fun DiaryDateCard(
     previewText: String,
     hasReply: Boolean,
     isLoading: Boolean,
+    stepCount: Int = 0,
     onClick: () -> Unit
 ) {
     val pinkAccent = Color(0xFFFF6B9D)
@@ -3423,9 +3428,10 @@ fun DiaryDateCard(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // 左：日付ブロック
-            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(44.dp)) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(52.dp)) {
                 Text(moodEmoji, fontSize = 20.sp)
                 Text(formattedDate, fontSize = 10.sp, color = Color(0xFFAAAAAA), fontFamily = MplusRoundedFontFamily)
+                if (stepCount > 0) Text("${"%,d".format(stepCount)}歩", fontSize = 9.sp, color = Color(0xFFBBBBBB), fontFamily = MplusRoundedFontFamily)
             }
             // 中：本文プレビュー
             Text(
@@ -3457,6 +3463,7 @@ fun DiaryDetailDialog(
     replyText: String,
     emotion: String,
     isLoading: Boolean,
+    stepCount: Int = 0,
     diaryFontFamily: FontFamily,
     onDismiss: () -> Unit
 ) {
@@ -3493,8 +3500,9 @@ fun DiaryDetailDialog(
                     }
                     Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(formattedDate, color = pinkAccent, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
-                        if (moodEmoji.isNotBlank()) {
-                            Text(moodEmoji, fontSize = 11.sp, color = Color(0xFF999999), fontFamily = MplusRoundedFontFamily)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (moodEmoji.isNotBlank()) Text(moodEmoji, fontSize = 11.sp, color = Color(0xFF999999), fontFamily = MplusRoundedFontFamily)
+                            if (stepCount > 0) Text("🚶 ${"%,d".format(stepCount)}歩", fontSize = 11.sp, color = Color(0xFF999999), fontFamily = MplusRoundedFontFamily)
                         }
                     }
                     Spacer(Modifier.width(48.dp))
