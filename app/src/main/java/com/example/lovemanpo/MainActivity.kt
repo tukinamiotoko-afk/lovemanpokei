@@ -1325,12 +1325,6 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
 
     var homeChatReply by remember { mutableStateOf<String?>(null) }
     var isHomeChatLoading by remember { mutableStateOf(false) }
-    LaunchedEffect(homeChatReply) {
-        if (homeChatReply != null) {
-            delay(12000)
-            homeChatReply = null
-        }
-    }
 
     val weatherDialogue = weatherInfo?.let { homeWeatherDialogue(it.weatherCode) }
     val stepAchievementDialogue = stepDialogue.takeIf { it.thresholdSteps > 0 }
@@ -1363,6 +1357,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             touchedDialogue = touchDialogues.randomOrNull()
         },
         isHomeChatLoading = isHomeChatLoading,
+        onRefreshDialogue = { homeChatReply = null },
         onHomeChatSend = { text ->
             isHomeChatLoading = true
             scope.launch {
@@ -1416,6 +1411,7 @@ fun HomeScreenContent(
     caloriesStr: String,
     weatherInfo: WeatherInfo? = null,
     isHomeChatLoading: Boolean = false,
+    onRefreshDialogue: () -> Unit = {},
     onHomeChatSend: (String) -> Unit = {},
     onCharacterClick: () -> Unit,
     onFreeChatClick: () -> Unit,
@@ -1460,6 +1456,10 @@ fun HomeScreenContent(
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     HomeTopCircleButton(Icons.Default.Notifications)
                     HomeTopCircleButton(Icons.Default.Settings)
+                    HomeTopCircleButton(
+                        icon = Icons.Default.Refresh,
+                        onClick = onRefreshDialogue
+                    )
                     HomeTopCircleButton(
                         icon = Icons.Default.BugReport,
                         containerColor = Color.Red.copy(alpha = 0.1f),
