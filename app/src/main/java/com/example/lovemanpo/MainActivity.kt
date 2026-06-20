@@ -4938,18 +4938,14 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
 
             // テンプレート生成ボタン
             val lastHikariMsg = messages.lastOrNull { it.role == "assistant" }?.content ?: ""
-            val templateDefs = listOf(
-                "共感する" to "😊",
-                "理由を聞く" to "🤔",
-                "話を広げる" to "✨"
-            )
+            val templateDefs = listOf("共感する", "理由を聞く", "話を広げる")
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                templateDefs.forEach { (label, emoji) ->
+                templateDefs.forEach { label ->
                     val isThisLoading = templateLoading == label
                     Surface(
                         shape = RoundedCornerShape(20.dp),
@@ -4974,16 +4970,15 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 }
                             }
                     ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                        Box(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             if (isThisLoading) {
-                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color(0xFFE87C9A), strokeWidth = 2.dp)
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), color = Color(0xFFE87C9A), strokeWidth = 2.dp)
                             } else {
-                                Text(emoji, fontSize = 16.sp)
+                                Text(label, fontSize = 10.sp, color = Color(0xFFD4618A), textAlign = TextAlign.Center)
                             }
-                            Text(label, fontSize = 9.sp, color = Color(0xFFD4618A), textAlign = TextAlign.Center, lineHeight = 13.sp)
                         }
                     }
                 }
