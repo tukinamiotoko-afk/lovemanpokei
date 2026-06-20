@@ -479,6 +479,85 @@ val loveContents = listOf(
     LoveContent(9, R.drawable.hikari_smile, stepDialoguesLv9, touchDialoguesLv9)
 )
 
+// ==========================================
+// ★ 会話テーマ定義 ★
+// ==========================================
+
+data class ConversationTheme(val text: String, val minStage: Int)
+
+val conversationThemes = listOf(
+    // 妄想・if系（Lv.1〜）
+    ConversationTheme("100万円もらったら何に使う？", 1),
+    ConversationTheme("1週間休みがあったら何する？", 1),
+    ConversationTheme("魔法が使えたら？", 1),
+    ConversationTheme("空を飛べたら？", 1),
+    ConversationTheme("透明人間になれたら？", 1),
+    ConversationTheme("無人島に行くなら何を持っていく？", 1),
+    ConversationTheme("タイムマシンがあったら？", 1),
+    ConversationTheme("一日だけ有名人になれるなら？", 1),
+    ConversationTheme("動物になれるなら？", 1),
+    ConversationTheme("どこでもドアがあったら？", 1),
+    // 好きなもの系（Lv.1〜）
+    ConversationTheme("好きな食べ物", 1),
+    ConversationTheme("好きな飲み物", 1),
+    ConversationTheme("好きなお菓子", 1),
+    ConversationTheme("好きな動物", 1),
+    ConversationTheme("好きな季節", 1),
+    ConversationTheme("好きな音楽", 1),
+    ConversationTheme("好きな映画", 1),
+    ConversationTheme("好きな漫画", 1),
+    ConversationTheme("好きなゲーム", 1),
+    ConversationTheme("好きな景色", 1),
+    // 性格・タイプ系（Lv.2〜）
+    ConversationTheme("朝型？夜型？", 2),
+    ConversationTheme("計画派？直感派？", 2),
+    ConversationTheme("インドア？アウトドア？", 2),
+    ConversationTheme("人見知りする？", 2),
+    ConversationTheme("一人時間は好き？", 2),
+    ConversationTheme("負けず嫌い？", 2),
+    ConversationTheme("チャレンジ好き？", 2),
+    ConversationTheme("コツコツ型？", 2),
+    ConversationTheme("リーダー向き？", 2),
+    ConversationTheme("聞き役？話し役？", 2),
+    // 思い出系（Lv.3〜）
+    ConversationTheme("子供の頃好きだった遊び", 3),
+    ConversationTheme("学生時代の思い出", 3),
+    ConversationTheme("一番印象に残っている旅行", 3),
+    ConversationTheme("昔好きだったアニメ", 3),
+    ConversationTheme("昔好きだったゲーム", 3),
+    ConversationTheme("忘れられない出来事", 3),
+    ConversationTheme("懐かしい場所", 3),
+    ConversationTheme("小さい頃の夢", 3),
+    ConversationTheme("子供の頃の宝物", 3),
+    ConversationTheme("昔の失敗談", 3),
+    // 二人で系（Lv.4〜）
+    ConversationTheme("理想の休日", 4),
+    ConversationTheme("一緒に行きたい場所", 4),
+    ConversationTheme("好きなデート", 4),
+    ConversationTheme("落ち着く時間", 4),
+    ConversationTheme("誰かと一緒に見たい景色", 4),
+    ConversationTheme("プレゼントでもらうなら何が嬉しい？", 4),
+    ConversationTheme("一緒に食べたいもの", 4),
+    ConversationTheme("一緒にやってみたいこと", 4),
+    ConversationTheme("好きな季節の過ごし方", 4),
+    ConversationTheme("思い出に残る一日にしたいなら？", 4)
+)
+
+fun getThemesForLoveLevel(loveCount: Int): List<String> {
+    val stage = when {
+        loveCount <= 2 -> 1
+        loveCount <= 4 -> 2
+        loveCount <= 6 -> 3
+        loveCount <= 8 -> 4
+        else -> 4
+    }
+    return conversationThemes
+        .filter { it.minStage <= stage }
+        .map { it.text }
+        .shuffled()
+        .take(4)
+}
+
 // --- 全エピソードのリスト ---
 val mainStoryEpisodes = listOf(
     StoryEpisode(1, "運命の出会い？", R.drawable.street_background, script1_Encounter, 1, 0),

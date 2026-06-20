@@ -39,6 +39,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -2488,12 +2489,18 @@ val odekakeLocations = listOf(
     OdekakeLocation("home",   "おうち",  "🏠")
 )
 
-fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String): String {
+fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String, theme: String = ""): String {
     val intimacy = when {
         loveCount <= 2 -> "まだ少し距離がある丁寧な話し方"
         loveCount <= 5 -> "友達のような自然な話し方"
         else -> "とても親密で甘えた話し方"
     }
+    val themeSection = if (theme.isNotEmpty()) """
+
+【今日のテーマ】
+${theme}
+まずひかり自身の話や感想から始めること。理由・感情・小さな失敗談を含めて話す。「私は○○が好きです。あなたは？」のような単純な終わり方はしない。""" else ""
+
     return """あなたはヒカリというキャラクターです。${playerName}のことが大好きな女の子で、${intimacy}をします。返答は200字以内に収めてください。
 
 【話し方のルール】
@@ -2505,7 +2512,7 @@ fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String): String {
 - ${playerName}だから話す、という特別感を伝える
 - 会話をぶつ切りで終わらせない。余韻や次への期待を残す
 - 好き嫌いだけで終わらせず、理由や感情も一緒に話す
-- 質問は1つまで""".trimIndent()
+- 質問は1つまで${themeSection}""".trimIndent()
 }
 
 fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String): String {
@@ -2580,6 +2587,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val themeChips = remember(loveCount) { getThemesForLoveLevel(loveCount) }
 
     // 履歴ロード＋毎日の挨拶
     LaunchedEffect(Unit) {
@@ -2646,6 +2654,42 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
 
             errorMessage?.let {
                 Text(it, color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 12.dp))
+            }
+
+            // テーマチップ
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                themeChips.forEach { theme ->
+                    SuggestionChip(
+                        onClick = {
+                            if (isLoading) return@SuggestionChip
+                            val apiKey = viewModel.openAiApiKey
+                            if (apiKey.isEmpty()) { errorMessage = "設定からOpenAI APIキーを入力してください"; return@SuggestionChip }
+                            if (!viewModel.spendPointForChat()) { errorMessage = "ポイントが足りません（2000歩で1ポイント）"; return@SuggestionChip }
+                            isLoading = true
+                            errorMessage = null
+                            scope.launch {
+                                try {
+                                    val today = getGameDate()
+                                    val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, theme)
+                                    val reply = callOpenAiApi(apiKey, systemPrompt, messages.toList(), "【テーマ：${theme}について、まずひかりから話しかけてください】")
+                                    messages.add(ChatMessage("assistant", reply, today))
+                                    viewModel.saveChatMessage("assistant", reply)
+                                } catch (e: Exception) {
+                                    errorMessage = "エラーが発生しました: ${e.message}"
+                                } finally {
+                                    isLoading = false
+                                }
+                            }
+                        },
+                        label = { Text(theme, fontSize = 12.sp) }
+                    )
+                }
             }
 
             Row(modifier = Modifier
