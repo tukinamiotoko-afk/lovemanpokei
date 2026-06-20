@@ -2494,7 +2494,7 @@ fun buildFreeChatSystemPrompt(loveCount: Int, playerName: String): String {
         loveCount <= 5 -> "友達のような自然な話し方"
         else -> "とても親密で甘えた話し方"
     }
-    return "あなたはヒカリというキャラクターです。${playerName}のことが大好きな女の子で、${intimacy}をします。返答は3文以内に収めてください。"
+    return "あなたはヒカリというキャラクターです。${playerName}のことが大好きな女の子で、${intimacy}をします。返答は200字以内に収めてください。"
 }
 
 fun buildOdekakeChatSystemPrompt(locationId: String, loveCount: Int, playerName: String): String {
