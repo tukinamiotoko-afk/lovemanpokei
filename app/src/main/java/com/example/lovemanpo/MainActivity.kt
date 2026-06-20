@@ -1329,7 +1329,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     val weatherDialogue = weatherInfo?.let { homeWeatherDialogue(it.weatherCode) }
     val stepAchievementDialogue = stepDialogue.takeIf { it.thresholdSteps > 0 }
     val displayMessage = (homeChatReply ?: touchedDialogue?.text ?: stepAchievementDialogue?.text ?: weatherDialogue?.text ?: stepDialogue.text).replace("○○", playerName)
-    val displayExpression = if (homeChatReply != null) exprNameToRes("smile") else (touchedDialogue?.expr ?: stepAchievementDialogue?.expr ?: weatherDialogue?.expr ?: stepDialogue.expr)
+    val displayExpression = touchedDialogue?.expr ?: stepAchievementDialogue?.expr ?: weatherDialogue?.expr ?: stepDialogue.expr
 
     LaunchedEffect(displayMessage, playerName) {
         viewModel.saveCurrentDialogue(displayMessage.replace("○○", playerName))
