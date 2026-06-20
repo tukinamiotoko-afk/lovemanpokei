@@ -1323,13 +1323,13 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         }
     }
 
-    var homeChatReply by remember { mutableStateOf<String?>(null) }
+    var homeChatReply by remember { mutableStateOf<Pair<String, Int>?>(null) }
     var isHomeChatLoading by remember { mutableStateOf(false) }
 
     val weatherDialogue = weatherInfo?.let { homeWeatherDialogue(it.weatherCode) }
     val stepAchievementDialogue = stepDialogue.takeIf { it.thresholdSteps > 0 }
-    val displayMessage = (homeChatReply ?: touchedDialogue?.text ?: stepAchievementDialogue?.text ?: weatherDialogue?.text ?: stepDialogue.text).replace("○○", playerName)
-    val displayExpression = touchedDialogue?.expr ?: stepAchievementDialogue?.expr ?: weatherDialogue?.expr ?: stepDialogue.expr
+    val displayMessage = (homeChatReply?.first ?: touchedDialogue?.text ?: stepAchievementDialogue?.text ?: weatherDialogue?.text ?: stepDialogue.text).replace("○○", playerName)
+    val displayExpression = homeChatReply?.second ?: touchedDialogue?.expr ?: stepAchievementDialogue?.expr ?: weatherDialogue?.expr ?: stepDialogue.expr
 
     LaunchedEffect(displayMessage, playerName) {
         viewModel.saveCurrentDialogue(displayMessage.replace("○○", playerName))
@@ -1363,10 +1363,20 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             scope.launch {
                 try {
                     val prompt = """あなたは「ひかり」（22歳）。${playerName}さんと散歩中の話し相手。
+返答の先頭に[EMOTION:タグ名]を出力する。タグ: happy / love / shy / sad / worry / normal
 40〜80文字で自然に返す。敬語。AIっぽい表現禁止。「${playerName}さん」と「さん」付けで呼ぶ。「今一緒に歩いている」視点で話す。
 今日の歩数：${todaySteps}歩。"""
-                    val reply = callGeminiApi(prompt, emptyList(), text, maxTokens = 300)
-                    homeChatReply = reply.trim()
+                    val raw = callGeminiApi(prompt, emptyList(), text, maxTokens = 300)
+                    val emotionMatch = Regex("""\[EMOTION:(\w+)\]""").find(raw)
+                    val emotion = emotionMatch?.groupValues?.get(1) ?: "normal"
+                    val replyText = raw.replace(emotionMatch?.value ?: "", "").trim()
+                    val expr = when (emotion) {
+                        "happy", "surprise" -> R.drawable.hikari_celebrate
+                        "love", "shy"       -> R.drawable.hikari_blush
+                        "sad", "worry"      -> R.drawable.hikari_think
+                        else                -> R.drawable.hikari_smile
+                    }
+                    homeChatReply = Pair(replyText, expr)
                 } catch (_: Exception) {
                     homeChatReply = null
                 } finally {
