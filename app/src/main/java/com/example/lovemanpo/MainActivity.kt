@@ -1323,10 +1323,19 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         }
     }
 
+    var homeChatReply by remember { mutableStateOf<String?>(null) }
+    var isHomeChatLoading by remember { mutableStateOf(false) }
+    LaunchedEffect(homeChatReply) {
+        if (homeChatReply != null) {
+            delay(12000)
+            homeChatReply = null
+        }
+    }
+
     val weatherDialogue = weatherInfo?.let { homeWeatherDialogue(it.weatherCode) }
     val stepAchievementDialogue = stepDialogue.takeIf { it.thresholdSteps > 0 }
-    val displayMessage = (touchedDialogue?.text ?: stepAchievementDialogue?.text ?: weatherDialogue?.text ?: stepDialogue.text).replace("○○", playerName)
-    val displayExpression = touchedDialogue?.expr ?: stepAchievementDialogue?.expr ?: weatherDialogue?.expr ?: stepDialogue.expr
+    val displayMessage = (homeChatReply ?: touchedDialogue?.text ?: stepAchievementDialogue?.text ?: weatherDialogue?.text ?: stepDialogue.text).replace("○○", playerName)
+    val displayExpression = if (homeChatReply != null) exprNameToRes("smile") else (touchedDialogue?.expr ?: stepAchievementDialogue?.expr ?: weatherDialogue?.expr ?: stepDialogue.expr)
 
     LaunchedEffect(displayMessage, playerName) {
         viewModel.saveCurrentDialogue(displayMessage.replace("○○", playerName))
@@ -1352,6 +1361,23 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         weatherInfo = weatherInfo,
         onCharacterClick = {
             touchedDialogue = touchDialogues.randomOrNull()
+        },
+        isHomeChatLoading = isHomeChatLoading,
+        onHomeChatSend = { text ->
+            isHomeChatLoading = true
+            scope.launch {
+                try {
+                    val prompt = """あなたは「ひかり」（22歳）。${playerName}さんと散歩中の話し相手。
+1〜2文で自然に返す。敬語。AIっぽい表現禁止。「${playerName}さん」と「さん」付けで呼ぶ。「今一緒に歩いている」視点で話す。
+今日の歩数：${todaySteps}歩。"""
+                    val reply = callGeminiApi(prompt, emptyList(), text, maxTokens = 200)
+                    homeChatReply = reply.trim()
+                } catch (_: Exception) {
+                    homeChatReply = null
+                } finally {
+                    isHomeChatLoading = false
+                }
+            }
         },
         onFreeChatClick = { navController.navigate("freechat") },
         onDiaryClick = { navController.navigate("diary") },
@@ -1389,6 +1415,8 @@ fun HomeScreenContent(
     distanceStr: String,
     caloriesStr: String,
     weatherInfo: WeatherInfo? = null,
+    isHomeChatLoading: Boolean = false,
+    onHomeChatSend: (String) -> Unit = {},
     onCharacterClick: () -> Unit,
     onFreeChatClick: () -> Unit,
     onDiaryClick: () -> Unit,
@@ -1492,7 +1520,44 @@ fun HomeScreenContent(
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     val formattedMessage = dialogueMessage.replace("○○", playerName)
                     HomeCommentBanner(expressionRes, formattedMessage, onClick = onCharacterClick)
-                    Spacer(modifier = Modifier.height(8.dp))
+
+                    var homeInput by remember { mutableStateOf("") }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
+                            .shadow(2.dp, RoundedCornerShape(24.dp))
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(Color.White)
+                            .padding(horizontal = 14.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        androidx.compose.foundation.text.BasicTextField(
+                            value = homeInput,
+                            onValueChange = { homeInput = it },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = Color.Black),
+                            decorationBox = { inner ->
+                                if (homeInput.isEmpty()) Text("ひかりに話しかける…", color = Color.Gray, fontSize = 14.sp)
+                                inner()
+                            }
+                        )
+                        if (isHomeChatLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFFEC407A))
+                        } else {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Send,
+                                contentDescription = null,
+                                tint = if (homeInput.isNotBlank()) Color(0xFFEC407A) else Color.LightGray,
+                                modifier = Modifier.size(20.dp).clickable {
+                                    if (homeInput.isNotBlank()) { onHomeChatSend(homeInput); homeInput = "" }
+                                }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
