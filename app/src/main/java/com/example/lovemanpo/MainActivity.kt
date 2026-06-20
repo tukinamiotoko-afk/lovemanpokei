@@ -4891,7 +4891,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                     .fillMaxWidth()
                     .background(
                         brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
-                            listOf(Color(0xFFFF8FB1), Color(0xFFD4618A), Color(0xFF9B59B6))
+                            listOf(Color(0xFFFFB8D0), Color(0xFFE88AAD), Color(0xFFC07FD4))
                         )
                     )
                     .padding(end = 12.dp),
@@ -4910,14 +4910,27 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             }
 
             // キャラクター画像（上部固定）
-            Image(
-                painter = painterResource(lastExprRes),
-                contentDescription = "ひかり",
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(280.dp),
-                contentScale = ContentScale.Fit
-            )
+                    .height(280.dp)
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .border(
+                        width = 2.dp,
+                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(Color(0xFFFFB8D0), Color(0xFFC07FD4))
+                        ),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    .clip(RoundedCornerShape(20.dp))
+            ) {
+                Image(
+                    painter = painterResource(lastExprRes),
+                    contentDescription = "ひかり",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            }
 
             LazyColumn(
                 state = listState,
