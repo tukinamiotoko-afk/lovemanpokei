@@ -1547,7 +1547,7 @@ fun HomeScreenContent(
                             CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFFEC407A))
                         } else {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Send,
+                                imageVector = Icons.Default.Send,
                                 contentDescription = null,
                                 tint = if (homeInput.isNotBlank()) Color(0xFFEC407A) else Color.LightGray,
                                 modifier = Modifier.size(20.dp).clickable {
