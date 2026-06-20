@@ -5025,12 +5025,21 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 templateLoading = label
                                 scope.launch {
                                     try {
-                                        val instruction = when (label) {
-                                            "共感する" -> "以下はひかりのセリフです。これに対して僕（ユーザー）が共感を示す自然な日本語の返答を1文（30文字以内）で生成してください。一人称は「僕」。名前の呼びかけ・タグ・記号・絵文字は禁止。"
-                                            "理由を聞く" -> "以下はひかりのセリフです。これに対して僕（ユーザー）が理由や気持ちを尋ねる自然な日本語の質問を1文（30文字以内）で生成してください。一人称は「僕」。名前の呼びかけ・タグ・記号・絵文字は禁止。"
-                                            else -> "以下はひかりのセリフです。これに対して僕（ユーザー）が話題を広げる自然な日本語の返答を1文（30文字以内）で生成してください。一人称は「僕」。名前の呼びかけ・タグ・記号・絵文字は禁止。"
+                                        val kind = when (label) {
+                                            "共感する" -> "共感を示す返答"
+                                            "理由を聞く" -> "理由や気持ちを尋ねる質問"
+                                            else -> "話題を広げる返答"
                                         }
-                                        val result = callGeminiApi(instruction, emptyList(), lastHikariMsg.take(200), maxTokens = 200)
+                                        val systemPrompt = """
+あなたはユーザー（一人称：僕）の代わりに返答文を1文だけ生成するAIです。
+以下のひかりのセリフに対して、ユーザーが言う自然な日本語の返答を1文（30文字以内）で生成してください。
+視点は必ずユーザー（僕）。ひかり視点・「彼」「あなた」・名前の呼びかけ・タグ・記号・絵文字は禁止。
+返答文のみ出力し、説明・括弧・前置きは不要。
+
+ひかりのセリフ：「${lastHikariMsg.take(200)}」
+生成する返答の種類：$kind
+""".trimIndent()
+                                        val result = callGeminiApi(systemPrompt, emptyList(), "返答を生成してください", maxTokens = 200)
                                         templateLoading = null
                                         sendMessage(result.trim())
                                     } catch (_: Exception) {
