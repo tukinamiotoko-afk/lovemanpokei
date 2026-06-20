@@ -1871,20 +1871,21 @@ fun HintSdHikari(modifier: Modifier = Modifier) {
 fun splitMessageIntoPages(text: String): List<String> {
     val maxChars = 44
     if (text.length <= maxChars) return listOf(text)
-    val sentences = text.split(Regex("(?<=[。！？!?])")).filter { it.isNotBlank() }
-    if (sentences.isEmpty()) return text.chunked(maxChars)
+    val punctuation = setOf('。', '、', '！', '？', '!', '?', '…', '，')
     val result = mutableListOf<String>()
-    var page = StringBuilder()
-    for (s in sentences) {
-        if (page.isEmpty() || page.length + s.length <= maxChars) {
-            page.append(s)
-        } else {
-            if (page.isNotBlank()) result.add(page.toString())
-            page = StringBuilder(s)
+    var start = 0
+    while (start < text.length) {
+        val end = (start + maxChars).coerceAtMost(text.length)
+        if (end == text.length) { result.add(text.substring(start)); break }
+        var breakPoint = -1
+        for (i in end - 1 downTo start + 1) {
+            if (text[i] in punctuation) { breakPoint = i + 1; break }
         }
+        if (breakPoint <= start) breakPoint = end
+        result.add(text.substring(start, breakPoint))
+        start = breakPoint
     }
-    if (page.isNotBlank()) result.add(page.toString())
-    return result.ifEmpty { text.chunked(maxChars) }
+    return result.ifEmpty { listOf(text) }
 }
 
 @Composable
