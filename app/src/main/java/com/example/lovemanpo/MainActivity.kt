@@ -4346,10 +4346,10 @@ fun parseReply(reply: String, loveCount: Int = 0): ParsedReply {
     val basyoId = basyoMatch?.groupValues?.get(1)
     if (basyoMatch != null) text = text.replace(basyoMatch.value, "").trim()
 
-    // [ACTION: text] — 地の文タグ。閉じ括弧がある通常ケースを優先し、
-    // 出力が途中で切れて ] が無い場合も末尾までを地の文として拾う（生タグの漏れ防止）。
+    // [ACTION: text] — 地の文タグ。閉じ括弧ありを優先。
+    // フォールバック: ] も改行もない場合は同一行分だけ取得（DOT_MATCHES_ALL は使わない—改行を越えるとセリフ本文ごと消えるため）。
     val actionMatch = Regex("""\[ACTION:\s*(.+?)\]""").find(text)
-        ?: Regex("""\[ACTION:\s*(.+)$""", RegexOption.DOT_MATCHES_ALL).find(text)
+        ?: Regex("""\[ACTION:\s*([^\n\]]+)""").find(text)
     val actionText = actionMatch?.groupValues?.get(1)?.trim()
     if (actionMatch != null) text = text.replace(actionMatch.value, "").trim()
 
