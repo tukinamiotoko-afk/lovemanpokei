@@ -4399,7 +4399,7 @@ fun parseReply(reply: String, loveCount: Int = 0): ParsedReply {
 data class MessageSegment(val text: String, val isNarration: Boolean)
 
 @Composable
-fun ChatStatusCard(loveCount: Int, heartCount: Int, lastExprName: String?) {
+fun ChatStatusCard(loveCount: Int, heartCount: Int, lastExprName: String?, todaySteps: Int = 0) {
     val loveLabel = when {
         loveCount >= 9 -> "深愛"
         loveCount >= 7 -> "恋愛中"
@@ -4449,20 +4449,20 @@ fun ChatStatusCard(loveCount: Int, heartCount: Int, lastExprName: String?) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp),
-        shape = RoundedCornerShape(16.dp),
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
         color = Color(0xFFFFF0F5),
         border = BorderStroke(1.dp, Color(0xFFEFB8CC))
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("好感度", fontSize = 10.sp, color = Color(0xFF9E8B75))
-                Text("Lv.$loveCount", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7B5C3E))
-                Text(loveLabel, fontSize = 10.sp, color = Color(0xFFB08060))
+                Text("好感度", fontSize = 9.sp, color = Color(0xFF9E8B75))
+                Text("Lv.$loveCount", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7B5C3E))
+                Text(loveLabel, fontSize = 9.sp, color = Color(0xFFB08060))
             }
             Column(modifier = Modifier.weight(1f)) {
                 Row(
@@ -4470,31 +4470,35 @@ fun ChatStatusCard(loveCount: Int, heartCount: Int, lastExprName: String?) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("ハート", fontSize = 10.sp, color = Color(0xFF9E8B75))
-                    Text("$heartCount / 15", fontSize = 10.sp, color = Color(0xFFE87C9A))
+                    Text("ハート", fontSize = 9.sp, color = Color(0xFF9E8B75))
+                    Text("$heartCount / 15", fontSize = 9.sp, color = Color(0xFFE87C9A))
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(10.dp)
-                        .clip(RoundedCornerShape(5.dp))
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
                         .background(Color(0xFFDDC8B8))
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(fraction = (heartCount / 15f).coerceIn(0f, 1f))
                             .fillMaxHeight()
-                            .clip(RoundedCornerShape(5.dp))
+                            .clip(RoundedCornerShape(4.dp))
                             .background(Color(0xFFE87C9A))
                     )
                 }
             }
             if (exprLabel != null) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("表情", fontSize = 10.sp, color = Color(0xFF9E8B75))
-                    Text(exprLabel, fontSize = 11.sp, color = Color(0xFF7B5C3E))
+                    Text("表情", fontSize = 9.sp, color = Color(0xFF9E8B75))
+                    Text(exprLabel, fontSize = 10.sp, color = Color(0xFF7B5C3E))
                 }
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("歩数", fontSize = 9.sp, color = Color(0xFF9E8B75))
+                Text(String.format(java.util.Locale.US, "%,d", todaySteps), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE87C9A))
             }
         }
     }
@@ -4877,7 +4881,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             .fillMaxSize()
             .background(Color(0xFFFFF5F7))
             .padding(padding)) {
-            // 上部固定カード（薄く・スリム・使えるポイントを表示）
+            // 上部固定カード（使えるポイントを表示）
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                 shape = RoundedCornerShape(12.dp),
@@ -4892,6 +4896,23 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                     Text("使えるポイント ${actionPoints}pt", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD4618A), fontFamily = MplusRoundedFontFamily)
                 }
             }
+
+            // キャラクター画像（上部固定）
+            val lastAssistantMsg = messages.lastOrNull { it.role == "assistant" }
+            val lastExprRes = lastAssistantMsg?.expressionRes ?: R.drawable.osyaberi_smile
+            val lastExprName = lastAssistantMsg?.exprName
+            Image(
+                painter = painterResource(lastExprRes),
+                contentDescription = "ひかり",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp),
+                contentScale = ContentScale.Fit
+            )
+
+            // ステータスカード（上部・細め・歩数付き）
+            ChatStatusCard(loveCount = loveCount, heartCount = heartCount, lastExprName = lastExprName, todaySteps = todaySteps)
+
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
@@ -4916,16 +4937,6 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalAlignment = Alignment.Start
                         ) {
-                            Image(
-                                painter = painterResource(msg.expressionRes ?: R.drawable.osyaberi_smile),
-                                contentDescription = "ひかり",
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(300.dp)
-                                    .clip(RoundedCornerShape(20.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
                             Column(modifier = Modifier.padding(horizontal = 4.dp)) {
                                 if (msg.actionText != null) {
                                     // 新フォーマット: [ACTION] が地の文
@@ -4951,10 +4962,6 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             CircularProgressIndicator(modifier = Modifier.size(28.dp), color = Color(0xFFE87C9A), strokeWidth = 2.dp)
                         }
                     }
-                }
-                item {
-                    val lastExpr = messages.lastOrNull { it.role == "assistant" }?.exprName
-                    ChatStatusCard(loveCount = loveCount, heartCount = heartCount, lastExprName = lastExpr)
                 }
             }
 
