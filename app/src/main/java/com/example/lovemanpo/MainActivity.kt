@@ -4895,6 +4895,9 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 loveCount >= 1 -> "知り合い"
                 else           -> "はじめまして"
             }
+            val currentBasyoName = messages.lastOrNull { it.basyoId != null }?.basyoId?.let { id ->
+                memoryItems.find { it.id == id }?.name
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -4915,6 +4918,10 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 Spacer(modifier = Modifier.width(10.dp))
                 Text("❤ $heartCount/15", fontSize = 11.sp, color = Color.White)
                 Spacer(modifier = Modifier.weight(1f))
+                if (currentBasyoName != null) {
+                    Text("📍$currentBasyoName", fontSize = 11.sp, color = Color.White.copy(alpha = 0.9f))
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
                 Text(String.format(java.util.Locale.US, "%,d", todaySteps) + "歩", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
             }
 
@@ -5019,9 +5026,9 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 scope.launch {
                                     try {
                                         val instruction = when (label) {
-                                            "共感する" -> "ユーザーが以下のメッセージに共感を示す自然な返答を日本語で1文（30文字以内）生成してください。タグ・記号・絵文字は不要。"
-                                            "理由を聞く" -> "ユーザーが以下のメッセージに対して理由や気持ちを尋ねる自然な質問を日本語で1文（30文字以内）生成してください。タグ・記号・絵文字は不要。"
-                                            else -> "ユーザーが以下のメッセージの話題を広げるような自然な返答を日本語で1文（30文字以内）生成してください。タグ・記号・絵文字は不要。"
+                                            "共感する" -> "以下はひかりのセリフです。これに対して僕（ユーザー）が共感を示す自然な日本語の返答を1文（30文字以内）で生成してください。一人称は「僕」。名前の呼びかけ・タグ・記号・絵文字は禁止。"
+                                            "理由を聞く" -> "以下はひかりのセリフです。これに対して僕（ユーザー）が理由や気持ちを尋ねる自然な日本語の質問を1文（30文字以内）で生成してください。一人称は「僕」。名前の呼びかけ・タグ・記号・絵文字は禁止。"
+                                            else -> "以下はひかりのセリフです。これに対して僕（ユーザー）が話題を広げる自然な日本語の返答を1文（30文字以内）で生成してください。一人称は「僕」。名前の呼びかけ・タグ・記号・絵文字は禁止。"
                                         }
                                         val result = callGeminiApi(instruction, emptyList(), lastHikariMsg.take(200), maxTokens = 200)
                                         templateLoading = null
