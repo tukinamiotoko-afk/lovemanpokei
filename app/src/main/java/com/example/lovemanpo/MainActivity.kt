@@ -4876,8 +4876,6 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             .padding(padding)
         ) {
             // 上部バー（矢印 + ステータス）
-            val lastAssistantMsg = messages.lastOrNull { it.role == "assistant" }
-            val lastExprRes = lastAssistantMsg?.expressionRes ?: R.drawable.osyaberi_smile
             val loveLabel = when {
                 loveCount >= 9 -> "深愛"
                 loveCount >= 7 -> "恋愛中"
@@ -4909,29 +4907,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 Text(String.format(java.util.Locale.US, "%,d", todaySteps) + "歩", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
             }
 
-            // キャラクター画像（上部固定）
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(280.dp)
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                    .border(
-                        width = 2.dp,
-                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                            listOf(Color(0xFFFFB8D0), Color(0xFFC07FD4))
-                        ),
-                        shape = RoundedCornerShape(20.dp)
-                    )
-                    .clip(RoundedCornerShape(20.dp))
-            ) {
-                Image(
-                    painter = painterResource(lastExprRes),
-                    contentDescription = "ひかり",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
-            }
-
+            // キャラクター画像は各メッセージ内に表示（↓LazyColumn内）
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
@@ -4956,6 +4932,27 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             modifier = Modifier.fillMaxWidth(),
                             horizontalAlignment = Alignment.Start
                         ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(280.dp)
+                                    .padding(vertical = 4.dp)
+                                    .border(
+                                        width = 2.dp,
+                                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                            listOf(Color(0xFFFFB8D0), Color(0xFFC07FD4))
+                                        ),
+                                        shape = RoundedCornerShape(20.dp)
+                                    )
+                                    .clip(RoundedCornerShape(20.dp))
+                            ) {
+                                Image(
+                                    painter = painterResource(msg.expressionRes ?: R.drawable.osyaberi_smile),
+                                    contentDescription = "ひかり",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Fit
+                                )
+                            }
                             Column(modifier = Modifier.padding(horizontal = 4.dp)) {
                                 if (msg.actionText != null) {
                                     // 新フォーマット: [ACTION] が地の文
