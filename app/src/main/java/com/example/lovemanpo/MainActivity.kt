@@ -4794,6 +4794,66 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     val scope = rememberCoroutineScope()
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
+    val sendMessage: (String) -> Unit = sendMsg@{ text ->
+        if (text.isEmpty() || isLoading) return@sendMsg
+        if (!viewModel.spendPointForChat()) {
+            errorMessage = "ポイントが足りません（2000歩で1ポイント）"
+            return@sendMsg
+        }
+        errorMessage = null
+        val userMsg = ChatMessage("user", text)
+        messages.add(userMsg)
+        inputText = ""
+        isLoading = true
+        val allHistory = messages.dropLast(1)
+        val historySnapshot = allHistory.takeLast(10)
+        scope.launch {
+            try {
+                val hasChat = viewModel.hasEverChatted
+                val customNote = viewModel.customCharacterNote
+                val summary = viewModel.buildMemoryContext()
+                val hoursAway = if (hasChat) viewModel.hoursSinceLastChat() else 0
+                val streak = viewModel.getCurrentStreak()
+                val absenceSteps = viewModel.getStepsDuringAbsence(hoursAway)
+                val unlockedBasyo = viewModel.unlockedMemoryIds.value
+                val basyoNote = if (unlockedBasyo.isNotEmpty()) "\n解錠済みBASYO（再出力禁止）: ${unlockedBasyo.joinToString(",")}" else ""
+                val yesterday = java.time.LocalDate.now().minusDays(1).toString()
+                val yestMood = viewModel.repository.getDiaryMood(yesterday)
+                val yestHint = viewModel.repository.getUserDiary(yesterday).take(50)
+                val diaryNote = if (yestMood.isNotBlank() && yestHint.isNotBlank())
+                    "\n【昨日の日記】気分：$yestMood　内容：「$yestHint」\n自然な流れで一度だけ触れてもいい。しつこく聞かない。"
+                else ""
+                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps, viewModel.lifestyle, viewModel.favoriteDrink, viewModel.weakness, viewModel.bodyNotes, currentTurn = messages.count { it.role == "user" }, previousStreakDays = viewModel.getPreviousStreak()) + basyoNote + diaryNote
+                viewModel.markHasEverChatted()
+                viewModel.updateLastChatTime()
+                val reply = callGeminiApi(systemPrompt, historySnapshot, text, maxTokens = 1500)
+                val parsed = parseReply(reply, loveCount)
+                messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName, parsed.actionText, parsed.basyoId))
+                parsed.basyoId?.let { viewModel.unlockMemory(it) }
+                when (parsed.loveChange) {
+                    1  -> viewModel.earnHeart()
+                    -1 -> viewModel.loseHeart()
+                }
+                viewModel.saveFreeChatHistory()
+                val userMsgCount = messages.count { it.role == "user" }
+                if (userMsgCount % 5 == 0 && userMsgCount >= 5) {
+                    scope.launch {
+                        try {
+                            val newSummary = callGeminiApiForSummary(messages)
+                            viewModel.updateDailyDiary(newSummary)
+                        } catch (_: Exception) {}
+                    }
+                }
+            } catch (e: Exception) {
+                viewModel.refundPointForChat()
+                messages.removeLastOrNull()
+                errorMessage = "エラー: ${e.message}"
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         val invite = viewModel.consumeOdekakeInvite()
         if (invite != null) {
@@ -4963,9 +5023,10 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                             "理由を聞く" -> "ユーザーが以下のメッセージに対して理由や気持ちを尋ねる自然な質問を日本語で1文（30文字以内）生成してください。タグ・記号・絵文字は不要。"
                                             else -> "ユーザーが以下のメッセージの話題を広げるような自然な返答を日本語で1文（30文字以内）生成してください。タグ・記号・絵文字は不要。"
                                         }
-                                        val result = callGeminiApi(instruction, emptyList(), lastHikariMsg.take(200), maxTokens = 80)
-                                        inputText = result.trim()
-                                    } catch (_: Exception) {} finally {
+                                        val result = callGeminiApi(instruction, emptyList(), lastHikariMsg.take(200), maxTokens = 200)
+                                        templateLoading = null
+                                        sendMessage(result.trim())
+                                    } catch (_: Exception) {
                                         templateLoading = null
                                     }
                                 }
@@ -5003,67 +5064,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 IconButton(
-                    onClick = {
-                        val text = inputText.trim()
-                        if (text.isEmpty() || isLoading) return@IconButton
-                        if (!viewModel.spendPointForChat()) {
-                            errorMessage = "ポイントが足りません（2000歩で1ポイント）"
-                            return@IconButton
-                        }
-                        errorMessage = null
-                        val userMsg = ChatMessage("user", text)
-                        messages.add(userMsg)
-                        inputText = ""
-                        isLoading = true
-                        val allHistory = messages.dropLast(1)
-                        val historySnapshot = allHistory.takeLast(10)
-                        scope.launch {
-                            try {
-                                val hasChat = viewModel.hasEverChatted
-                                val customNote = viewModel.customCharacterNote
-                                val summary = viewModel.buildMemoryContext()
-                                val hoursAway = if (hasChat) viewModel.hoursSinceLastChat() else 0
-                                val streak = viewModel.getCurrentStreak()
-                                val absenceSteps = viewModel.getStepsDuringAbsence(hoursAway)
-                                val unlockedBasyo = viewModel.unlockedMemoryIds.value
-                                val basyoNote = if (unlockedBasyo.isNotEmpty()) "\n解錠済みBASYO（再出力禁止）: ${unlockedBasyo.joinToString(",")}" else ""
-                                val yesterday = java.time.LocalDate.now().minusDays(1).toString()
-                                val yestMood = viewModel.repository.getDiaryMood(yesterday)
-                                val yestHint = viewModel.repository.getUserDiary(yesterday).take(50)
-                                val diaryNote = if (yestMood.isNotBlank() && yestHint.isNotBlank())
-                                    "\n【昨日の日記】気分：$yestMood　内容：「$yestHint」\n自然な流れで一度だけ触れてもいい。しつこく聞かない。"
-                                else ""
-                                val systemPrompt = buildFreeChatSystemPrompt(loveCount, playerName, if (hasChat) todaySteps else 0, if (hasChat) activeDays else 0, customNote, if (hasChat) daysSinceLastActive else 0, summary, hoursAway, streak, absenceSteps, viewModel.lifestyle, viewModel.favoriteDrink, viewModel.weakness, viewModel.bodyNotes, currentTurn = messages.count { it.role == "user" }, previousStreakDays = viewModel.getPreviousStreak()) + basyoNote + diaryNote
-                                viewModel.markHasEverChatted()
-                                viewModel.updateLastChatTime()
-                                val reply = callGeminiApi(systemPrompt, historySnapshot, text, maxTokens = 1500)
-                                val parsed = parseReply(reply, loveCount)
-                                messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName, parsed.actionText, parsed.basyoId))
-                                parsed.basyoId?.let { viewModel.unlockMemory(it) }
-                                when (parsed.loveChange) {
-                                    1  -> viewModel.earnHeart()
-                                    -1 -> viewModel.loseHeart()
-                                }
-                                viewModel.saveFreeChatHistory()
-                                // 5メッセージごとに日次日記を更新（バックグラウンド）
-                                val userMsgCount = messages.count { it.role == "user" }
-                                if (userMsgCount % 5 == 0 && userMsgCount >= 5) {
-                                    scope.launch {
-                                        try {
-                                            val newSummary = callGeminiApiForSummary(messages)
-                                            viewModel.updateDailyDiary(newSummary)
-                                        } catch (_: Exception) {}
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                viewModel.refundPointForChat()
-                                messages.removeLastOrNull()
-                                errorMessage = "エラー: ${e.message}"
-                            } finally {
-                                isLoading = false
-                            }
-                        }
-                    },
+                    onClick = { sendMessage(inputText.trim()) },
                     enabled = !isLoading && inputText.isNotBlank()
                 ) {
                     Icon(Icons.Default.Send, contentDescription = "送信", tint = Color(0xFFE87C9A))
