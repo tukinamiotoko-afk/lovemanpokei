@@ -4874,7 +4874,6 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             .fillMaxSize()
             .background(Color(0xFFFFF5F7))
             .padding(padding)
-            .statusBarsPadding()
         ) {
             // 上部バー（矢印 + ステータス）
             val lastAssistantMsg = messages.lastOrNull { it.role == "assistant" }
