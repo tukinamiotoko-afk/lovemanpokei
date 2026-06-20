@@ -2157,8 +2157,8 @@ fun DebugScreen(navController: NavController, viewModel: StepViewModel) {
                     Slider(
                         value = maxTok.toFloat(),
                         onValueChange = { viewModel.setDebugChatMaxTokens(it.toInt()) },
-                        valueRange = 100f..2000f,
-                        steps = 37,
+                        valueRange = 200f..2000f,
+                        steps = 35,
                         colors = androidx.compose.material3.SliderDefaults.colors(
                             thumbColor = Color(0xFFE87C9A),
                             activeTrackColor = Color(0xFFFFB8D0)
@@ -4384,8 +4384,8 @@ fun parseReply(reply: String, loveCount: Int = 0): ParsedReply {
         else -> 0
     }
 
-    // 念のため：途中で切れて閉じ括弧の無い残存タグ（[EMOTION: / [BASYO: 等）を末尾ごと除去
-    text = text.replace(Regex("""\[[A-Z]+:[^\]]*$"""), "").trim()
+    // 途中で切れた残存タグを除去（[EMOT / [EMOTION: / [EMOTION:hap 等すべて対応）
+    text = text.replace(Regex("""\[[A-Z][^\]]*$"""), "").trim()
 
     return ParsedReply(text.trim(), actionText, exprRes, exprName, loveChange, basyoId, locationName)
 }
