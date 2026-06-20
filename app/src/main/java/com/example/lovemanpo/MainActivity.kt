@@ -4003,7 +4003,7 @@ fun buildSystemPrompt(
     lifestyle: String = "", favoriteDrink: String = "",
     weakness: String = "", bodyNotes: String = "",
     currentTurn: Int = 1, previousStreakDays: Int = 0,
-    selectedTheme: String = ""
+    selectedTheme: String = "", maxChars: Int = 150
 ): String {
     val talkStage = calcTalkStage(loveCount)
     val walkStage = calcWalkStage(activeDays)
@@ -4234,7 +4234,7 @@ fun buildFreeChatSystemPrompt(
 ) = buildSystemPrompt(loveCount, playerName, "散歩中",
     todaySteps, activeDays, customNote, daysSinceLastActive, conversationSummary,
     hoursSinceLastChat, streakDays, stepsDuringAbsence, lifestyle, favoriteDrink, weakness, bodyNotes,
-    currentTurn, previousStreakDays, selectedTheme)
+    currentTurn, previousStreakDays, selectedTheme, maxChars)
 
 val positiveExpressions = setOf(
     R.drawable.osyaberi_tereru,
