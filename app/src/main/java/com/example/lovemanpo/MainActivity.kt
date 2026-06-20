@@ -4947,13 +4947,17 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                             }
                             Column(modifier = Modifier.padding(horizontal = 4.dp)) {
                                 if (msg.actionText != null) {
-                                    // 新フォーマット: [ACTION] が地の文
-                                    Text(msg.actionText, color = Color(0xFF555555), fontSize = 12.sp, lineHeight = 20.sp, modifier = msgModifier)
+                                    // 新フォーマット: [ACTION] が地の文（枠なし）
+                                    Text(msg.actionText, color = Color(0xFF555555), fontSize = 12.sp, lineHeight = 20.sp, modifier = Modifier.padding(vertical = 2.dp))
                                     Text(msg.content.take(400), color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = msgModifier)
                                 } else {
                                     // 旧フォーマット後方互換: 「」で地の文/セリフを分割
                                     parseMessageSegments(msg.content.take(400)).forEach { seg ->
-                                        Text(seg.text, color = if (seg.isNarration) Color(0xFF555555) else Color(0xFF2C2C2C), fontSize = if (seg.isNarration) 12.sp else 13.sp, lineHeight = if (seg.isNarration) 20.sp else 22.sp, modifier = msgModifier)
+                                        if (seg.isNarration) {
+                                            Text(seg.text, color = Color(0xFF555555), fontSize = 12.sp, lineHeight = 20.sp, modifier = Modifier.padding(vertical = 2.dp))
+                                        } else {
+                                            Text(seg.text, color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = msgModifier)
+                                        }
                                     }
                                 }
                             }
