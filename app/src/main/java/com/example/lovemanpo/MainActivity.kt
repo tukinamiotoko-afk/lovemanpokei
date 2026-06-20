@@ -4921,6 +4921,8 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(loveLabel, fontSize = 11.sp, color = Color.White.copy(alpha = 0.85f))
                 Spacer(modifier = Modifier.width(8.dp))
+                Text("❤$heartCount/15", fontSize = 11.sp, color = Color.White)
+                Spacer(modifier = Modifier.width(8.dp))
                 Text("💬$actionPoints", fontSize = 11.sp, color = Color.White)
                 Spacer(modifier = Modifier.weight(1f))
                 Text("📍$currentLocation", fontSize = 11.sp, color = Color.White.copy(alpha = 0.9f))
