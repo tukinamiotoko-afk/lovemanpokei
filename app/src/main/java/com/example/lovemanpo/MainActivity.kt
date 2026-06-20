@@ -4937,11 +4937,6 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                     .fillMaxWidth()
                                     .height(280.dp)
                                     .padding(vertical = 4.dp)
-                                    .border(
-                                        width = 2.dp,
-                                        color = Color(0xFFFFB8D0),
-                                        shape = RoundedCornerShape(20.dp)
-                                    )
                                     .clip(RoundedCornerShape(20.dp))
                             ) {
                                 Image(
@@ -4955,14 +4950,14 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                                 if (msg.actionText != null) {
                                     // 新フォーマット: [ACTION] が地の文
                                     Text(msg.actionText, color = Color(0xFF555555), fontSize = 12.sp, lineHeight = 20.sp, modifier = Modifier.padding(vertical = 2.dp))
-                                    Text(msg.content.take(400), color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = Modifier.padding(vertical = 2.dp).background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
+                                    Text(msg.content.take(400), color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = Modifier.padding(vertical = 2.dp).border(1.dp, Color(0xFFFFB8D0), RoundedCornerShape(8.dp)).background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
                                 } else {
                                     // 旧フォーマット後方互換: 「」で地の文/セリフを分割
                                     parseMessageSegments(msg.content.take(400)).forEach { seg ->
                                         if (seg.isNarration) {
                                             Text(seg.text, color = Color(0xFF555555), fontSize = 12.sp, lineHeight = 20.sp, modifier = Modifier.padding(vertical = 2.dp))
                                         } else {
-                                            Text(seg.text, color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = Modifier.padding(vertical = 2.dp).background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
+                                            Text(seg.text, color = Color(0xFF2C2C2C), fontSize = 13.sp, lineHeight = 22.sp, modifier = Modifier.padding(vertical = 2.dp).border(1.dp, Color(0xFFFFB8D0), RoundedCornerShape(8.dp)).background(Color(0xFFFCEEF4), RoundedCornerShape(8.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
                                         }
                                     }
                                 }
