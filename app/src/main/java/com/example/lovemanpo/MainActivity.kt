@@ -3593,6 +3593,7 @@ fun DiaryDetailDialog(
                         modifier = Modifier
                             .fillMaxSize()
                             .drawWithContent {
+                                val contentScope = this
                                 val w = size.width; val h = size.height
                                 val peelPath = Path().apply {
                                     moveTo(0f, 0f); lineTo(w, 0f)
@@ -3607,7 +3608,7 @@ fun DiaryDetailDialog(
                                         drawLine(lineColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
                                         y += lineSpPx
                                     }
-                                    drawContent()
+                                    contentScope.drawContent()
                                 }
                             }
                     ) {
