@@ -3114,6 +3114,14 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
         pendingDates.forEach { date -> generateDiaryReply(date) }
     }
 
+    Box(Modifier.fillMaxSize()) {
+        Image(
+            painter = painterResource(R.drawable.nikki_haikei),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+        Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.25f)))
     Scaffold(
         topBar = {
             TopAppBar(
@@ -3121,7 +3129,7 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                 navigationIcon = { IconButton(onClick = { navController.popBackStack() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = pinkAccent)
                 }},
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFFFF9FC))
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
         floatingActionButton = {
@@ -3140,14 +3148,6 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
         },
         containerColor = Color.Transparent
     ) { padding ->
-        Box(Modifier.fillMaxSize()) {
-            Image(
-                painter = painterResource(R.drawable.nikki_haikei),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-            Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.25f)))
         if (allDates.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -3200,8 +3200,8 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                 }
             }
         }
-        } // outer background Box
-    }
+    } // Scaffold
+    } // outer background Box
 
     // 日記詳細ダイアログ
     selectedDate?.let { date ->
