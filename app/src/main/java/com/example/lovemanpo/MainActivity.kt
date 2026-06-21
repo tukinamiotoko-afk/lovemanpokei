@@ -3454,6 +3454,7 @@ fun DiaryDateCard(
 }
 
 // 詳細表示ダイアログ（全文＋ひかりの返信）
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun DiaryDetailDialog(
     date: String,
@@ -3484,6 +3485,8 @@ fun DiaryDetailDialog(
         else       -> ""
     }
 
+    var showReply by remember { mutableStateOf(false) }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -3495,8 +3498,8 @@ fun DiaryDetailDialog(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "閉じる", tint = pinkAccent)
+                    IconButton(onClick = { if (showReply) showReply = false else onDismiss() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = pinkAccent)
                     }
                     Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(formattedDate, color = pinkAccent, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
@@ -3509,83 +3512,146 @@ fun DiaryDetailDialog(
                 }
                 HorizontalDivider(color = Color(0xFFFFD7E5), thickness = 0.5.dp)
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    // 日記本文
-                    Text(
-                        userText,
-                        fontSize = 15.sp,
-                        color = Color(0xFF333333),
-                        fontFamily = diaryFontFamily,
-                        lineHeight = 26.sp
-                    )
-
-                    // 写真（あれば）
-                    if (photoPath.isNotBlank()) {
-                        val bitmap = remember(photoPath) { BitmapFactory.decodeFile(photoPath)?.asImageBitmap() }
-                        bitmap?.let {
-                            Image(
-                                bitmap = it,
-                                contentDescription = "日記の写真",
+                AnimatedContent(
+                    targetState = showReply,
+                    transitionSpec = {
+                        if (targetState) {
+                            slideInHorizontally(tween(380)) { it } + fadeIn(tween(380)) togetherWith
+                            slideOutHorizontally(tween(380)) { -it } + fadeOut(tween(200))
+                        } else {
+                            slideInHorizontally(tween(380)) { -it } + fadeIn(tween(380)) togetherWith
+                            slideOutHorizontally(tween(380)) { it } + fadeOut(tween(200))
+                        }
+                    },
+                    label = "diaryFlip"
+                ) { isReply ->
+                    if (!isReply) {
+                        // ── 日記ページ ──
+                        Column(
+                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            var lineHeightPx by remember { mutableStateOf(0f) }
+                            val fallbackPx = with(LocalDensity.current) { 26.sp.toPx() }
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .heightIn(max = 260.dp)
-                                    .clip(RoundedCornerShape(12.dp)),
-                                contentScale = ContentScale.Crop
-                            )
+                                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFFFFFEFA))
+                                    .border(1.dp, Color(0xFFFFD7E5), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                                    .drawWithContent {
+                                        val lh = if (lineHeightPx > 0f) lineHeightPx else fallbackPx
+                                        var y = lh
+                                        while (y <= size.height) {
+                                            drawLine(Color(0xFFFFC7D8).copy(alpha = 0.65f), Offset(0f, y), Offset(size.width, y), 0.5.dp.toPx())
+                                            y += lh
+                                        }
+                                        drawContent()
+                                    }
+                            ) {
+                                Text(
+                                    userText,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF333333),
+                                    fontFamily = diaryFontFamily,
+                                    lineHeight = 26.sp,
+                                    style = androidx.compose.ui.text.TextStyle(
+                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Bottom, LineHeightStyle.Trim.None)
+                                    ),
+                                    onTextLayout = { r -> if (r.lineCount > 0) lineHeightPx = r.getLineBottom(0) - r.getLineTop(0) }
+                                )
+                            }
+                            if (photoPath.isNotBlank()) {
+                                val bitmap = remember(photoPath) { BitmapFactory.decodeFile(photoPath)?.asImageBitmap() }
+                                bitmap?.let {
+                                    Image(bitmap = it, contentDescription = "日記の写真",
+                                        modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)
+                                            .padding(horizontal = 20.dp).clip(RoundedCornerShape(12.dp)),
+                                        contentScale = ContentScale.Crop)
+                                }
+                            }
+                            // ひかりの返信ボタン
+                            when {
+                                isLoading -> Row(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center
+                                ) {
+                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = pinkAccent, strokeWidth = 2.dp)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("ひかりがお返事を書いています…", fontSize = 12.sp, color = Color(0xFFAAAAAA), fontFamily = MplusRoundedFontFamily)
+                                }
+                                replyText.isNotBlank() -> Button(
+                                    onClick = { showReply = true },
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6B9D))
+                                ) {
+                                    Text("💌 ひかりからのお手紙を見る", fontFamily = MplusRoundedFontFamily)
+                                }
+                                else -> Text(
+                                    "ひかりからの返事は、明日手紙で届きます。",
+                                    modifier = Modifier.padding(horizontal = 20.dp),
+                                    fontSize = 13.sp, color = Color(0xFFAAAAAA), fontFamily = MplusRoundedFontFamily
+                                )
+                            }
+                            Spacer(Modifier.height(16.dp))
                         }
-                    }
-
-                    // 区切り
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(Modifier.weight(1f).height(0.5.dp).background(Color(0xFFFFB7D0).copy(alpha = 0.6f)))
-                        Text(
-                            "ひかりより",
-                            modifier = Modifier.padding(horizontal = 10.dp),
-                            fontSize = 11.sp,
-                            color = pinkAccent,
-                            fontFamily = MplusRoundedFontFamily,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Box(Modifier.weight(1f).height(0.5.dp).background(Color(0xFFFFB7D0).copy(alpha = 0.6f)))
-                    }
-
-                    // ひかりの返信
-                    when {
-                        isLoading -> Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = pinkAccent, strokeWidth = 2.dp)
-                            Spacer(Modifier.width(10.dp))
-                            Text("ひかりが返事を書いています…", fontSize = 13.sp, color = Color(0xFFAAAAAA), fontFamily = MplusRoundedFontFamily)
+                    } else {
+                        // ── ひかりの返信ページ ──
+                        Column(
+                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Image(
+                                    painter = painterResource(id = expressionToFaceRes(hikariExprRes)),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(40.dp).clip(CircleShape).background(Color(0xFFFFE0E9)),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Text("ひかりより", fontSize = 14.sp, color = pinkAccent, fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
+                            }
+                            var replyLineHeightPx by remember { mutableStateOf(0f) }
+                            val replyFallbackPx = with(LocalDensity.current) { 26.sp.toPx() }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(Color(0xFFFFF8FC))
+                                    .border(1.dp, Color(0xFFFFD7E5), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                                    .drawWithContent {
+                                        val lh = if (replyLineHeightPx > 0f) replyLineHeightPx else replyFallbackPx
+                                        var y = lh
+                                        while (y <= size.height) {
+                                            drawLine(Color(0xFFFFC7D8).copy(alpha = 0.65f), Offset(0f, y), Offset(size.width, y), 0.5.dp.toPx())
+                                            y += lh
+                                        }
+                                        drawContent()
+                                    }
+                            ) {
+                                Text(
+                                    replyText,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF333333),
+                                    fontFamily = DiaryFemaleFontFamily,
+                                    lineHeight = 26.sp,
+                                    style = androidx.compose.ui.text.TextStyle(
+                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Bottom, LineHeightStyle.Trim.None)
+                                    ),
+                                    onTextLayout = { r -> if (r.lineCount > 0) replyLineHeightPx = r.getLineBottom(0) - r.getLineTop(0) }
+                                )
+                            }
+                            Spacer(Modifier.height(16.dp))
                         }
-                        replyText.isNotBlank() -> Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Image(
-                                painter = painterResource(id = expressionToFaceRes(hikariExprRes)),
-                                contentDescription = null,
-                                modifier = Modifier.size(38.dp).clip(CircleShape).background(Color(0xFFFFE0E9)),
-                                contentScale = ContentScale.Crop
-                            )
-                            Text(
-                                replyText,
-                                fontSize = 15.sp,
-                                color = Color(0xFF333333),
-                                fontFamily = DiaryFemaleFontFamily,
-                                lineHeight = 24.sp
-                            )
-                        }
-                        else -> Text(
-                            "ひかりからの返事は、明日手紙で届きます。",
-                            fontSize = 13.sp,
-                            color = Color(0xFFAAAAAA),
-                            fontFamily = MplusRoundedFontFamily
-                        )
                     }
                 }
             }
