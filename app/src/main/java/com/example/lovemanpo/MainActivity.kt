@@ -1331,11 +1331,13 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
 
     var homeChatReply by remember { mutableStateOf<Pair<String, Int>?>(null) }
     var isHomeChatLoading by remember { mutableStateOf(false) }
+    var weatherDialogueActive by remember { mutableStateOf(false) }
 
     val weatherDialogue = weatherInfo?.let { homeWeatherDialogue(it.weatherCode) }
     val stepAchievementDialogue = stepDialogue.takeIf { it.thresholdSteps > 0 }
-    val displayMessage = (homeChatReply?.first ?: touchedDialogue?.text ?: stepAchievementDialogue?.text ?: weatherDialogue?.text ?: stepDialogue.text).replace("○○", playerName)
-    val displayExpression = homeChatReply?.second ?: touchedDialogue?.expr ?: stepAchievementDialogue?.expr ?: weatherDialogue?.expr ?: stepDialogue.expr
+    val activeWeatherDialogue = if (weatherDialogueActive) weatherDialogue else null
+    val displayMessage = (homeChatReply?.first ?: touchedDialogue?.text ?: stepAchievementDialogue?.text ?: activeWeatherDialogue?.text ?: stepDialogue.text).replace("○○", playerName)
+    val displayExpression = homeChatReply?.second ?: touchedDialogue?.expr ?: stepAchievementDialogue?.expr ?: activeWeatherDialogue?.expr ?: stepDialogue.expr
 
     LaunchedEffect(displayMessage, playerName) {
         viewModel.saveCurrentDialogue(displayMessage.replace("○○", playerName))
@@ -1361,10 +1363,13 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         weatherInfo = weatherInfo,
         onCharacterClick = {
             touchedDialogue = touchDialogues.randomOrNull()
+            weatherDialogueActive = false
         },
         isHomeChatLoading = isHomeChatLoading,
         onRefreshDialogue = { homeChatReply = null },
+        onWeatherTap = { weatherDialogueActive = true },
         onHomeChatSend = { text ->
+            weatherDialogueActive = false
             isHomeChatLoading = true
             scope.launch {
                 try {
@@ -1428,6 +1433,7 @@ fun HomeScreenContent(
     weatherInfo: WeatherInfo? = null,
     isHomeChatLoading: Boolean = false,
     onRefreshDialogue: () -> Unit = {},
+    onWeatherTap: () -> Unit = {},
     onHomeChatSend: (String) -> Unit = {},
     onCharacterClick: () -> Unit,
     onFreeChatClick: () -> Unit,
@@ -1481,7 +1487,7 @@ fun HomeScreenContent(
                     Surface(
                         shape = CircleShape,
                         color = Color.White,
-                        modifier = Modifier.size(30.dp).clickable(enabled = weatherInfo != null) { showWeatherSheet = true }
+                        modifier = Modifier.size(30.dp).clickable(enabled = weatherInfo != null) { showWeatherSheet = true; onWeatherTap() }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
