@@ -1888,7 +1888,7 @@ fun HintSdHikari(modifier: Modifier = Modifier) {
 
 
 fun splitMessageIntoPages(text: String): List<String> {
-    val maxChars = 28
+    val maxChars = 40
     if (text.length <= maxChars) return listOf(text)
     val punctuation = setOf('。', '、', '！', '？', '!', '?', '…', '，')
     val result = mutableListOf<String>()
