@@ -152,6 +152,11 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.TextUnit
 
 // --- 期間の定義 ---
 enum class DisplayPeriod(val label: String) {
@@ -1390,7 +1395,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
                     }
                     homeChatReply = Pair(replyText, expr)
                 } catch (_: Exception) {
-                    homeChatReply = null
+                    homeChatReply = Pair("ごめん、うまく聞こえなかったよ…もう一度話しかけてみて？", R.drawable.hikari_think)
                 } finally {
                     isHomeChatLoading = false
                 }
@@ -1889,7 +1894,7 @@ fun HintSdHikari(modifier: Modifier = Modifier) {
 
 
 fun splitMessageIntoPages(text: String): List<String> {
-    val maxChars = 34
+    val maxChars = 28
     if (text.length <= maxChars) return listOf(text)
     val punctuation = setOf('。', '、', '！', '？', '!', '?', '…', '，')
     val result = mutableListOf<String>()
@@ -1908,11 +1913,33 @@ fun splitMessageIntoPages(text: String): List<String> {
     return result.ifEmpty { listOf(text) }
 }
 
+fun splitByTextMeasure(text: String, measurer: TextMeasurer, fontSize: TextUnit, widthPx: Int, maxLines: Int = 2): List<String> {
+    val style = TextStyle(fontSize = fontSize)
+    val constraints = Constraints(maxWidth = widthPx)
+    val pages = mutableListOf<String>()
+    var remaining = text.trim()
+    while (remaining.isNotEmpty()) {
+        val result = measurer.measure(remaining, style, constraints = constraints)
+        if (result.lineCount <= maxLines) { pages.add(remaining); break }
+        val cut = result.getLineEnd(maxLines - 1, visibleEnd = true)
+        if (cut <= 0 || cut >= remaining.length) { pages.add(remaining); break }
+        pages.add(remaining.substring(0, cut).trimEnd())
+        remaining = remaining.substring(cut).trimStart()
+    }
+    return pages.ifEmpty { listOf(text) }
+}
+
 @Composable
 fun HomeCommentBanner(expr: Int, message: String, onRefresh: (() -> Unit)? = null, onClick: () -> Unit = {}) {
-    val pages = remember(message) { splitMessageIntoPages(message) }
+    val textMeasurer = rememberTextMeasurer()
+    var columnWidthPx by remember { mutableStateOf(0) }
+    val pages = remember(message, columnWidthPx) {
+        if (columnWidthPx > 0) splitByTextMeasure(message, textMeasurer, 12.sp, columnWidthPx)
+        else splitMessageIntoPages(message)
+    }
     var pageIndex by remember(message) { mutableStateOf(0) }
-    val currentText = pages.getOrElse(pageIndex) { message }
+    val safePageIndex = pageIndex.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
+    val currentText = pages.getOrElse(safePageIndex) { message }
     val multiPage = pages.size > 1
 
     Box {
@@ -1930,29 +1957,29 @@ fun HomeCommentBanner(expr: Int, message: String, onRefresh: (() -> Unit)? = nul
                         .background(Color(0xFFFFB7D0).copy(alpha = 0.7f))
                 )
                 Spacer(modifier = Modifier.width(10.dp))
-                Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.weight(1f).onSizeChanged { columnWidthPx = it.width }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                         if (multiPage) {
                             Icon(
                                 Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                                 contentDescription = "前へ",
-                                tint = if (pageIndex > 0) Color(0xFFFF6B9D) else Color.LightGray,
-                                modifier = Modifier.size(16.dp).clickable(enabled = pageIndex > 0) { pageIndex-- }
+                                tint = if (safePageIndex > 0) Color(0xFFFF6B9D) else Color.LightGray,
+                                modifier = Modifier.size(16.dp).clickable(enabled = safePageIndex > 0) { pageIndex-- }
                             )
-                            Text("${pageIndex + 1}/${pages.size}", fontSize = 9.sp, color = Color.Gray, modifier = Modifier.padding(horizontal = 2.dp))
+                            Text("${safePageIndex + 1}/${pages.size}", fontSize = 9.sp, color = Color.Gray, modifier = Modifier.padding(horizontal = 2.dp))
                             Icon(
                                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 contentDescription = "次へ",
-                                tint = if (pageIndex < pages.size - 1) Color(0xFFFF6B9D) else Color.LightGray,
-                                modifier = Modifier.size(16.dp).clickable(enabled = pageIndex < pages.size - 1) { pageIndex++ }
+                                tint = if (safePageIndex < pages.size - 1) Color(0xFFFF6B9D) else Color.LightGray,
+                                modifier = Modifier.size(16.dp).clickable(enabled = safePageIndex < pages.size - 1) { pageIndex++ }
                             )
                         } else {
                             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
-                    Text(currentText, fontSize = 12.sp, color = Color(0xFF1A1A1A), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(currentText, fontSize = 12.sp, color = Color(0xFF1A1A1A), maxLines = 2, overflow = TextOverflow.Clip)
                 }
         }
     }
