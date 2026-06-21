@@ -3505,10 +3505,11 @@ fun DiaryDetailDialog(
     }
 
     var showReply by remember { mutableStateOf(false) }
-    val progress by animateFloatAsState(
-        targetValue = if (showReply) 1f else 0f,
-        animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing),
-        label = "peel"
+    // 0° = 日記ページ表示、180° = ひかりページ表示
+    val flipRotation by animateFloatAsState(
+        targetValue = if (showReply) 180f else 0f,
+        animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing),
+        label = "cardFlip"
     )
 
     Dialog(
@@ -3539,13 +3540,18 @@ fun DiaryDetailDialog(
                 }
                 HorizontalDivider(color = Color(0xFFFFD7E5), thickness = 0.5.dp)
 
-                // ── ページめくりアニメーション ──
+                // ── 3D カードフリップ ──
                 Box(modifier = Modifier.fillMaxSize()) {
 
-                    // ── 裏ページ（ひかりの返信）常に存在、前ページが剥がれると現れる ──
+                    // ── 裏ページ（ひかりの返信）flipRotation 90°〜180° で表側に出てくる ──
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
+                            .graphicsLayer {
+                                rotationY = flipRotation - 180f   // -180°→0° へ
+                                cameraDistance = 10f * density
+                                alpha = if (flipRotation <= 90f) 0f else 1f
+                            }
                             .drawBehind {
                                 drawRect(Color(0xFFFFF8FC))
                                 var y = lineSpPx
@@ -3587,28 +3593,21 @@ fun DiaryDetailDialog(
                         }
                     }
 
-                    // ── 前ページ（日記）drawWithContent + clipPathでめくれる ──
-                    // アニメーション完了後はcompositionから除去してタッチを裏ページへ
-                    if (progress < 1f) Box(
+                    // ── 表ページ（日記）flipRotation 0°〜90° で見える、それ以降は裏に回る ──
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .drawWithContent {
-                                val contentScope = this
-                                val w = size.width; val h = size.height
-                                val peelPath = Path().apply {
-                                    moveTo(0f, 0f); lineTo(w, 0f)
-                                    lineTo(w, h * (1f - progress))
-                                    lineTo(w * (1f - progress), h)
-                                    lineTo(0f, h); close()
-                                }
-                                clipPath(peelPath) {
-                                    drawRect(Color(0xFFFFFCF6))
-                                    var y = lineSpPx
-                                    while (y <= size.height) {
-                                        drawLine(lineColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
-                                        y += lineSpPx
-                                    }
-                                    contentScope.drawContent()
+                            .graphicsLayer {
+                                rotationY = flipRotation          // 0°→180° へ
+                                cameraDistance = 10f * density
+                                alpha = if (flipRotation >= 90f) 0f else 1f
+                            }
+                            .drawBehind {
+                                drawRect(Color(0xFFFFFCF6))
+                                var y = lineSpPx
+                                while (y <= size.height) {
+                                    drawLine(lineColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+                                    y += lineSpPx
                                 }
                             }
                     ) {
@@ -3668,52 +3667,6 @@ fun DiaryDetailDialog(
                                 }
                                 Spacer(Modifier.height(32.dp))
                             }
-                        }
-                    }
-
-                    // ── 角めくりフラップ（Canvas）物理的な紙めくり演出 ──
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        if (progress > 0.005f) {
-                            val w = size.width
-                            val h = size.height
-                            val cx = w * (1f - progress)
-                            val cy = h * (1f - progress)
-
-                            // 折り目の影（裏ページ側に落ちる）
-                            val shadowPath = Path().apply {
-                                moveTo(w, cy + h * 0.05f)
-                                lineTo(cx + w * 0.05f, h)
-                                lineTo(w, h)
-                                close()
-                            }
-                            drawPath(shadowPath, Color.Black.copy(alpha = 0.20f))
-
-                            // めくれた紙のフラップ（グラデーションで丸み表現）
-                            val flapPath = Path().apply {
-                                moveTo(w, cy)
-                                lineTo(cx, h)
-                                lineTo(w, h)
-                                close()
-                            }
-                            val midX = (w + cx) / 2f
-                            val midY = (cy + h) / 2f
-                            drawPath(
-                                flapPath,
-                                Brush.linearGradient(
-                                    colors = listOf(Color(0xFFFFF5F8), Color(0xFFFFD5E5)),
-                                    start = Offset(midX, midY),
-                                    end = Offset(w, h)
-                                )
-                            )
-
-                            // 折り目のライン
-                            drawLine(
-                                color = Color(0xFFCC8899),
-                                start = Offset(w, cy),
-                                end = Offset(cx, h),
-                                strokeWidth = 2f,
-                                cap = StrokeCap.Round
-                            )
                         }
                     }
                 }
