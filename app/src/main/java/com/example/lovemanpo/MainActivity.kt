@@ -3454,7 +3454,6 @@ fun DiaryDateCard(
 }
 
 // 詳細表示ダイアログ（全文＋ひかりの返信）
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun DiaryDetailDialog(
     date: String,
