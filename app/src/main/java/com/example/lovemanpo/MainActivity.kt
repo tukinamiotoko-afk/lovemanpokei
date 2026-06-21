@@ -3138,8 +3138,16 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                 ) { Icon(Icons.Default.Edit, contentDescription = "日記を書く") }
             }
         },
-        containerColor = Color(0xFFFFF9FC)
+        containerColor = Color.Transparent
     ) { padding ->
+        Box(Modifier.fillMaxSize()) {
+            Image(
+                painter = painterResource(R.drawable.nikki_haikei),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = 0.25f)))
         if (allDates.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -3192,6 +3200,7 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                 }
             }
         }
+        } // outer background Box
     }
 
     // 日記詳細ダイアログ
