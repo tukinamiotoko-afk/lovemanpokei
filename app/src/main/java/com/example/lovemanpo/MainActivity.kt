@@ -19,6 +19,8 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.fadeIn
@@ -3453,6 +3455,20 @@ fun DiaryDateCard(
     }
 }
 
+private class PeelShape(private val progress: Float) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+        if (progress >= 1f) return Outline.Generic(Path())
+        val w = size.width; val h = size.height
+        val path = Path().apply {
+            moveTo(0f, 0f); lineTo(w, 0f)
+            lineTo(w, h * (1f - progress))
+            lineTo(w * (1f - progress), h)
+            lineTo(0f, h); close()
+        }
+        return Outline.Generic(path)
+    }
+}
+
 // 詳細表示ダイアログ（全文＋ひかりの返信）
 @Composable
 fun DiaryDetailDialog(
@@ -3485,11 +3501,19 @@ fun DiaryDetailDialog(
     }
 
     var showReply by remember { mutableStateOf(false) }
+    val progress by animateFloatAsState(
+        targetValue = if (showReply) 1f else 0f,
+        animationSpec = tween(durationMillis = 750, easing = FastOutSlowInEasing),
+        label = "peel"
+    )
 
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        val lineSpPx = with(LocalDensity.current) { 26.sp.toPx() }
+        val lineColor = Color(0xFFFFC7D8).copy(alpha = 0.60f)
+
         Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFFFFCF6)) {
             Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
                 // ヘッダー
@@ -3511,72 +3535,102 @@ fun DiaryDetailDialog(
                 }
                 HorizontalDivider(color = Color(0xFFFFD7E5), thickness = 0.5.dp)
 
-                AnimatedContent(
-                    targetState = showReply,
-                    transitionSpec = {
-                        if (targetState) {
-                            slideInHorizontally(tween(380)) { it } + fadeIn(tween(380)) togetherWith
-                            slideOutHorizontally(tween(380)) { -it } + fadeOut(tween(200))
-                        } else {
-                            slideInHorizontally(tween(380)) { -it } + fadeIn(tween(380)) togetherWith
-                            slideOutHorizontally(tween(380)) { it } + fadeOut(tween(200))
-                        }
-                    },
-                    label = "diaryFlip"
-                ) { isReply ->
-                    if (!isReply) {
-                        // ── 日記ページ ──
-                        Column(
-                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            var lineHeightPx by remember { mutableStateOf(0f) }
-                            val fallbackPx = with(LocalDensity.current) { 26.sp.toPx() }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 20.dp, vertical = 12.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFFFFFEFA))
-                                    .border(1.dp, Color(0xFFFFD7E5), RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 14.dp, vertical = 10.dp)
-                                    .drawWithContent {
-                                        val lh = if (lineHeightPx > 0f) lineHeightPx else fallbackPx
-                                        var y = lh
-                                        while (y <= size.height) {
-                                            drawLine(Color(0xFFFFC7D8).copy(alpha = 0.65f), Offset(0f, y), Offset(size.width, y), 0.5.dp.toPx())
-                                            y += lh
-                                        }
-                                        drawContent()
-                                    }
-                            ) {
-                                Text(
-                                    userText,
-                                    fontSize = 14.sp,
-                                    color = Color(0xFF333333),
-                                    fontFamily = diaryFontFamily,
-                                    lineHeight = 26.sp,
-                                    style = androidx.compose.ui.text.TextStyle(
-                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Bottom, LineHeightStyle.Trim.None)
-                                    ),
-                                    onTextLayout = { r -> if (r.lineCount > 0) lineHeightPx = r.getLineBottom(0) - r.getLineTop(0) }
-                                )
+                // ── ページめくりアニメーション ──
+                Box(modifier = Modifier.fillMaxSize()) {
+
+                    // ── 裏ページ（ひかりの返信）常に存在、前ページが剥がれると現れる ──
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .drawBehind {
+                                drawRect(Color(0xFFFFF8FC))
+                                var y = lineSpPx
+                                while (y <= size.height) {
+                                    drawLine(lineColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+                                    y += lineSpPx
+                                }
                             }
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Image(
+                                    painter = painterResource(id = expressionToFaceRes(hikariExprRes)),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(40.dp).clip(CircleShape).background(Color(0xFFFFE0E9)),
+                                    contentScale = ContentScale.Crop
+                                )
+                                Text("ひかりより", fontSize = 14.sp, color = pinkAccent, fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
+                            }
+                            Text(
+                                replyText,
+                                modifier = Modifier.padding(horizontal = 20.dp),
+                                fontSize = 14.sp,
+                                color = Color(0xFF333333),
+                                fontFamily = DiaryFemaleFontFamily,
+                                lineHeight = 26.sp,
+                                style = androidx.compose.ui.text.TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                    lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Bottom, LineHeightStyle.Trim.None)
+                                )
+                            )
+                            Spacer(Modifier.height(32.dp))
+                        }
+                    }
+
+                    // ── 前ページ（日記）PeelShapeでクリップしてめくれる ──
+                    // アニメーション完了後は完全に取り除いてタッチを裏ページに渡す
+                    if (progress < 1f) Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(remember(progress) { PeelShape(progress) })
+                            .drawBehind {
+                                drawRect(Color(0xFFFFFCF6))
+                                var y = lineSpPx
+                                while (y <= size.height) {
+                                    drawLine(lineColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+                                    y += lineSpPx
+                                }
+                            }
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                        ) {
+                            Text(
+                                userText,
+                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                                fontSize = 14.sp,
+                                color = Color(0xFF333333),
+                                fontFamily = diaryFontFamily,
+                                lineHeight = 26.sp,
+                                style = androidx.compose.ui.text.TextStyle(
+                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                    lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Bottom, LineHeightStyle.Trim.None)
+                                )
+                            )
                             if (photoPath.isNotBlank()) {
                                 val bitmap = remember(photoPath) { BitmapFactory.decodeFile(photoPath)?.asImageBitmap() }
                                 bitmap?.let {
-                                    Image(bitmap = it, contentDescription = "日記の写真",
+                                    Image(
+                                        bitmap = it,
+                                        contentDescription = "日記の写真",
                                         modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)
                                             .padding(horizontal = 20.dp).clip(RoundedCornerShape(12.dp)),
-                                        contentScale = ContentScale.Crop)
+                                        contentScale = ContentScale.Crop
+                                    )
                                 }
                             }
-                            // ひかりの返信ボタン
+                            Spacer(Modifier.height(16.dp))
                             when {
                                 isLoading -> Row(
                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
                                 ) {
                                     CircularProgressIndicator(modifier = Modifier.size(16.dp), color = pinkAccent, strokeWidth = 2.dp)
                                     Spacer(Modifier.width(8.dp))
@@ -3595,61 +3649,26 @@ fun DiaryDetailDialog(
                                     fontSize = 13.sp, color = Color(0xFFAAAAAA), fontFamily = MplusRoundedFontFamily
                                 )
                             }
-                            Spacer(Modifier.height(16.dp))
+                            Spacer(Modifier.height(32.dp))
                         }
-                    } else {
-                        // ── ひかりの返信ページ ──
-                        Column(
-                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Image(
-                                    painter = painterResource(id = expressionToFaceRes(hikariExprRes)),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(40.dp).clip(CircleShape).background(Color(0xFFFFE0E9)),
-                                    contentScale = ContentScale.Crop
-                                )
-                                Text("ひかりより", fontSize = 14.sp, color = pinkAccent, fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
+                    }
+
+                    // ── 角めくりフラップ（Canvas）──
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        if (progress > 0.01f && progress < 0.99f) {
+                            val w = size.width
+                            val h = size.height
+                            val cx = w * (1f - progress)
+                            val cy = h * (1f - progress)
+                            val flapPath = Path().apply {
+                                moveTo(w, cy)
+                                lineTo(cx, h)
+                                lineTo(w, h)
+                                close()
                             }
-                            var replyLineHeightPx by remember { mutableStateOf(0f) }
-                            val replyFallbackPx = with(LocalDensity.current) { 26.sp.toPx() }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 20.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFFFFF8FC))
-                                    .border(1.dp, Color(0xFFFFD7E5), RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 14.dp, vertical = 10.dp)
-                                    .drawWithContent {
-                                        val lh = if (replyLineHeightPx > 0f) replyLineHeightPx else replyFallbackPx
-                                        var y = lh
-                                        while (y <= size.height) {
-                                            drawLine(Color(0xFFFFC7D8).copy(alpha = 0.65f), Offset(0f, y), Offset(size.width, y), 0.5.dp.toPx())
-                                            y += lh
-                                        }
-                                        drawContent()
-                                    }
-                            ) {
-                                Text(
-                                    replyText,
-                                    fontSize = 14.sp,
-                                    color = Color(0xFF333333),
-                                    fontFamily = DiaryFemaleFontFamily,
-                                    lineHeight = 26.sp,
-                                    style = androidx.compose.ui.text.TextStyle(
-                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Bottom, LineHeightStyle.Trim.None)
-                                    ),
-                                    onTextLayout = { r -> if (r.lineCount > 0) replyLineHeightPx = r.getLineBottom(0) - r.getLineTop(0) }
-                                )
-                            }
-                            Spacer(Modifier.height(16.dp))
+                            drawPath(flapPath, Color(0x22000000))
+                            drawPath(flapPath, Color(0xFFFFEEF3))
+                            drawLine(Color(0xFFFFB7D0), Offset(w, cy), Offset(cx, h), strokeWidth = 1.5f)
                         }
                     }
                 }
