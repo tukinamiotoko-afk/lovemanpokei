@@ -1377,7 +1377,8 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
 返答の先頭に[EMOTION:タグ名]を出力する。タグ: happy / love / shy / sad / worry / normal
 30〜70文字で自然に返す。句読点で区切りやすい文にする。敬語。AIっぽい表現禁止。「${playerName}さん」と「さん」付けで呼ぶ。「今一緒に歩いている」視点で話す。
 今日の歩数：${todaySteps}歩。"""
-                    val raw = callGeminiApi(prompt, emptyList(), text, maxTokens = 300)
+                    val history = listOf(ChatMessage(role = "assistant", content = displayMessage))
+                    val raw = callGeminiApi(prompt, history, text, maxTokens = 300)
                     val emotionMatch = Regex("""\[EMOTION:(\w+)\]""").find(raw)
                     val emotion = emotionMatch?.groupValues?.get(1) ?: "normal"
                     val replyText = raw.replace(emotionMatch?.value ?: "", "").trim()
@@ -1916,7 +1917,7 @@ fun HomeCommentBanner(expr: Int, message: String, onRefresh: (() -> Unit)? = nul
 
     Box {
     Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0)), modifier = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }) {
-        Row(modifier = Modifier.padding(10.dp).height(IntrinsicSize.Min), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.padding(10.dp).height(IntrinsicSize.Max), verticalAlignment = Alignment.CenterVertically) {
                 Image(painter = painterResource(id = expressionToFaceRes(expr)), contentDescription = null, modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
