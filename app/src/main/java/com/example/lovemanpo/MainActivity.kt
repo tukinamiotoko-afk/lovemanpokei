@@ -3587,52 +3587,35 @@ fun DiaryDetailDialog(
                         }
                     }
 
-                    // ── 前ページ（日記）PeelShapeでクリップしてめくれる ──
-                    // アニメーション完了後は完全に取り除いてタッチを裏ページに渡す
+                    // ── 前ページ（日記）drawWithContent + clipPathでめくれる ──
+                    // アニメーション完了後はcompositionから除去してタッチを裏ページへ
                     if (progress < 1f) Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .clip(remember(progress) { PeelShape(progress) })
-                            .drawBehind {
-                                drawRect(Color(0xFFFFFCF6))
-                                var y = lineSpPx
-                                while (y <= size.height) {
-                                    drawLine(lineColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
-                                    y += lineSpPx
+                            .drawWithContent {
+                                val w = size.width; val h = size.height
+                                val peelPath = Path().apply {
+                                    moveTo(0f, 0f); lineTo(w, 0f)
+                                    lineTo(w, h * (1f - progress))
+                                    lineTo(w * (1f - progress), h)
+                                    lineTo(0f, h); close()
+                                }
+                                clipPath(peelPath) {
+                                    drawRect(Color(0xFFFFFCF6))
+                                    var y = lineSpPx
+                                    while (y <= size.height) {
+                                        drawLine(lineColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f)
+                                        y += lineSpPx
+                                    }
+                                    drawContent()
                                 }
                             }
                     ) {
-                        Column(
-                            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                        ) {
-                            Text(
-                                userText,
-                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
-                                fontSize = 14.sp,
-                                color = Color(0xFF333333),
-                                fontFamily = diaryFontFamily,
-                                lineHeight = 26.sp,
-                                style = androidx.compose.ui.text.TextStyle(
-                                    platformStyle = PlatformTextStyle(includeFontPadding = false),
-                                    lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Bottom, LineHeightStyle.Trim.None)
-                                )
-                            )
-                            if (photoPath.isNotBlank()) {
-                                val bitmap = remember(photoPath) { BitmapFactory.decodeFile(photoPath)?.asImageBitmap() }
-                                bitmap?.let {
-                                    Image(
-                                        bitmap = it,
-                                        contentDescription = "日記の写真",
-                                        modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)
-                                            .padding(horizontal = 20.dp).clip(RoundedCornerShape(12.dp)),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.height(16.dp))
+                        Column(Modifier.fillMaxSize()) {
+                            // ── ボタンを上部に固定 ──
                             when {
                                 isLoading -> Row(
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center
                                 ) {
@@ -3642,37 +3625,94 @@ fun DiaryDetailDialog(
                                 }
                                 replyText.isNotBlank() -> Button(
                                     onClick = { showReply = true },
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6B9D))
                                 ) {
                                     Text("💌 ひかりからのお手紙を見る", fontFamily = MplusRoundedFontFamily)
                                 }
                                 else -> Text(
                                     "ひかりからの返事は、明日手紙で届きます。",
-                                    modifier = Modifier.padding(horizontal = 20.dp),
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
                                     fontSize = 13.sp, color = Color(0xFFAAAAAA), fontFamily = MplusRoundedFontFamily
                                 )
                             }
-                            Spacer(Modifier.height(32.dp))
+                            HorizontalDivider(color = Color(0xFFFFD7E5), thickness = 0.5.dp)
+                            // ── 日記本文（スクロール可） ──
+                            Column(
+                                modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())
+                            ) {
+                                Text(
+                                    userText,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF333333),
+                                    fontFamily = diaryFontFamily,
+                                    lineHeight = 26.sp,
+                                    style = androidx.compose.ui.text.TextStyle(
+                                        platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                        lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Bottom, LineHeightStyle.Trim.None)
+                                    )
+                                )
+                                if (photoPath.isNotBlank()) {
+                                    val bitmap = remember(photoPath) { BitmapFactory.decodeFile(photoPath)?.asImageBitmap() }
+                                    bitmap?.let {
+                                        Image(
+                                            bitmap = it,
+                                            contentDescription = "日記の写真",
+                                            modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)
+                                                .padding(horizontal = 20.dp).clip(RoundedCornerShape(12.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(32.dp))
+                            }
                         }
                     }
 
-                    // ── 角めくりフラップ（Canvas）──
+                    // ── 角めくりフラップ（Canvas）物理的な紙めくり演出 ──
                     Canvas(modifier = Modifier.fillMaxSize()) {
-                        if (progress > 0.01f && progress < 0.99f) {
+                        if (progress > 0.005f) {
                             val w = size.width
                             val h = size.height
                             val cx = w * (1f - progress)
                             val cy = h * (1f - progress)
+
+                            // 折り目の影（裏ページ側に落ちる）
+                            val shadowPath = Path().apply {
+                                moveTo(w, cy + h * 0.05f)
+                                lineTo(cx + w * 0.05f, h)
+                                lineTo(w, h)
+                                close()
+                            }
+                            drawPath(shadowPath, Color.Black.copy(alpha = 0.20f))
+
+                            // めくれた紙のフラップ（グラデーションで丸み表現）
                             val flapPath = Path().apply {
                                 moveTo(w, cy)
                                 lineTo(cx, h)
                                 lineTo(w, h)
                                 close()
                             }
-                            drawPath(flapPath, Color(0x22000000))
-                            drawPath(flapPath, Color(0xFFFFEEF3))
-                            drawLine(Color(0xFFFFB7D0), Offset(w, cy), Offset(cx, h), strokeWidth = 1.5f)
+                            val midX = (w + cx) / 2f
+                            val midY = (cy + h) / 2f
+                            drawPath(
+                                flapPath,
+                                Brush.linearGradient(
+                                    colors = listOf(Color(0xFFFFF5F8), Color(0xFFFFD5E5)),
+                                    start = Offset(midX, midY),
+                                    end = Offset(w, h)
+                                )
+                            )
+
+                            // 折り目のライン
+                            drawLine(
+                                color = Color(0xFFCC8899),
+                                start = Offset(w, cy),
+                                end = Offset(cx, h),
+                                strokeWidth = 2f,
+                                cap = StrokeCap.Round
+                            )
                         }
                     }
                 }
