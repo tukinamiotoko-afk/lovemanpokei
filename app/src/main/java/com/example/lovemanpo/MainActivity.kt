@@ -1888,7 +1888,7 @@ fun HintSdHikari(modifier: Modifier = Modifier) {
 
 
 fun splitMessageIntoPages(text: String): List<String> {
-    val maxChars = 44
+    val maxChars = 28
     if (text.length <= maxChars) return listOf(text)
     val punctuation = setOf('。', '、', '！', '？', '!', '?', '…', '，')
     val result = mutableListOf<String>()
@@ -1935,7 +1935,7 @@ fun HomeCommentBanner(expr: Int, message: String, onRefresh: (() -> Unit)? = nul
                         if (!multiPage) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
-                    Text(currentText, fontSize = 12.sp, color = Color(0xFF1A1A1A))
+                    Text(currentText, fontSize = 12.sp, color = Color(0xFF1A1A1A), maxLines = 2, overflow = TextOverflow.Ellipsis)
                     if (multiPage) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
