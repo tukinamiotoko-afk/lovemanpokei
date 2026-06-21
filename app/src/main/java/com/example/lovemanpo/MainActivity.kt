@@ -1370,7 +1370,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
                 try {
                     val prompt = """あなたは「ひかり」（22歳）。${playerName}さんと散歩中の話し相手。
 返答の先頭に[EMOTION:タグ名]を出力する。タグ: happy / love / shy / sad / worry / normal
-20〜30文字で自然に返す。敬語。AIっぽい表現禁止。「${playerName}さん」と「さん」付けで呼ぶ。「今一緒に歩いている」視点で話す。
+40〜80文字で自然に返す。敬語。AIっぽい表現禁止。「${playerName}さん」と「さん」付けで呼ぶ。「今一緒に歩いている」視点で話す。
 今日の歩数：${todaySteps}歩。"""
                     val raw = callGeminiApi(prompt, emptyList(), text, maxTokens = 300)
                     val emotionMatch = Regex("""\[EMOTION:(\w+)\]""").find(raw)
@@ -1882,7 +1882,7 @@ fun HintSdHikari(modifier: Modifier = Modifier) {
 
 
 fun splitMessageIntoPages(text: String): List<String> {
-    val maxChars = 30
+    val maxChars = 44
     if (text.length <= maxChars) return listOf(text)
     val punctuation = setOf('。', '、', '！', '？', '!', '?', '…', '，')
     val result = mutableListOf<String>()
@@ -1929,7 +1929,7 @@ fun HomeCommentBanner(expr: Int, message: String, onRefresh: (() -> Unit)? = nul
                         if (!multiPage) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
-                    Text(currentText, fontSize = 12.sp, color = Color(0xFF1A1A1A), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(currentText, fontSize = 12.sp, color = Color(0xFF1A1A1A))
                     if (multiPage) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
