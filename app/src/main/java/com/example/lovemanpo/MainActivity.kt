@@ -1375,7 +1375,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
                 try {
                     val prompt = """あなたは「ひかり」（22歳）。${playerName}さんと散歩中の話し相手。
 返答の先頭に[EMOTION:タグ名]を出力する。タグ: happy / love / shy / sad / worry / normal
-40〜80文字で自然に返す。敬語。AIっぽい表現禁止。「${playerName}さん」と「さん」付けで呼ぶ。「今一緒に歩いている」視点で話す。
+30〜70文字で自然に返す。句読点で区切りやすい文にする。敬語。AIっぽい表現禁止。「${playerName}さん」と「さん」付けで呼ぶ。「今一緒に歩いている」視点で話す。
 今日の歩数：${todaySteps}歩。"""
                     val raw = callGeminiApi(prompt, emptyList(), text, maxTokens = 300)
                     val emotionMatch = Regex("""\[EMOTION:(\w+)\]""").find(raw)
@@ -1888,7 +1888,7 @@ fun HintSdHikari(modifier: Modifier = Modifier) {
 
 
 fun splitMessageIntoPages(text: String): List<String> {
-    val maxChars = 40
+    val maxChars = 34
     if (text.length <= maxChars) return listOf(text)
     val punctuation = setOf('。', '、', '！', '？', '!', '?', '…', '，')
     val result = mutableListOf<String>()
