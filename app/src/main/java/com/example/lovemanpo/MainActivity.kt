@@ -1932,31 +1932,26 @@ fun HomeCommentBanner(expr: Int, message: String, onRefresh: (() -> Unit)? = nul
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        if (!multiPage) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
-                    }
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
-                    Text(currentText, fontSize = 12.sp, color = Color(0xFF1A1A1A), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    if (multiPage) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                            horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                        if (multiPage) {
                             Icon(
                                 Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                                 contentDescription = "前へ",
                                 tint = if (pageIndex > 0) Color(0xFFFF6B9D) else Color.LightGray,
-                                modifier = Modifier.size(18.dp).clickable(enabled = pageIndex > 0) { pageIndex-- }
+                                modifier = Modifier.size(16.dp).clickable(enabled = pageIndex > 0) { pageIndex-- }
                             )
-                            Text("${pageIndex + 1}/${pages.size}", fontSize = 10.sp, color = Color.Gray, modifier = Modifier.padding(horizontal = 4.dp))
+                            Text("${pageIndex + 1}/${pages.size}", fontSize = 9.sp, color = Color.Gray, modifier = Modifier.padding(horizontal = 2.dp))
                             Icon(
                                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 contentDescription = "次へ",
                                 tint = if (pageIndex < pages.size - 1) Color(0xFFFF6B9D) else Color.LightGray,
-                                modifier = Modifier.size(18.dp).clickable(enabled = pageIndex < pages.size - 1) { pageIndex++ }
+                                modifier = Modifier.size(16.dp).clickable(enabled = pageIndex < pages.size - 1) { pageIndex++ }
                             )
+                        } else {
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
                         }
                     }
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
+                    Text(currentText, fontSize = 12.sp, color = Color(0xFF1A1A1A), maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
         }
     }
