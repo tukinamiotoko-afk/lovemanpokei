@@ -19,8 +19,8 @@ const C = {
   elevated:  '#f7f7f7',
   border:    '#cccccc',
   hairline:  '#cccccc',
-  primary:   '#76b900',
-  onPrimary: '#000000',
+  primary:   '#1a73e8',
+  onPrimary: '#ffffff',
   onDark:    '#1a1a1a',
   muted:     '#757575',
   stone:     '#898989',
@@ -92,18 +92,11 @@ export default function HomeScreen({ navigation }: Props) {
   const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
   const dateLabel = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} (${weekdays[now.getDay()]})`;
 
-  return (
-    <SafeAreaView style={s.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.dark} />
-
-      <View style={s.navBar}>
-        <Text style={s.navTitle}>毎日タスク</Text>
-      </View>
-
+  const listHeader = (
+    <View style={s.listHeader}>
       <View style={s.dateStrip}>
         <Text style={s.dateText}>{dateLabel}</Text>
       </View>
-
       <View style={s.progressPanel}>
         <Text style={s.metaLabel}>今日の進捗</Text>
         <View style={s.progressRow}>
@@ -113,54 +106,63 @@ export default function HomeScreen({ navigation }: Props) {
           <Text style={s.progressText}>{done} / {total}</Text>
         </View>
       </View>
-
       <View style={s.sectionBar}>
         <Text style={s.metaLabel}>チェックリスト</Text>
         {total > 0 && <Text style={s.stone}>{total}件</Text>}
       </View>
+    </View>
+  );
 
-      {tasks.length === 0 ? (
-        <View style={s.empty}>
-          <View style={s.emptyBox}>
-            <Text style={s.emptyTitle}>タスクなし</Text>
-            <Text style={s.emptyBody}>毎日やることを追加しましょう</Text>
-            <TouchableOpacity style={s.emptyButton} onPress={() => setShowAdd(true)}>
-              <Text style={s.emptyButtonText}>＋</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ) : (
-        <FlatList
-          data={tasks}
-          keyExtractor={(item) => String(item.id)}
-          style={s.list}
-          contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 6 }}
-          renderItem={({ item }) => {
-            const isDone = completedIds.has(item.id);
-            return (
-              <TouchableOpacity
-                style={[s.taskCard, isDone && s.taskCardDone]}
-                onPress={() => toggle(item.id)}
-                onLongPress={() => handleDelete(item)}
-                activeOpacity={0.75}
-              >
-                <View style={[s.checkBox, isDone && s.checkBoxDone]}>
-                  {isDone && <Text style={s.checkMark}>✓</Text>}
-                </View>
-                <Text style={[s.taskTitle, isDone && s.taskTitleDone]} numberOfLines={2}>
-                  {item.title}
-                </Text>
-                {isDone && (
-                  <View style={s.doneBadge}>
-                    <Text style={s.doneBadgeText}>完了</Text>
-                  </View>
-                )}
+  return (
+    <SafeAreaView style={s.safeArea} edges={['top', 'bottom']}>
+      <StatusBar barStyle="dark-content" backgroundColor={C.dark} />
+
+      <View style={s.navBar}>
+        <Text style={s.navTitle}>毎日タスク</Text>
+      </View>
+
+      <FlatList
+        data={tasks}
+        keyExtractor={(item) => String(item.id)}
+        style={s.list}
+        contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: 8, gap: 6 }}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={
+          <View style={s.empty}>
+            <View style={s.emptyBox}>
+              <Text style={s.emptyTitle}>タスクなし</Text>
+              <Text style={s.emptyBody}>毎日やることを追加しましょう</Text>
+              <TouchableOpacity style={s.emptyButton} onPress={() => setShowAdd(true)}>
+                <Text style={s.emptyButtonText}>＋</Text>
               </TouchableOpacity>
-            );
-          }}
-          ListFooterComponent={<View style={{ height: 8 }} />}
-        />
-      )}
+            </View>
+          </View>
+        }
+        renderItem={({ item }) => {
+          const isDone = completedIds.has(item.id);
+          return (
+            <TouchableOpacity
+              style={[s.taskCard, isDone && s.taskCardDone]}
+              onPress={() => toggle(item.id)}
+              onLongPress={() => handleDelete(item)}
+              activeOpacity={0.75}
+            >
+              <View style={[s.checkBox, isDone && s.checkBoxDone]}>
+                {isDone && <Text style={s.checkMark}>✓</Text>}
+              </View>
+              <Text style={[s.taskTitle, isDone && s.taskTitleDone]} numberOfLines={2}>
+                {item.title}
+              </Text>
+              {isDone && (
+                <View style={s.doneBadge}>
+                  <Text style={s.doneBadgeText}>完了</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        }}
+        ListFooterComponent={<View style={{ height: 80 }} />}
+      />
 
       <View style={s.tabBar}>
         <TouchableOpacity style={[s.tabItem, s.tabItemActive]} onPress={() => {}}>
@@ -235,23 +237,19 @@ const s = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: C.border,
     height: 52,
   },
-  tabItem: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-  },
-  tabItemActive: {
-    borderTopWidth: 2, borderTopColor: C.primary,
-  },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  tabItemActive: { borderTopWidth: 2, borderTopColor: C.primary },
   tabLabel: { color: C.muted, fontSize: 12, fontWeight: '700' },
   tabLabelActive: { color: C.primary },
 
-  dateStrip: {
-    backgroundColor: C.dark, paddingHorizontal: 12, paddingVertical: 7,
-    borderBottomWidth: 1, borderBottomColor: C.border,
-  },
+  list: { flex: 1 },
+
+  listHeader: { gap: 8, marginBottom: 4 },
+  dateStrip: { paddingVertical: 4 },
   dateText: { color: C.stone, fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
 
   progressPanel: {
-    margin: 12, backgroundColor: C.elevated,
+    backgroundColor: C.elevated,
     borderRadius: 2, borderWidth: 1, borderColor: C.border, padding: 12,
   },
   progressRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
@@ -261,16 +259,15 @@ const s = StyleSheet.create({
 
   sectionBar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 12, paddingVertical: 6,
+    paddingVertical: 4,
     borderBottomWidth: 1, borderBottomColor: C.border,
   },
   metaLabel: { color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
   stone: { color: C.stone, fontSize: 11, fontWeight: '700' },
 
-  list: { flex: 1 },
   taskCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.elevated,
+    backgroundColor: '#fff4e6',
     borderWidth: 1, borderColor: C.border, borderRadius: 2,
     paddingHorizontal: 12, paddingVertical: 13, gap: 10,
   },
@@ -289,7 +286,7 @@ const s = StyleSheet.create({
   },
   doneBadgeText: { color: C.onPrimary, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
 
-  empty: { flex: 1, padding: 24, justifyContent: 'center' },
+  empty: { paddingVertical: 40 },
   emptyBox: {
     backgroundColor: C.elevated, borderRadius: 2,
     borderWidth: 1, borderColor: C.border,
@@ -304,7 +301,7 @@ const s = StyleSheet.create({
   emptyButtonText: { color: C.onPrimary, fontSize: 22, fontWeight: '700' },
 
   fab: {
-    position: 'absolute', bottom: 24, right: 20,
+    position: 'absolute', bottom: 68, right: 20,
     width: 52, height: 52, borderRadius: 2,
     backgroundColor: C.primary,
     alignItems: 'center', justifyContent: 'center',
