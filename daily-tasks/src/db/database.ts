@@ -1,6 +1,8 @@
 import * as SQLite from 'expo-sqlite';
 
 export type Task = { id: number; title: string; sort_order: number };
+export type NotificationSetting = { id: number; time: string; notification_type: string; identifier: string | null };
+export type CompletionDetail = { task_id: number; title: string; date: string; completed_at: string | null };
 
 export async function migrateDb(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync(`
@@ -12,9 +14,17 @@ export async function migrateDb(db: SQLite.SQLiteDatabase): Promise<void> {
     CREATE TABLE IF NOT EXISTS completions (
       task_id INTEGER NOT NULL,
       date TEXT NOT NULL,
+      completed_at TEXT,
       PRIMARY KEY (task_id, date)
     );
+    CREATE TABLE IF NOT EXISTS notification_settings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      time TEXT NOT NULL,
+      notification_type TEXT NOT NULL DEFAULT 'full',
+      identifier TEXT
+    );
   `);
+  try { await db.execAsync('ALTER TABLE completions ADD COLUMN completed_at TEXT'); } catch {}
 }
 
 export function getToday(): string {
@@ -41,6 +51,10 @@ export async function addTask(db: SQLite.SQLiteDatabase, title: string): Promise
   await db.runAsync('INSERT INTO tasks (title) VALUES (?)', [title]);
 }
 
+export async function updateTask(db: SQLite.SQLiteDatabase, id: number, title: string): Promise<void> {
+  await db.runAsync('UPDATE tasks SET title = ? WHERE id = ?', [title, id]);
+}
+
 export async function deleteTask(db: SQLite.SQLiteDatabase, id: number): Promise<void> {
   await db.runAsync('DELETE FROM tasks WHERE id = ?', [id]);
   await db.runAsync('DELETE FROM completions WHERE task_id = ?', [id]);
@@ -52,7 +66,11 @@ export async function getCompletedTaskIds(db: SQLite.SQLiteDatabase, date: strin
 }
 
 export async function markComplete(db: SQLite.SQLiteDatabase, taskId: number, date: string): Promise<void> {
-  await db.runAsync('INSERT OR REPLACE INTO completions (task_id, date) VALUES (?, ?)', [taskId, date]);
+  const now = new Date().toISOString();
+  await db.runAsync(
+    'INSERT OR REPLACE INTO completions (task_id, date, completed_at) VALUES (?, ?, ?)',
+    [taskId, date, now]
+  );
 }
 
 export async function markIncomplete(db: SQLite.SQLiteDatabase, taskId: number, date: string): Promise<void> {
@@ -60,10 +78,7 @@ export async function markIncomplete(db: SQLite.SQLiteDatabase, taskId: number, 
 }
 
 export async function getCompletionCountInRange(
-  db: SQLite.SQLiteDatabase,
-  taskId: number,
-  startDate: string,
-  endDate: string
+  db: SQLite.SQLiteDatabase, taskId: number, startDate: string, endDate: string
 ): Promise<number> {
   const row = await db.getFirstAsync<{ count: number }>(
     'SELECT COUNT(*) as count FROM completions WHERE task_id = ? AND date >= ? AND date <= ?',
@@ -72,13 +87,46 @@ export async function getCompletionCountInRange(
   return row?.count ?? 0;
 }
 
-export async function getFirstCompletionDate(
-  db: SQLite.SQLiteDatabase,
-  taskId: number
-): Promise<string | null> {
+export async function getFirstCompletionDate(db: SQLite.SQLiteDatabase, taskId: number): Promise<string | null> {
   const row = await db.getFirstAsync<{ date: string }>(
-    'SELECT MIN(date) as date FROM completions WHERE task_id = ?',
-    [taskId]
+    'SELECT MIN(date) as date FROM completions WHERE task_id = ?', [taskId]
   );
   return row?.date ?? null;
+}
+
+export async function getCompletionsForMonth(
+  db: SQLite.SQLiteDatabase, year: number, month: number
+): Promise<CompletionDetail[]> {
+  const start = `${year}-${String(month).padStart(2, '0')}-01`;
+  const end = `${year}-${String(month).padStart(2, '0')}-31`;
+  return db.getAllAsync<CompletionDetail>(
+    `SELECT c.task_id, t.title, c.date, c.completed_at
+     FROM completions c JOIN tasks t ON c.task_id = t.id
+     WHERE c.date >= ? AND c.date <= ?
+     ORDER BY c.date, c.completed_at`,
+    [start, end]
+  );
+}
+
+export async function getNotificationSettings(db: SQLite.SQLiteDatabase): Promise<NotificationSetting[]> {
+  return db.getAllAsync<NotificationSetting>('SELECT * FROM notification_settings ORDER BY time ASC');
+}
+
+export async function addNotificationSetting(
+  db: SQLite.SQLiteDatabase, time: string, notification_type: string, identifier: string | null
+): Promise<void> {
+  await db.runAsync(
+    'INSERT INTO notification_settings (time, notification_type, identifier) VALUES (?, ?, ?)',
+    [time, notification_type, identifier]
+  );
+}
+
+export async function deleteNotificationSetting(
+  db: SQLite.SQLiteDatabase, id: number
+): Promise<string | null> {
+  const row = await db.getFirstAsync<{ identifier: string | null }>(
+    'SELECT identifier FROM notification_settings WHERE id = ?', [id]
+  );
+  await db.runAsync('DELETE FROM notification_settings WHERE id = ?', [id]);
+  return row?.identifier ?? null;
 }

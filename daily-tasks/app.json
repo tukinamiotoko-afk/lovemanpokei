@@ -7,6 +7,6 @@
     "backgroundColor": "#ffffff",
     "ios": { "supportsTablet": false },
     "android": { "adaptiveIcon": { "backgroundColor": "#76b900" } },
-    "plugins": ["expo-sqlite"]
+    "plugins": ["expo-sqlite", "expo-notifications"]
   }
 }

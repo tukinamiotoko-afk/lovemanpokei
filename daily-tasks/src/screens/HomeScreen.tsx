@@ -10,9 +10,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import {
-  Task, getToday, getTasks, addTask, deleteTask,
+  Task, getToday, getTasks, addTask, updateTask, deleteTask,
   getCompletedTaskIds, markComplete, markIncomplete,
 } from '../db/database';
+import TabBar from '../components/TabBar';
 
 const C = {
   header:    '#4a5569',
@@ -35,6 +36,9 @@ export default function HomeScreen({ navigation }: Props) {
   const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
   const [showAdd, setShowAdd] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  const [showEdit, setShowEdit] = useState(false);
+  const [editTask, setEditTask] = useState<Task | null>(null);
+  const [editTitle, setEditTitle] = useState('');
   const [showThumb, setShowThumb] = useState(false);
   const thumbAnim = useRef(new Animated.Value(0)).current;
   const today = getToday();
@@ -74,6 +78,19 @@ export default function HomeScreen({ navigation }: Props) {
     await addTask(db, title);
     setNewTitle('');
     setShowAdd(false);
+    load();
+  };
+
+  const openEdit = (task: Task) => {
+    setEditTask(task);
+    setEditTitle(task.title);
+    setShowEdit(true);
+  };
+
+  const handleEdit = async () => {
+    if (!editTask || !editTitle.trim()) return;
+    await updateTask(db, editTask.id, editTitle.trim());
+    setShowEdit(false);
     load();
   };
 
@@ -127,41 +144,34 @@ export default function HomeScreen({ navigation }: Props) {
         renderItem={({ item }) => {
           const isDone = completedIds.has(item.id);
           return (
-            <TouchableOpacity
-              style={[s.taskCard, isDone && s.taskCardDone]}
-              onPress={() => toggle(item.id)}
-              activeOpacity={0.8}
-            >
-              <View style={[s.checkBox, isDone && s.checkBoxDone]}>
+            <View style={[s.taskCard, isDone && s.taskCardDone]}>
+              <TouchableOpacity
+                style={[s.checkBox, isDone && s.checkBoxDone]}
+                onPress={() => toggle(item.id)}
+                hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+              >
                 {isDone && <Text style={s.checkMark}>✓</Text>}
-              </View>
-              <Text style={[s.taskTitle, isDone && s.taskTitleDone]} numberOfLines={2}>
-                {item.title}
-              </Text>
-              {isDone && (
-                <View style={s.doneBadge}>
-                  <Text style={s.doneBadgeText}>完了</Text>
-                </View>
-              )}
+              </TouchableOpacity>
+              <TouchableOpacity style={s.taskBody} onPress={() => openEdit(item)} activeOpacity={0.7}>
+                <Text style={[s.taskTitle, isDone && s.taskTitleDone]} numberOfLines={2}>
+                  {item.title}
+                </Text>
+                {isDone && (
+                  <View style={s.doneBadge}>
+                    <Text style={s.doneBadgeText}>完了</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
               <TouchableOpacity style={s.deleteBtn} onPress={() => handleDelete(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Text style={s.deleteBtnText}>🗑️</Text>
               </TouchableOpacity>
-            </TouchableOpacity>
+            </View>
           );
         }}
         ListFooterComponent={<View style={{ height: 80 }} />}
       />
 
-      <View style={s.tabBar}>
-        <TouchableOpacity style={[s.tabItem, s.tabItemActive]} onPress={() => {}}>
-          <Text style={s.tabIcon}>📋</Text>
-          <Text style={[s.tabLabel, s.tabLabelActive]}>タスク一覧</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={s.tabItem} onPress={() => navigation.navigate('Stats')}>
-          <Text style={s.tabIcon}>📊</Text>
-          <Text style={s.tabLabel}>実行率</Text>
-        </TouchableOpacity>
-      </View>
+      <TabBar current="Home" navigation={navigation} />
 
       <TouchableOpacity style={s.fab} onPress={() => setShowAdd(true)} activeOpacity={0.85}>
         <Text style={s.fabText}>＋</Text>
@@ -176,6 +186,7 @@ export default function HomeScreen({ navigation }: Props) {
         </Animated.View>
       )}
 
+      {/* Add modal */}
       <Modal visible={showAdd} transparent animationType="fade" onRequestClose={() => setShowAdd(false)}>
         <KeyboardAvoidingView style={s.modalBg} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={s.modalCard}>
@@ -207,6 +218,37 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Edit modal */}
+      <Modal visible={showEdit} transparent animationType="fade" onRequestClose={() => setShowEdit(false)}>
+        <KeyboardAvoidingView style={s.modalBg} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={s.modalCard}>
+            <Text style={s.modalTitle}>タスクを編集</Text>
+            <View style={s.modalDivider} />
+            <Text style={s.modalLabel}>タスク名</Text>
+            <TextInput
+              style={s.modalInput}
+              value={editTitle}
+              onChangeText={setEditTitle}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleEdit}
+            />
+            <View style={s.modalButtons}>
+              <TouchableOpacity style={s.modalCancel} onPress={() => setShowEdit(false)}>
+                <Text style={s.modalCancelText}>キャンセル</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.modalConfirm, !editTitle.trim() && s.modalConfirmDisabled]}
+                onPress={handleEdit}
+                disabled={!editTitle.trim()}
+              >
+                <Text style={s.modalConfirmText}>保存</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -226,16 +268,13 @@ const s = StyleSheet.create({
   progressText: { color: '#ffffff', fontSize: 11, fontWeight: '700' },
 
   list: { flex: 1, backgroundColor: C.body },
-  sectionBar: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 4,
-  },
+  sectionBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   metaLabel: { color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
   stone: { color: C.stone, fontSize: 11, fontWeight: '700' },
 
   taskCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.card,
+    backgroundColor: '#fffbe6',
     borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 14, gap: 12,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4,
@@ -249,38 +288,21 @@ const s = StyleSheet.create({
   },
   checkBoxDone: { backgroundColor: C.primary, borderColor: C.primary },
   checkMark: { color: C.onPrimary, fontSize: 11, fontWeight: '700' },
+  taskBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   taskTitle: { flex: 1, color: C.onDark, fontSize: 14, fontWeight: '500', lineHeight: 20 },
   taskTitleDone: { color: C.muted, textDecorationLine: 'line-through' },
-  doneBadge: {
-    backgroundColor: C.header, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3,
-  },
+  doneBadge: { backgroundColor: C.header, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   doneBadgeText: { color: C.onPrimary, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
 
-  deleteBtn: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: '#fee2e2',
-    alignItems: 'center', justifyContent: 'center',
-  },
+  deleteBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#fee2e2', alignItems: 'center', justifyContent: 'center' },
   deleteBtnText: { fontSize: 16 },
 
   empty: { paddingVertical: 60, alignItems: 'center', gap: 8 },
   emptyTitle: { color: C.stone, fontSize: 16, fontWeight: '700' },
   emptyBody: { color: C.muted, fontSize: 13 },
 
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: C.card,
-    borderTopWidth: 1, borderTopColor: C.border,
-    height: 52,
-  },
-  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  tabItemActive: { borderTopWidth: 2, borderTopColor: C.primary },
-  tabIcon: { fontSize: 18 },
-  tabLabel: { color: C.muted, fontSize: 10, fontWeight: '700' },
-  tabLabelActive: { color: C.primary },
-
   fab: {
-    position: 'absolute', bottom: 68, right: 20,
+    position: 'absolute', bottom: 72, right: 20,
     width: 52, height: 52, borderRadius: 26,
     backgroundColor: C.primary,
     alignItems: 'center', justifyContent: 'center',
@@ -290,33 +312,18 @@ const s = StyleSheet.create({
   fabText: { color: C.onPrimary, fontSize: 26, fontWeight: '400', lineHeight: 30 },
 
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-  modalCard: {
-    backgroundColor: C.card, borderRadius: 16,
-    padding: 20, gap: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12,
-    elevation: 8,
-  },
+  modalCard: { backgroundColor: C.card, borderRadius: 16, padding: 20, gap: 12, elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
   modalTitle: { color: C.onDark, fontSize: 16, fontWeight: '700' },
   modalDivider: { height: 1, backgroundColor: C.border },
   modalLabel: { color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
-  modalInput: {
-    borderWidth: 1, borderColor: C.border, borderRadius: 10,
-    padding: 12, fontSize: 14, color: C.onDark,
-    backgroundColor: C.body,
-  },
+  modalInput: { borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 12, fontSize: 14, color: C.onDark, backgroundColor: C.body },
   modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 4 },
-  modalCancel: {
-    borderRadius: 8, borderWidth: 1, borderColor: C.border,
-    paddingHorizontal: 16, paddingVertical: 9,
-  },
+  modalCancel: { borderRadius: 8, borderWidth: 1, borderColor: C.border, paddingHorizontal: 16, paddingVertical: 9 },
   modalCancelText: { color: C.stone, fontSize: 13, fontWeight: '700' },
   modalConfirm: { backgroundColor: C.primary, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 9 },
   modalConfirmDisabled: { backgroundColor: C.border },
   modalConfirmText: { color: C.onPrimary, fontSize: 13, fontWeight: '700' },
 
-  thumbOverlay: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  thumbOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   thumbEmoji: { fontSize: 80 },
 });

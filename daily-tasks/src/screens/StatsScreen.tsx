@@ -1,18 +1,13 @@
 import React, { useState, useCallback } from 'react';
-import {
-  View, Text, FlatList, TouchableOpacity,
-  StyleSheet, Platform, StatusBar,
-} from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Platform, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { RootStackParamList } from '../../App';
-import {
-  Task, getToday, subtractDays, daysBetween,
-  getTasks, getCompletionCountInRange, getFirstCompletionDate,
-} from '../db/database';
+import { Task, getToday, subtractDays, daysBetween, getTasks, getCompletionCountInRange, getFirstCompletionDate } from '../db/database';
+import TabBar from '../components/TabBar';
 
 const C = {
   header:    '#4a5569',
@@ -49,32 +44,23 @@ export default function StatsScreen({ navigation }: Props) {
   const load = useCallback(async () => {
     const tasks = await getTasks(db);
     if (tasks.length === 0) { setRates([]); return; }
-
     const computed = await Promise.all(tasks.map(async (task) => {
       let startDate: string;
       let totalDays: number;
-
-      if (period === '7日') {
-        startDate = subtractDays(today, 6);
-        totalDays = 7;
-      } else if (period === '30日') {
-        startDate = subtractDays(today, 29);
-        totalDays = 30;
-      } else if (period === '全期間') {
+      if (period === '7日') { startDate = subtractDays(today, 6); totalDays = 7; }
+      else if (period === '30日') { startDate = subtractDays(today, 29); totalDays = 30; }
+      else if (period === '全期間') {
         const first = await getFirstCompletionDate(db, task.id);
         startDate = first ?? today;
         totalDays = daysBetween(startDate, today);
       } else {
         startDate = toDateString(customStart);
-        const endStr = toDateString(customEnd);
-        totalDays = daysBetween(startDate, endStr);
+        totalDays = daysBetween(startDate, toDateString(customEnd));
       }
-
       const endDate = period === '任意' ? toDateString(customEnd) : today;
       const completed = await getCompletionCountInRange(db, task.id, startDate, endDate);
       return { task, completed, total: Math.max(totalDays, 1), rate: completed / Math.max(totalDays, 1) };
     }));
-
     setRates(computed);
   }, [db, period, today, customStart, customEnd]);
 
@@ -84,16 +70,10 @@ export default function StatsScreen({ navigation }: Props) {
     if (period === '7日') return '直近7日間';
     if (period === '30日') return '直近30日間';
     if (period === '全期間') return '全期間';
-    const s = customStart;
-    const e = customEnd;
-    return `${s.getMonth() + 1}/${s.getDate()} 〜 ${e.getMonth() + 1}/${e.getDate()}`;
+    return `${customStart.getMonth() + 1}/${customStart.getDate()} 〜 ${customEnd.getMonth() + 1}/${customEnd.getDate()}`;
   };
 
-  const barColor = (rate: number) => {
-    if (rate >= 0.8) return C.primary;
-    if (rate >= 0.5) return C.warning;
-    return C.muted;
-  };
+  const barColor = (rate: number) => rate >= 0.8 ? C.primary : rate >= 0.5 ? C.warning : C.muted;
 
   return (
     <SafeAreaView style={s.safeArea} edges={['top', 'bottom']}>
@@ -106,7 +86,7 @@ export default function StatsScreen({ navigation }: Props) {
             <TouchableOpacity
               key={p}
               style={[s.periodChip, period === p && s.periodChipActive]}
-              onPress={() => { setPeriod(p); }}
+              onPress={() => setPeriod(p)}
             >
               <Text style={[s.periodChipText, period === p && s.periodChipTextActive]}>{p}</Text>
             </TouchableOpacity>
@@ -140,9 +120,7 @@ export default function StatsScreen({ navigation }: Props) {
           keyExtractor={(item) => String(item.task.id)}
           style={s.list}
           contentContainerStyle={{ padding: 16, gap: 10 }}
-          ListHeaderComponent={
-            <Text style={s.metaLabel}>{periodLabel()}</Text>
-          }
+          ListHeaderComponent={<Text style={s.metaLabel}>{periodLabel()}</Text>}
           renderItem={({ item }) => {
             const pct = Math.round(item.rate * 100);
             const bc = barColor(item.rate);
@@ -167,41 +145,15 @@ export default function StatsScreen({ navigation }: Props) {
         />
       )}
 
-      <View style={s.tabBar}>
-        <TouchableOpacity style={s.tabItem} onPress={() => navigation.goBack()}>
-          <Text style={s.tabIcon}>📋</Text>
-          <Text style={s.tabLabel}>タスク一覧</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[s.tabItem, s.tabItemActive]} onPress={() => {}}>
-          <Text style={s.tabIcon}>📊</Text>
-          <Text style={[s.tabLabel, s.tabLabelActive]}>実行率</Text>
-        </TouchableOpacity>
-      </View>
+      <TabBar current="Stats" navigation={navigation} />
 
       {showStartPicker && (
-        <DateTimePicker
-          value={customStart}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'inline' : 'default'}
-          maximumDate={customEnd}
-          onChange={(_, date) => {
-            setShowStartPicker(Platform.OS === 'ios');
-            if (date) setCustomStart(date);
-          }}
-        />
+        <DateTimePicker value={customStart} mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'} maximumDate={customEnd}
+          onChange={(_, date) => { setShowStartPicker(Platform.OS === 'ios'); if (date) setCustomStart(date); }} />
       )}
       {showEndPicker && (
-        <DateTimePicker
-          value={customEnd}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'inline' : 'default'}
-          minimumDate={customStart}
-          maximumDate={new Date()}
-          onChange={(_, date) => {
-            setShowEndPicker(Platform.OS === 'ios');
-            if (date) setCustomEnd(date);
-          }}
-        />
+        <DateTimePicker value={customEnd} mode="date" display={Platform.OS === 'ios' ? 'inline' : 'default'} minimumDate={customStart} maximumDate={new Date()}
+          onChange={(_, date) => { setShowEndPicker(Platform.OS === 'ios'); if (date) setCustomEnd(date); }} />
       )}
     </SafeAreaView>
   );
@@ -209,46 +161,23 @@ export default function StatsScreen({ navigation }: Props) {
 
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: C.header },
-
-  headerCard: {
-    backgroundColor: C.header,
-    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, gap: 16,
-  },
+  headerCard: { backgroundColor: C.header, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, gap: 16 },
   headerTitle: { color: '#ffffff', fontSize: 20, fontWeight: '700' },
-
   periodBar: { flexDirection: 'row', gap: 8 },
-  periodChip: {
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)',
-    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
-  },
+  periodChip: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
   periodChipActive: { backgroundColor: '#ffffff', borderColor: '#ffffff' },
   periodChipText: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '700' },
   periodChipTextActive: { color: C.header },
-
-  customBar: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.card, paddingHorizontal: 16, paddingVertical: 10, gap: 6,
-    borderBottomWidth: 1, borderBottomColor: C.border,
-  },
+  customBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.card, paddingHorizontal: 16, paddingVertical: 10, gap: 6, borderBottomWidth: 1, borderBottomColor: C.border },
   customLabel: { color: C.stone, fontSize: 11, fontWeight: '700' },
-  dateBtn: {
-    borderWidth: 1, borderColor: C.border, borderRadius: 8,
-    paddingHorizontal: 8, paddingVertical: 5,
-  },
+  dateBtn: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 },
   dateBtnText: { color: C.onDark, fontSize: 11, fontWeight: '700' },
   customTilde: { color: C.muted, fontSize: 12 },
   applyBtn: { backgroundColor: C.primary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 5 },
   applyBtnText: { color: C.onPrimary, fontSize: 11, fontWeight: '700' },
-
   metaLabel: { color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
-
   list: { flex: 1, backgroundColor: C.body },
-  rateCard: {
-    backgroundColor: C.card,
-    borderRadius: 16, padding: 16, gap: 10,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6,
-    elevation: 3,
-  },
+  rateCard: { backgroundColor: C.card, borderRadius: 16, padding: 16, gap: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 3 },
   rateHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rateTitle: { flex: 1, color: C.onDark, fontSize: 14, fontWeight: '600' },
   rateRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -257,19 +186,6 @@ const s = StyleSheet.create({
   ratePct: { color: C.onPrimary, fontSize: 11, fontWeight: '700' },
   barBg: { height: 4, backgroundColor: C.border, borderRadius: 2, overflow: 'hidden' },
   barFill: { height: '100%' },
-
   empty: { flex: 1, backgroundColor: C.body, alignItems: 'center', justifyContent: 'center' },
   emptyText: { color: C.muted, fontSize: 14, fontWeight: '600' },
-
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: C.card,
-    borderTopWidth: 1, borderTopColor: C.border,
-    height: 52,
-  },
-  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  tabItemActive: { borderTopWidth: 2, borderTopColor: C.primary },
-  tabIcon: { fontSize: 18 },
-  tabLabel: { color: C.muted, fontSize: 10, fontWeight: '700' },
-  tabLabelActive: { color: C.primary },
 });
