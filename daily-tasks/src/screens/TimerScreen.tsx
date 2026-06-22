@@ -1,12 +1,13 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  StatusBar, Animated, Modal,
+  StatusBar, Animated, Modal, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as Notifications from 'expo-notifications';
 import { RootStackParamList } from '../../App';
 import { Task, getTasks, addTimeLog } from '../db/database';
 import TabBar from '../components/TabBar';
@@ -40,6 +41,17 @@ function formatTime(sec: number): string {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+async function setupChannel() {
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('timer_silent', {
+      name: 'タイマー通知',
+      importance: Notifications.AndroidImportance.LOW,
+      sound: null,
+      vibrationPattern: null,
+    });
+  }
+}
+
 export default function TimerScreen({ navigation }: Props) {
   const db = useSQLiteContext();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -49,7 +61,6 @@ export default function TimerScreen({ navigation }: Props) {
   const [mode, setMode] = useState<TimerMode>('stopwatch');
   const [timerMinutes, setTimerMinutes] = useState(25);
   const [elapsed, setElapsed] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [startedAt, setStartedAt] = useState('');
   const [finalDuration, setFinalDuration] = useState(0);
@@ -57,6 +68,17 @@ export default function TimerScreen({ navigation }: Props) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const baseTimeRef = useRef<number>(0);
   const pausedElapsedRef = useRef<number>(0);
+  const tickRef = useRef(0);
+  const notifIdRef = useRef<string | null>(null);
+  const completionNotifIdRef = useRef<string | null>(null);
+  // Refs so callbacks can read latest values without stale closures
+  const elapsedRef = useRef(0);
+  const isPausedRef = useRef(false);
+  const modeRef = useRef<TimerMode>('stopwatch');
+  const selectedTaskRef = useRef<Task | null>(null);
+  const timerDurSecRef = useRef(25 * 60);
+  const startedAtRef = useRef('');
+
   const doneAnim = useRef(new Animated.Value(0)).current;
 
   const load = useCallback(async () => {
@@ -64,64 +86,153 @@ export default function TimerScreen({ navigation }: Props) {
     setTasks(ts);
   }, [db]);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => {
+    load();
+    setupChannel();
+  }, [load]));
 
   useEffect(() => {
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      cancelTimerNotif();
+    };
   }, []);
+
+  // Keep refs in sync
+  useEffect(() => { elapsedRef.current = elapsed; }, [elapsed]);
+  useEffect(() => { isPausedRef.current = isPaused; }, [isPaused]);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+  useEffect(() => { selectedTaskRef.current = selectedTask; }, [selectedTask]);
+  useEffect(() => { timerDurSecRef.current = timerMinutes * 60; }, [timerMinutes]);
 
   const timerDurationSec = timerMinutes * 60;
   const remaining = Math.max(timerDurationSec - elapsed, 0);
   const displaySec = mode === 'stopwatch' ? elapsed : remaining;
   const progress = mode === 'timer' ? Math.min(elapsed / timerDurationSec, 1) : 0;
 
-  const startTimer = () => {
-    const now = new Date().toISOString();
-    setStartedAt(now);
-    setElapsed(0);
-    pausedElapsedRef.current = 0;
-    baseTimeRef.current = Date.now();
-    setIsRunning(true);
-    setIsPaused(false);
-    setScreenState('running');
+  const showLiveNotif = async (elapsedSec: number, paused: boolean) => {
+    if (notifIdRef.current) {
+      try { await Notifications.dismissNotificationAsync(notifIdRef.current); } catch {}
+    }
+    const task = selectedTaskRef.current;
+    const timerMode = modeRef.current;
+    const durSec = timerDurSecRef.current;
+    const dispSec = timerMode === 'stopwatch' ? elapsedSec : Math.max(durSec - elapsedSec, 0);
+    const timeStr = formatTime(dispSec);
 
-    intervalRef.current = setInterval(() => {
+    let body: string;
+    if (paused) {
+      body = `⏸ 一時停止中  ${timeStr}`;
+    } else if (timerMode === 'stopwatch') {
+      body = `⏱️ 経過  ${timeStr}`;
+    } else {
+      body = `⏳ 残り  ${timeStr}`;
+    }
+
+    try {
+      const id = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `${task?.icon ?? '⏱️'}  ${task?.title ?? 'タイマー'}`,
+          body,
+          sound: false,
+          android: {
+            channelId: 'timer_silent',
+            ongoing: !paused,
+            color: '#4a5569',
+          } as any,
+        },
+        trigger: null as any,
+      });
+      notifIdRef.current = id;
+    } catch {}
+  };
+
+  const cancelTimerNotif = async () => {
+    if (notifIdRef.current) {
+      try { await Notifications.dismissNotificationAsync(notifIdRef.current); } catch {}
+      notifIdRef.current = null;
+    }
+    if (completionNotifIdRef.current) {
+      try { await Notifications.cancelScheduledNotificationAsync(completionNotifIdRef.current); } catch {}
+      completionNotifIdRef.current = null;
+    }
+  };
+
+  const buildInterval = (sa: string) => {
+    tickRef.current = 0;
+    return setInterval(() => {
       const newElapsed = Math.floor((Date.now() - baseTimeRef.current) / 1000) + pausedElapsedRef.current;
       setElapsed(newElapsed);
-      if (mode === 'timer' && newElapsed >= timerDurationSec) {
-        stopTimer(newElapsed, now);
+      elapsedRef.current = newElapsed;
+      tickRef.current += 1;
+      // update notification every ~3 seconds
+      if (tickRef.current % 15 === 0) {
+        showLiveNotif(newElapsed, false);
+      }
+      if (modeRef.current === 'timer' && newElapsed >= timerDurSecRef.current) {
+        stopTimer(newElapsed, sa);
       }
     }, 200);
   };
 
-  const pauseResume = () => {
+  const startTimer = async () => {
+    const { status } = await Notifications.requestPermissionsAsync();
+    const now = new Date().toISOString();
+    setStartedAt(now);
+    startedAtRef.current = now;
+    setElapsed(0);
+    pausedElapsedRef.current = 0;
+    baseTimeRef.current = Date.now();
+    setIsPaused(false);
+    setScreenState('running');
+
+    await showLiveNotif(0, false);
+
+    // For timer mode: schedule a completion notification
+    if (mode === 'timer' && status === 'granted') {
+      try {
+        const cid = await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `${selectedTask?.icon ?? '⏱️'}  ${selectedTask?.title ?? 'タイマー'}`,
+            body: '⏰ タイマー終了！',
+            sound: true,
+            android: { channelId: 'full' } as any,
+          },
+          trigger: { seconds: timerMinutes * 60, repeats: false } as any,
+        });
+        completionNotifIdRef.current = cid;
+      } catch {}
+    }
+
+    intervalRef.current = buildInterval(now);
+  };
+
+  const pauseResume = async () => {
     if (isPaused) {
       baseTimeRef.current = Date.now();
-      intervalRef.current = setInterval(() => {
-        const newElapsed = Math.floor((Date.now() - baseTimeRef.current) / 1000) + pausedElapsedRef.current;
-        setElapsed(newElapsed);
-        if (mode === 'timer' && newElapsed >= timerDurationSec) {
-          stopTimer(newElapsed, startedAt);
-        }
-      }, 200);
+      intervalRef.current = buildInterval(startedAtRef.current);
       setIsPaused(false);
+      isPausedRef.current = false;
+      await showLiveNotif(elapsedRef.current, false);
     } else {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      pausedElapsedRef.current = elapsed;
+      pausedElapsedRef.current = elapsedRef.current;
       setIsPaused(true);
+      isPausedRef.current = true;
+      await showLiveNotif(elapsedRef.current, true);
     }
   };
 
-  const stopTimer = (durationSec?: number, sa?: string) => {
+  const stopTimer = async (durationSec?: number, sa?: string) => {
     if (intervalRef.current) clearInterval(intervalRef.current);
-    setIsRunning(false);
     setIsPaused(false);
-    const dur = durationSec ?? elapsed;
-    const sat = sa ?? startedAt;
+    const dur = durationSec ?? elapsedRef.current;
+    const sat = sa ?? startedAtRef.current;
     setFinalDuration(dur);
-    if (dur > 0 && selectedTask) {
-      addTimeLog(db, selectedTask.id, dur, mode, sat);
+    if (dur > 0 && selectedTaskRef.current) {
+      await addTimeLog(db, selectedTaskRef.current.id, dur, modeRef.current, sat);
     }
+    await cancelTimerNotif();
     doneAnim.setValue(0);
     Animated.spring(doneAnim, { toValue: 1, useNativeDriver: true, tension: 120, friction: 8 }).start();
     setScreenState('done');
@@ -134,6 +245,7 @@ export default function TimerScreen({ navigation }: Props) {
 
   const handleTaskPress = (task: Task) => {
     setSelectedTask(task);
+    selectedTaskRef.current = task;
     setShowModeModal(true);
   };
 
@@ -150,22 +262,22 @@ export default function TimerScreen({ navigation }: Props) {
         <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
           <View style={s.timerInner}>
 
-            {/* Task info */}
             <View style={s.timerTaskRow}>
               <Text style={s.timerTaskIcon}>{selectedTask?.icon || '⏱️'}</Text>
               <Text style={s.timerTaskName} numberOfLines={1}>{selectedTask?.title}</Text>
             </View>
 
-            {/* Mode chip */}
             <View style={s.modeChip}>
               <Text style={s.modeChipText}>
                 {mode === 'stopwatch' ? 'ストップウォッチ' : `タイマー ${timerMinutes}分`}
               </Text>
             </View>
 
-            {/* Time display */}
             {isDone ? (
-              <Animated.View style={{ transform: [{ scale: doneAnim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }], opacity: doneAnim, alignItems: 'center' }}>
+              <Animated.View style={{
+                transform: [{ scale: doneAnim.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }],
+                opacity: doneAnim, alignItems: 'center',
+              }}>
                 <Text style={s.timerDoneLabel}>記録しました</Text>
                 <Text style={s.timerDisplay}>{formatTime(finalDuration)}</Text>
                 <Text style={s.timerDoneCheck}>✓</Text>
@@ -175,8 +287,6 @@ export default function TimerScreen({ navigation }: Props) {
                 <Text style={[s.timerDisplay, isPaused && s.timerDisplayPaused]}>
                   {formatTime(displaySec)}
                 </Text>
-
-                {/* Timer progress bar */}
                 {mode === 'timer' && (
                   <View style={s.timerProgressBg}>
                     <View style={[s.timerProgressFill, { width: `${progress * 100}%` as any }]} />
@@ -185,14 +295,18 @@ export default function TimerScreen({ navigation }: Props) {
               </View>
             )}
 
-            {/* Controls */}
             {!isDone && (
               <View style={s.timerControls}>
-                <TouchableOpacity style={s.pauseBtn} onPress={pauseResume}>
-                  <Text style={s.pauseBtnText}>{isPaused ? '▶' : '⏸'}</Text>
+                <TouchableOpacity
+                  style={[s.controlBtn, isPaused ? s.controlBtnResume : s.controlBtnPause]}
+                  onPress={pauseResume}
+                >
+                  <Text style={s.controlBtnIcon}>{isPaused ? '▶' : '⏸'}</Text>
+                  <Text style={s.controlBtnText}>{isPaused ? '再開' : '一時停止'}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={s.stopBtn} onPress={() => stopTimer()}>
-                  <Text style={s.stopBtnText}>⏹ 停止</Text>
+                <TouchableOpacity style={[s.controlBtn, s.controlBtnStop]} onPress={() => stopTimer()}>
+                  <Text style={s.controlBtnIcon}>⏹</Text>
+                  <Text style={s.controlBtnText}>完全停止</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -233,7 +347,6 @@ export default function TimerScreen({ navigation }: Props) {
 
       <TabBar current="Timer" navigation={navigation} />
 
-      {/* Mode selection modal */}
       <Modal visible={showModeModal} transparent animationType="slide" onRequestClose={() => setShowModeModal(false)}>
         <TouchableOpacity style={s.modalBg} activeOpacity={1} onPress={() => setShowModeModal(false)}>
           <TouchableOpacity activeOpacity={1} onPress={() => {}}>
@@ -244,7 +357,6 @@ export default function TimerScreen({ navigation }: Props) {
                 <Text style={s.modeTaskName}>{selectedTask?.title}</Text>
               </View>
 
-              {/* Stopwatch / Timer selector */}
               <View style={s.modeRow}>
                 <TouchableOpacity
                   style={[s.modeBtn, mode === 'stopwatch' && s.modeBtnActive]}
@@ -264,7 +376,6 @@ export default function TimerScreen({ navigation }: Props) {
                 </TouchableOpacity>
               </View>
 
-              {/* Timer presets */}
               {mode === 'timer' && (
                 <View style={s.presetsSection}>
                   <Text style={s.presetsLabel}>時間を選ぶ</Text>
@@ -324,9 +435,8 @@ const s = StyleSheet.create({
   empty: { paddingVertical: 60, alignItems: 'center' },
   emptyText: { color: C.muted, fontSize: 14, fontWeight: '600' },
 
-  // Full-screen timer
   timerFull: { flex: 1, backgroundColor: C.timerBg },
-  timerInner: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 20, paddingHorizontal: 32 },
+  timerInner: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 24, paddingHorizontal: 32 },
   timerTaskRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   timerTaskIcon: { fontSize: 26 },
   timerTaskName: { color: 'rgba(255,255,255,0.7)', fontSize: 15, fontWeight: '600', maxWidth: 240 },
@@ -334,18 +444,24 @@ const s = StyleSheet.create({
   modeChipText: { color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '600' },
   timerCenter: { alignItems: 'center', gap: 20, width: '100%' },
   timerDisplay: { color: '#ffffff', fontSize: 80, fontWeight: '200', letterSpacing: -2, fontVariant: ['tabular-nums'] },
-  timerDisplayPaused: { color: 'rgba(255,255,255,0.4)' },
+  timerDisplayPaused: { color: 'rgba(255,255,255,0.35)' },
   timerProgressBg: { width: '80%', height: 4, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 2, overflow: 'hidden' },
   timerProgressFill: { height: '100%', backgroundColor: C.accent },
-  timerControls: { flexDirection: 'row', gap: 16, marginTop: 20 },
-  pauseBtn: { width: 60, height: 60, borderRadius: 30, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
-  pauseBtnText: { color: '#ffffff', fontSize: 24 },
-  stopBtn: { backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 30, paddingHorizontal: 28, paddingVertical: 18, alignItems: 'center', justifyContent: 'center' },
-  stopBtnText: { color: '#ffffff', fontSize: 16, fontWeight: '700' },
+
+  timerControls: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  controlBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, borderRadius: 16, paddingVertical: 16,
+  },
+  controlBtnPause: { backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  controlBtnResume: { backgroundColor: 'rgba(74,222,128,0.18)', borderWidth: 1, borderColor: 'rgba(74,222,128,0.4)' },
+  controlBtnStop: { backgroundColor: 'rgba(239,68,68,0.18)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.4)' },
+  controlBtnIcon: { color: '#ffffff', fontSize: 18 },
+  controlBtnText: { color: '#ffffff', fontSize: 14, fontWeight: '700' },
+
   timerDoneLabel: { color: 'rgba(255,255,255,0.5)', fontSize: 14, fontWeight: '600', marginBottom: 8 },
   timerDoneCheck: { color: '#4ade80', fontSize: 48, marginTop: 8 },
 
-  // Mode modal
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modeSheet: { backgroundColor: C.card, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingTop: 12, gap: 16 },
   sheetHandle: { width: 40, height: 4, backgroundColor: C.border, borderRadius: 2, alignSelf: 'center', marginBottom: 8 },
