@@ -4177,7 +4177,7 @@ val touchDialoguesLv10 = listOf(
 )
 
 val stepDialoguesLv1 = listOf(
-    StepDialogue(0,     "起動確認ヨシ！あとは足を動かすだけですよ♪", R.drawable.hikari_smile),
+    StepDialogue(0,     "今日も来ましたね。さあ、行きましょうか♪", R.drawable.hikari_smile),
     StepDialogue(1000,  "1000歩！靴がようやく本気を出してきましたよ。", R.drawable.hikari_smile),
     StepDialogue(3000,  "3000歩！「今日はここまで」って思った自分を完全に無視しましたね♪", R.drawable.hikari_celebrate),
     StepDialogue(5000,  "5000歩！足が「もういい？」って言ってますが聞かなくていいですよ。", R.drawable.hikari_smile),
