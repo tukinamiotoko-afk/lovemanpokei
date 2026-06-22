@@ -140,7 +140,6 @@ export default function HomeScreen({ navigation }: Props) {
             <TouchableOpacity
               style={[s.taskCard, isDone && s.taskCardDone]}
               onPress={() => toggle(item.id)}
-              onLongPress={() => handleDelete(item)}
               activeOpacity={0.75}
             >
               <View style={[s.checkBox, isDone && s.checkBoxDone]}>
@@ -154,6 +153,9 @@ export default function HomeScreen({ navigation }: Props) {
                   <Text style={s.doneBadgeText}>完了</Text>
                 </View>
               )}
+              <TouchableOpacity style={s.deleteBtn} onPress={() => handleDelete(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Text style={s.deleteBtnText}>✕</Text>
+              </TouchableOpacity>
             </TouchableOpacity>
           );
         }}
@@ -280,6 +282,13 @@ const s = StyleSheet.create({
     backgroundColor: C.primary, borderRadius: 2, paddingHorizontal: 6, paddingVertical: 2,
   },
   doneBadgeText: { color: C.onPrimary, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
+
+  deleteBtn: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#fee2e2',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  deleteBtnText: { color: '#e52020', fontSize: 12, fontWeight: '700' },
 
   empty: { paddingVertical: 40 },
   emptyBox: {
