@@ -4,9 +4,9 @@
     "slug": "mainichi-tasks",
     "version": "1.0.0",
     "orientation": "portrait",
-    "backgroundColor": "#7a8aba",
+    "backgroundColor": "#000000",
     "ios": { "supportsTablet": false },
-    "android": { "adaptiveIcon": { "backgroundColor": "#7a8aba" } },
+    "android": { "adaptiveIcon": { "backgroundColor": "#000000" } },
     "plugins": ["expo-sqlite"]
   }
 }

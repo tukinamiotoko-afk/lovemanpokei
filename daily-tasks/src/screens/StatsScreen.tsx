@@ -14,20 +14,16 @@ import {
 } from '../db/database';
 
 const C = {
-  carbon:      '#21242e',
-  gold:        '#e48600',
-  amber:       '#ecab37',
-  signal:      '#f68d1f',
-  canvas:      '#7a8aba',
-  canvasSoft:  '#9fbee7',
-  chrome:      '#3d4f97',
-  mutedIndigo: '#60619c',
-  platinum:    '#dedede',
-  surface:     '#ffffff',
-  periwinkle:  '#8ba1d4',
-  onPrimary:   '#ffffff',
-  inkSoft:     '#3d4f97',
-  red:         '#e60012',
+  canvas:   '#000000',
+  elevated: '#121314',
+  card:     '#181818',
+  primary:  '#0070d1',
+  onDark:   '#ffffff',
+  bodyDark: 'rgba(255,255,255,0.7)',
+  muteDark: 'rgba(229,229,229,0.55)',
+  hairline: 'rgba(229,229,229,0.2)',
+  psGold:   '#f5a623',
+  muted:    '#6b6b6b',
 };
 
 type Period = '7日' | '30日' | '全期間' | '任意';
@@ -96,16 +92,15 @@ export default function StatsScreen({ navigation }: Props) {
   };
 
   const barColor = (rate: number) => {
-    if (rate >= 0.8) return C.signal;
-    if (rate >= 0.5) return C.amber;
-    return C.mutedIndigo;
+    if (rate >= 0.8) return C.primary;
+    if (rate >= 0.5) return C.psGold;
+    return C.muted;
   };
 
   return (
     <View style={s.root}>
-      <StatusBar barStyle="light-content" backgroundColor={C.carbon} />
+      <StatusBar barStyle="light-content" backgroundColor={C.canvas} />
 
-      {/* ── Nav bar ────────────────────────────────────────────────── */}
       <View style={s.navBar}>
         <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()}>
           <Text style={s.backText}>‹ 戻る</Text>
@@ -113,7 +108,6 @@ export default function StatsScreen({ navigation }: Props) {
         <Text style={s.navTitle}>実行率</Text>
       </View>
 
-      {/* ── Period selector ─────────────────────────────────────────── */}
       <View style={s.periodBar}>
         {(['7日', '30日', '全期間', '任意'] as Period[]).map((p) => (
           <TouchableOpacity
@@ -126,7 +120,6 @@ export default function StatsScreen({ navigation }: Props) {
         ))}
       </View>
 
-      {/* ── Custom date range ───────────────────────────────────────── */}
       {period === '任意' && (
         <View style={s.customBar}>
           <Text style={s.customLabel}>期間：</Text>
@@ -143,12 +136,10 @@ export default function StatsScreen({ navigation }: Props) {
         </View>
       )}
 
-      {/* ── Section label ───────────────────────────────────────────── */}
       <View style={s.sectionBar}>
-        <Text style={s.sectionLabel}>≡ EXECUTION RATE  {periodLabel()}</Text>
+        <Text style={s.metaLabel}>EXECUTION RATE  {periodLabel()}</Text>
       </View>
 
-      {/* ── Rate list ───────────────────────────────────────────────── */}
       {rates.length === 0 ? (
         <View style={s.empty}>
           <Text style={s.emptyText}>タスクがありません</Text>
@@ -158,7 +149,7 @@ export default function StatsScreen({ navigation }: Props) {
           data={rates}
           keyExtractor={(item) => String(item.task.id)}
           style={s.list}
-          contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 8 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8, gap: 8 }}
           renderItem={({ item }) => {
             const pct = Math.round(item.rate * 100);
             const bc = barColor(item.rate);
@@ -174,7 +165,7 @@ export default function StatsScreen({ navigation }: Props) {
                   </View>
                 </View>
                 <View style={s.barBg}>
-                  <View style={[s.barFill, { width: `${Math.min(item.rate * 100, 100)}%`, backgroundColor: bc }]} />
+                  <View style={[s.barFill, { width: `${Math.min(item.rate * 100, 100)}%` as any, backgroundColor: bc }]} />
                 </View>
               </View>
             );
@@ -216,40 +207,59 @@ export default function StatsScreen({ navigation }: Props) {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.canvas },
 
-  navBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.carbon, height: 52, paddingHorizontal: 12, borderBottomWidth: 2, borderBottomColor: C.chrome },
-  backBtn: { marginRight: 12 },
-  backText: { color: C.canvasSoft, fontSize: 14, fontWeight: '700' },
-  navTitle: { flex: 1, color: C.gold, fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
+  navBar: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: C.canvas, height: 52, paddingHorizontal: 16,
+    borderBottomWidth: 1, borderBottomColor: C.hairline,
+  },
+  backBtn: { marginRight: 16 },
+  backText: { color: C.primary, fontSize: 14, fontWeight: '700' },
+  navTitle: { flex: 1, color: C.onDark, fontSize: 16, fontWeight: '500', letterSpacing: 0.4 },
 
-  periodBar: { flexDirection: 'row', backgroundColor: C.canvasSoft, paddingHorizontal: 8, paddingVertical: 6, gap: 6 },
-  periodChip: { backgroundColor: C.periwinkle, borderRadius: 2, paddingHorizontal: 10, paddingVertical: 5 },
-  periodChipActive: { backgroundColor: C.carbon },
-  periodChipText: { color: C.carbon, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
-  periodChipTextActive: { color: C.gold },
+  periodBar: {
+    flexDirection: 'row', backgroundColor: C.elevated,
+    paddingHorizontal: 16, paddingVertical: 10, gap: 8,
+    borderBottomWidth: 1, borderBottomColor: C.hairline,
+  },
+  periodChip: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 7,
+  },
+  periodChipActive: { backgroundColor: C.onDark },
+  periodChipText: { color: C.bodyDark, fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
+  periodChipTextActive: { color: C.canvas },
 
-  customBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.periwinkle, borderBottomWidth: 1, borderBottomColor: C.chrome, paddingHorizontal: 12, paddingVertical: 8, gap: 6 },
-  customLabel: { color: C.carbon, fontSize: 11, fontWeight: '700' },
-  dateBtn: { backgroundColor: C.surface, borderRadius: 2, borderWidth: 1, borderColor: C.chrome, paddingHorizontal: 8, paddingVertical: 4 },
-  dateBtnText: { color: C.carbon, fontSize: 11, fontWeight: '700' },
-  customTilde: { color: C.carbon, fontSize: 12, fontWeight: '700' },
-  applyBtn: { backgroundColor: C.signal, borderRadius: 2, paddingHorizontal: 10, paddingVertical: 4 },
-  applyBtnText: { color: C.onPrimary, fontSize: 11, fontWeight: '700' },
+  customBar: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: C.card, paddingHorizontal: 16, paddingVertical: 10, gap: 8,
+    borderBottomWidth: 1, borderBottomColor: C.hairline,
+  },
+  customLabel: { color: C.muteDark, fontSize: 12, fontWeight: '500' },
+  dateBtn: {
+    backgroundColor: C.elevated, borderRadius: 4,
+    borderWidth: 1, borderColor: C.hairline,
+    paddingHorizontal: 10, paddingVertical: 6,
+  },
+  dateBtnText: { color: C.onDark, fontSize: 12, fontWeight: '700' },
+  customTilde: { color: C.muteDark, fontSize: 14 },
+  applyBtn: { backgroundColor: C.primary, borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 6 },
+  applyBtnText: { color: C.onDark, fontSize: 12, fontWeight: '700' },
 
-  sectionBar: { paddingHorizontal: 12, paddingVertical: 6 },
-  sectionLabel: { color: C.carbon, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  sectionBar: { paddingHorizontal: 16, paddingVertical: 10 },
+  metaLabel: { color: C.muteDark, fontSize: 11, fontWeight: '500', letterSpacing: 0.5 },
 
   list: { flex: 1 },
 
-  rateCard: { backgroundColor: C.platinum, borderRadius: 4, borderWidth: 1, borderColor: 'rgba(61,79,151,0.3)', padding: 12, gap: 8, elevation: 2 },
+  rateCard: { backgroundColor: C.card, borderRadius: 8, padding: 16, gap: 10 },
   rateHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  rateTitle: { flex: 1, color: C.carbon, fontSize: 12, fontWeight: '700' },
-  rateRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  rateDays: { color: C.inkSoft, fontSize: 11, fontWeight: '700' },
-  rateBadge: { borderRadius: 2, paddingHorizontal: 8, paddingVertical: 3 },
-  ratePct: { color: C.onPrimary, fontSize: 12, fontWeight: '700' },
-  barBg: { height: 6, backgroundColor: 'rgba(96,97,156,0.2)', borderRadius: 2, overflow: 'hidden' },
+  rateTitle: { flex: 1, color: C.onDark, fontSize: 14, fontWeight: '400' },
+  rateRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  rateDays: { color: C.muteDark, fontSize: 12, fontWeight: '400' },
+  rateBadge: { borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 4 },
+  ratePct: { color: C.onDark, fontSize: 12, fontWeight: '700' },
+  barBg: { height: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 2 },
 
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyText: { color: C.mutedIndigo, fontSize: 12, fontWeight: '700' },
+  emptyText: { color: C.muteDark, fontSize: 14, fontWeight: '300' },
 });
