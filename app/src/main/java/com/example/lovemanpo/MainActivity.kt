@@ -418,6 +418,7 @@ class MainActivity : ComponentActivity() {
         val database = AppDatabase.getDatabase(this)
         val repository = StepRepository(database.stepDao(), getSharedPreferences("lovemanpo_prefs", MODE_PRIVATE))
         val viewModelFactory = StepViewModelFactory(repository)
+        val dailyTaskViewModelFactory = DailyTaskViewModelFactory(database.dailyTaskDao())
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "StepSyncWork",
@@ -426,14 +427,14 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
-            ラブ万歩計Theme { PedometerAppWithNavigation(viewModelFactory) }
+            ラブ万歩計Theme { PedometerAppWithNavigation(viewModelFactory, dailyTaskViewModelFactory) }
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
+fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory, dailyTaskViewModelFactory: DailyTaskViewModelFactory) {
     val context = LocalContext.current
     val permissions = mutableListOf(Manifest.permission.ACTIVITY_RECOGNITION)
     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
@@ -456,6 +457,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
     if (hasPermissions) {
         val navController = rememberNavController()
         val viewModel: StepViewModel = viewModel(factory = viewModelFactory)
+        val dailyTaskViewModel: DailyTaskViewModel = viewModel(factory = dailyTaskViewModelFactory)
 
         var navTrigger by remember { mutableStateOf(0) }
         val routeHistory = remember { mutableListOf<String>() }
@@ -534,6 +536,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 composable("records") { RecordsScreen(navController, viewModel) }
                 composable("settings") { SettingsScreen(navController, viewModel) }
                 composable("debug") { DebugScreen(navController, viewModel) }
+                composable("daily_tasks") { DailyTaskScreen(navController, dailyTaskViewModel) }
             }
             key(navTrigger) {
                 if (navTrigger > 0) CharacterPullOverlay()
@@ -942,6 +945,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         onFreeChatClick = { navController.navigate("freechat") },
         onOdekakeClick = { navController.navigate("odekake") },
         onRecordsClick = { navController.navigate("records") },
+        onDailyTasksClick = { navController.navigate("daily_tasks") },
         onDebugClick = { navController.navigate("debug") }
     )
 }
@@ -966,6 +970,7 @@ fun HomeScreenContent(
     onFreeChatClick: () -> Unit,
     onOdekakeClick: () -> Unit,
     onRecordsClick: () -> Unit,
+    onDailyTasksClick: () -> Unit,
     onDebugClick: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
@@ -1091,7 +1096,8 @@ fun HomeScreenContent(
                 .navigationBarsPadding(),
             onFreeChat = onFreeChatClick,
             onOdekake = onOdekakeClick,
-            onRecords = onRecordsClick
+            onRecords = onRecordsClick,
+            onDailyTasks = onDailyTasksClick
         )
     }
 } // ← ここで HomeScreenContent が終わる
@@ -1375,7 +1381,7 @@ fun HomeAdPlaceholder() {
 }
 
 @Composable
-fun HomeCustomBottomNav(modifier: Modifier = Modifier, onFreeChat: () -> Unit, onOdekake: () -> Unit, onRecords: () -> Unit) {
+fun HomeCustomBottomNav(modifier: Modifier = Modifier, onFreeChat: () -> Unit, onOdekake: () -> Unit, onRecords: () -> Unit, onDailyTasks: () -> Unit = {}) {
     Surface(modifier = modifier
         .fillMaxWidth()
         .height(80.dp), color = Color.White, shadowElevation = 10.dp) {
@@ -1396,7 +1402,7 @@ fun HomeCustomBottomNav(modifier: Modifier = Modifier, onFreeChat: () -> Unit, o
                     .offset(y = 22.dp), fontSize = 10.sp, color = Color(0xFF4A90E2), fontWeight = FontWeight.Bold)
             }
 
-            HomeNavItem(Icons.Default.EditNote, "日記", false) {}
+            HomeNavItem(Icons.Default.EditNote, "日記", false, onDailyTasks)
             HomeNavItem(Icons.Default.BarChart, "記録", false, onRecords)
         }
     }
@@ -1434,6 +1440,7 @@ fun HomeScreenPreview() {
             onFreeChatClick = {},
             onOdekakeClick = {},
             onRecordsClick = {},
+            onDailyTasksClick = {},
             onDebugClick = {}
         )
     }

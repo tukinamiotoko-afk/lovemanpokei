@@ -47,9 +47,10 @@ interface StepDao {
     fun getHourlyRecordsForDayFlow(date: String): Flow<List<HourlyStepRecord>>
 }
 
-@Database(entities = [StepRecord::class, HourlyStepRecord::class], version = 3)
+@Database(entities = [StepRecord::class, HourlyStepRecord::class, DailyTask::class, DailyTaskCompletion::class], version = 4)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun stepDao(): StepDao
+    abstract fun dailyTaskDao(): DailyTaskDao
 
     companion object {
         @Volatile
