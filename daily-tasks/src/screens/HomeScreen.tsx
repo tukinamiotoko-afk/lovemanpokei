@@ -2,16 +2,20 @@ import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, Modal,
   TextInput, StyleSheet, Alert, KeyboardAvoidingView,
-  Platform, StatusBar, Animated,
+  Platform, StatusBar, Animated, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import * as Notifications from 'expo-notifications';
 import { RootStackParamList } from '../../App';
 import {
   Task, getToday, getTasks, addTask, updateTask, deleteTask,
   getCompletedTaskIds, markComplete, markIncomplete,
+  NotificationSetting, getNotificationSettingsForTask,
+  addNotificationSetting, deleteNotificationSetting,
 } from '../db/database';
 import TabBar from '../components/TabBar';
 
@@ -28,7 +32,23 @@ const C = {
   error:     '#e52020',
 };
 
+type NotifType = 'full' | 'silent';
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Home'> };
+
+async function scheduleNotif(time: string, type: NotifType): Promise<string | null> {
+  const [h, m] = time.split(':').map(Number);
+  try {
+    return await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '毎日タスク',
+        body: '今日のタスクを確認しましょう！',
+        sound: type === 'full',
+        android: { channelId: type === 'full' ? 'full' : 'silent' } as any,
+      },
+      trigger: { hour: h, minute: m, repeats: true } as any,
+    });
+  } catch { return null; }
+}
 
 export default function HomeScreen({ navigation }: Props) {
   const db = useSQLiteContext();
@@ -36,12 +56,17 @@ export default function HomeScreen({ navigation }: Props) {
   const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
   const [showAdd, setShowAdd] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [showEdit, setShowEdit] = useState(false);
-  const [editTask, setEditTask] = useState<Task | null>(null);
-  const [editTitle, setEditTitle] = useState('');
   const [showThumb, setShowThumb] = useState(false);
   const thumbAnim = useRef(new Animated.Value(0)).current;
   const today = getToday();
+
+  // Task detail sheet
+  const [detailTask, setDetailTask] = useState<Task | null>(null);
+  const [detailTitle, setDetailTitle] = useState('');
+  const [taskNotifs, setTaskNotifs] = useState<NotificationSetting[]>([]);
+  const [notifType, setNotifType] = useState<NotifType>('full');
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [pickerTime, setPickerTime] = useState(new Date());
 
   const load = useCallback(async () => {
     const ts = await getTasks(db);
@@ -81,23 +106,58 @@ export default function HomeScreen({ navigation }: Props) {
     load();
   };
 
-  const openEdit = (task: Task) => {
-    setEditTask(task);
-    setEditTitle(task.title);
-    setShowEdit(true);
+  const openDetail = async (task: Task) => {
+    const notifs = await getNotificationSettingsForTask(db, task.id);
+    setDetailTask(task);
+    setDetailTitle(task.title);
+    setTaskNotifs(notifs);
   };
 
-  const handleEdit = async () => {
-    if (!editTask || !editTitle.trim()) return;
-    await updateTask(db, editTask.id, editTitle.trim());
-    setShowEdit(false);
+  const handleSaveTitle = async () => {
+    if (!detailTask || !detailTitle.trim()) return;
+    await updateTask(db, detailTask.id, detailTitle.trim());
+    setDetailTask(t => t ? { ...t, title: detailTitle.trim() } : null);
     load();
+  };
+
+  const handleAddNotif = async (date: Date) => {
+    setShowTimePicker(false);
+    if (!detailTask) return;
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('通知の許可が必要です', '設定から通知を許可してください。');
+      return;
+    }
+    const h = date.getHours();
+    const m = date.getMinutes();
+    const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const identifier = await scheduleNotif(time, notifType);
+    await addNotificationSetting(db, time, notifType, identifier, detailTask.id);
+    const notifs = await getNotificationSettingsForTask(db, detailTask.id);
+    setTaskNotifs(notifs);
+  };
+
+  const handleDeleteNotif = async (notif: NotificationSetting) => {
+    const id = await deleteNotificationSetting(db, notif.id);
+    if (id) await Notifications.cancelScheduledNotificationAsync(id);
+    if (detailTask) {
+      const notifs = await getNotificationSettingsForTask(db, detailTask.id);
+      setTaskNotifs(notifs);
+    }
   };
 
   const handleDelete = (task: Task) => {
     Alert.alert('削除', `「${task.title}」を削除しますか？`, [
       { text: 'キャンセル', style: 'cancel' },
-      { text: '削除', style: 'destructive', onPress: async () => { await deleteTask(db, task.id); load(); } },
+      {
+        text: '削除', style: 'destructive',
+        onPress: async () => {
+          const identifiers = await deleteTask(db, task.id);
+          for (const id of identifiers) await Notifications.cancelScheduledNotificationAsync(id);
+          if (detailTask?.id === task.id) setDetailTask(null);
+          load();
+        },
+      },
     ]);
   };
 
@@ -152,15 +212,11 @@ export default function HomeScreen({ navigation }: Props) {
               >
                 {isDone && <Text style={s.checkMark}>✓</Text>}
               </TouchableOpacity>
-              <TouchableOpacity style={s.taskBody} onPress={() => openEdit(item)} activeOpacity={0.7}>
+              <TouchableOpacity style={s.taskBody} onPress={() => openDetail(item)} activeOpacity={0.7}>
                 <Text style={[s.taskTitle, isDone && s.taskTitleDone]} numberOfLines={2}>
                   {item.title}
                 </Text>
-                {isDone && (
-                  <View style={s.doneBadge}>
-                    <Text style={s.doneBadgeText}>完了</Text>
-                  </View>
-                )}
+                {isDone && <View style={s.doneBadge}><Text style={s.doneBadgeText}>完了</Text></View>}
               </TouchableOpacity>
               <TouchableOpacity style={s.deleteBtn} onPress={() => handleDelete(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Text style={s.deleteBtnText}>🗑️</Text>
@@ -186,7 +242,7 @@ export default function HomeScreen({ navigation }: Props) {
         </Animated.View>
       )}
 
-      {/* Add modal */}
+      {/* Add task modal */}
       <Modal visible={showAdd} transparent animationType="fade" onRequestClose={() => setShowAdd(false)}>
         <KeyboardAvoidingView style={s.modalBg} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={s.modalCard}>
@@ -194,24 +250,15 @@ export default function HomeScreen({ navigation }: Props) {
             <View style={s.modalDivider} />
             <Text style={s.modalLabel}>タスク名</Text>
             <TextInput
-              style={s.modalInput}
-              value={newTitle}
-              onChangeText={setNewTitle}
-              placeholder="例：歯磨き、運動、水を飲む"
-              placeholderTextColor={C.muted}
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={handleAdd}
+              style={s.modalInput} value={newTitle} onChangeText={setNewTitle}
+              placeholder="例：歯磨き、運動、水を飲む" placeholderTextColor={C.muted}
+              autoFocus returnKeyType="done" onSubmitEditing={handleAdd}
             />
             <View style={s.modalButtons}>
               <TouchableOpacity style={s.modalCancel} onPress={() => { setShowAdd(false); setNewTitle(''); }}>
                 <Text style={s.modalCancelText}>キャンセル</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.modalConfirm, !newTitle.trim() && s.modalConfirmDisabled]}
-                onPress={handleAdd}
-                disabled={!newTitle.trim()}
-              >
+              <TouchableOpacity style={[s.modalConfirm, !newTitle.trim() && s.modalConfirmDisabled]} onPress={handleAdd} disabled={!newTitle.trim()}>
                 <Text style={s.modalConfirmText}>追加</Text>
               </TouchableOpacity>
             </View>
@@ -219,36 +266,88 @@ export default function HomeScreen({ navigation }: Props) {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Edit modal */}
-      <Modal visible={showEdit} transparent animationType="fade" onRequestClose={() => setShowEdit(false)}>
-        <KeyboardAvoidingView style={s.modalBg} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={s.modalCard}>
-            <Text style={s.modalTitle}>タスクを編集</Text>
-            <View style={s.modalDivider} />
-            <Text style={s.modalLabel}>タスク名</Text>
-            <TextInput
-              style={s.modalInput}
-              value={editTitle}
-              onChangeText={setEditTitle}
-              autoFocus
-              returnKeyType="done"
-              onSubmitEditing={handleEdit}
-            />
-            <View style={s.modalButtons}>
-              <TouchableOpacity style={s.modalCancel} onPress={() => setShowEdit(false)}>
-                <Text style={s.modalCancelText}>キャンセル</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.modalConfirm, !editTitle.trim() && s.modalConfirmDisabled]}
-                onPress={handleEdit}
-                disabled={!editTitle.trim()}
-              >
-                <Text style={s.modalConfirmText}>保存</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
+      {/* Task detail bottom sheet */}
+      <Modal visible={!!detailTask} transparent animationType="slide" onRequestClose={() => setDetailTask(null)}>
+        <TouchableOpacity style={s.sheetBg} activeOpacity={1} onPress={() => setDetailTask(null)}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+              <View style={s.sheet}>
+                <View style={s.sheetHandle} />
+
+                {/* Title edit */}
+                <Text style={s.sheetSection}>タスク名</Text>
+                <View style={s.sheetTitleRow}>
+                  <TextInput
+                    style={s.sheetTitleInput}
+                    value={detailTitle}
+                    onChangeText={setDetailTitle}
+                    returnKeyType="done"
+                    onSubmitEditing={handleSaveTitle}
+                  />
+                  <TouchableOpacity
+                    style={[s.sheetSaveBtn, detailTitle === detailTask?.title && s.sheetSaveBtnDisabled]}
+                    onPress={handleSaveTitle}
+                    disabled={detailTitle === detailTask?.title}
+                  >
+                    <Text style={s.sheetSaveBtnText}>保存</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Notification section */}
+                <Text style={[s.sheetSection, { marginTop: 16 }]}>通知</Text>
+                <View style={s.typeRow}>
+                  <TouchableOpacity style={[s.typeChip, notifType === 'full' && s.typeChipActive]} onPress={() => setNotifType('full')}>
+                    <Text style={[s.typeChipText, notifType === 'full' && s.typeChipTextActive]}>🔔 通常</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[s.typeChip, notifType === 'silent' && s.typeChipActive]} onPress={() => setNotifType('silent')}>
+                    <Text style={[s.typeChipText, notifType === 'silent' && s.typeChipTextActive]}>🔕 サイレント</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {taskNotifs.map((n) => (
+                  <View key={n.id} style={s.notifRow}>
+                    <Text style={s.notifTime}>{n.time}</Text>
+                    <Text style={s.notifType}>{n.notification_type === 'full' ? '🔔' : '🔕'}</Text>
+                    <TouchableOpacity onPress={() => handleDeleteNotif(n)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Text style={s.deleteBtnText}>🗑️</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+
+                <TouchableOpacity style={s.addNotifBtn} onPress={() => setShowTimePicker(true)}>
+                  <Text style={s.addNotifBtnText}>＋ 通知時間を追加</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </TouchableOpacity>
       </Modal>
+
+      {showTimePicker && (
+        <DateTimePicker
+          value={pickerTime}
+          mode="time"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(_, date) => {
+            if (Platform.OS === 'android') {
+              if (date) handleAddNotif(date);
+              else setShowTimePicker(false);
+            } else {
+              if (date) setPickerTime(date);
+            }
+          }}
+        />
+      )}
+      {Platform.OS === 'ios' && showTimePicker && (
+        <View style={s.iosRow}>
+          <TouchableOpacity style={s.iosCancelBtn} onPress={() => setShowTimePicker(false)}>
+            <Text style={s.iosCancelText}>キャンセル</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.iosConfirmBtn} onPress={() => handleAddNotif(pickerTime)}>
+            <Text style={s.iosConfirmText}>追加</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -256,10 +355,7 @@ export default function HomeScreen({ navigation }: Props) {
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: C.header },
 
-  headerCard: {
-    backgroundColor: C.header,
-    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24,
-  },
+  headerCard: { backgroundColor: C.header, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24 },
   dateText: { color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '600', marginBottom: 12 },
   headerLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
   progressRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 },
@@ -274,18 +370,14 @@ const s = StyleSheet.create({
 
   taskCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fffbe6',
+    backgroundColor: C.card,
     borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 14, gap: 12,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4,
     elevation: 2,
   },
   taskCardDone: { opacity: 0.6 },
-  checkBox: {
-    width: 22, height: 22, borderRadius: 11,
-    borderWidth: 2, borderColor: C.border,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  checkBox: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
   checkBoxDone: { backgroundColor: C.primary, borderColor: C.primary },
   checkMark: { color: C.onPrimary, fontSize: 11, fontWeight: '700' },
   taskBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -293,7 +385,6 @@ const s = StyleSheet.create({
   taskTitleDone: { color: C.muted, textDecorationLine: 'line-through' },
   doneBadge: { backgroundColor: C.header, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   doneBadgeText: { color: C.onPrimary, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
-
   deleteBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#fee2e2', alignItems: 'center', justifyContent: 'center' },
   deleteBtnText: { fontSize: 16 },
 
@@ -301,18 +392,11 @@ const s = StyleSheet.create({
   emptyTitle: { color: C.stone, fontSize: 16, fontWeight: '700' },
   emptyBody: { color: C.muted, fontSize: 13 },
 
-  fab: {
-    position: 'absolute', bottom: 72, right: 20,
-    width: 52, height: 52, borderRadius: 26,
-    backgroundColor: C.primary,
-    alignItems: 'center', justifyContent: 'center',
-    elevation: 6,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6,
-  },
+  fab: { position: 'absolute', bottom: 72, right: 20, width: 52, height: 52, borderRadius: 26, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6 },
   fabText: { color: C.onPrimary, fontSize: 26, fontWeight: '400', lineHeight: 30 },
 
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-  modalCard: { backgroundColor: C.card, borderRadius: 16, padding: 20, gap: 12, elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+  modalCard: { backgroundColor: C.card, borderRadius: 16, padding: 20, gap: 12, elevation: 8 },
   modalTitle: { color: C.onDark, fontSize: 16, fontWeight: '700' },
   modalDivider: { height: 1, backgroundColor: C.border },
   modalLabel: { color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
@@ -323,6 +407,32 @@ const s = StyleSheet.create({
   modalConfirm: { backgroundColor: C.primary, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 9 },
   modalConfirmDisabled: { backgroundColor: C.border },
   modalConfirmText: { color: C.onPrimary, fontSize: 13, fontWeight: '700' },
+
+  sheetBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingTop: 12, gap: 8 },
+  sheetHandle: { width: 40, height: 4, backgroundColor: C.border, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
+  sheetSection: { color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  sheetTitleRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  sheetTitleInput: { flex: 1, borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 12, fontSize: 15, color: C.onDark, backgroundColor: C.body },
+  sheetSaveBtn: { backgroundColor: C.primary, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12 },
+  sheetSaveBtnDisabled: { backgroundColor: C.border },
+  sheetSaveBtnText: { color: C.onPrimary, fontSize: 13, fontWeight: '700' },
+  typeRow: { flexDirection: 'row', gap: 8 },
+  typeChip: { flex: 1, borderWidth: 1, borderColor: C.border, borderRadius: 20, paddingVertical: 8, alignItems: 'center' },
+  typeChipActive: { backgroundColor: C.primary, borderColor: C.primary },
+  typeChipText: { color: C.muted, fontSize: 12, fontWeight: '700' },
+  typeChipTextActive: { color: C.onPrimary },
+  notifRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.border, gap: 12 },
+  notifTime: { flex: 1, fontSize: 18, fontWeight: '700', color: C.onDark },
+  notifType: { fontSize: 16 },
+  addNotifBtn: { backgroundColor: C.body, borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginTop: 4 },
+  addNotifBtnText: { color: C.primary, fontSize: 14, fontWeight: '700' },
+
+  iosRow: { flexDirection: 'row', backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.border, padding: 12, gap: 12 },
+  iosCancelBtn: { flex: 1, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
+  iosCancelText: { color: C.stone, fontSize: 14, fontWeight: '700' },
+  iosConfirmBtn: { flex: 1, backgroundColor: C.primary, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
+  iosConfirmText: { color: C.onPrimary, fontSize: 14, fontWeight: '700' },
 
   thumbOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   thumbEmoji: { fontSize: 80 },

@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 
 export type Task = { id: number; title: string; sort_order: number };
-export type NotificationSetting = { id: number; time: string; notification_type: string; identifier: string | null };
+export type NotificationSetting = { id: number; time: string; notification_type: string; identifier: string | null; task_id: number | null };
 export type CompletionDetail = { task_id: number; title: string; date: string; completed_at: string | null };
 
 export async function migrateDb(db: SQLite.SQLiteDatabase): Promise<void> {
@@ -21,10 +21,12 @@ export async function migrateDb(db: SQLite.SQLiteDatabase): Promise<void> {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       time TEXT NOT NULL,
       notification_type TEXT NOT NULL DEFAULT 'full',
-      identifier TEXT
+      identifier TEXT,
+      task_id INTEGER
     );
   `);
   try { await db.execAsync('ALTER TABLE completions ADD COLUMN completed_at TEXT'); } catch {}
+  try { await db.execAsync('ALTER TABLE notification_settings ADD COLUMN task_id INTEGER'); } catch {}
 }
 
 export function getToday(): string {
@@ -55,9 +57,14 @@ export async function updateTask(db: SQLite.SQLiteDatabase, id: number, title: s
   await db.runAsync('UPDATE tasks SET title = ? WHERE id = ?', [title, id]);
 }
 
-export async function deleteTask(db: SQLite.SQLiteDatabase, id: number): Promise<void> {
+export async function deleteTask(db: SQLite.SQLiteDatabase, id: number): Promise<string[]> {
+  const rows = await db.getAllAsync<{ identifier: string | null }>(
+    'SELECT identifier FROM notification_settings WHERE task_id = ?', [id]
+  );
   await db.runAsync('DELETE FROM tasks WHERE id = ?', [id]);
   await db.runAsync('DELETE FROM completions WHERE task_id = ?', [id]);
+  await db.runAsync('DELETE FROM notification_settings WHERE task_id = ?', [id]);
+  return rows.map(r => r.identifier).filter(Boolean) as string[];
 }
 
 export async function getCompletedTaskIds(db: SQLite.SQLiteDatabase, date: string): Promise<number[]> {
@@ -109,15 +116,25 @@ export async function getCompletionsForMonth(
 }
 
 export async function getNotificationSettings(db: SQLite.SQLiteDatabase): Promise<NotificationSetting[]> {
-  return db.getAllAsync<NotificationSetting>('SELECT * FROM notification_settings ORDER BY time ASC');
+  return db.getAllAsync<NotificationSetting>(
+    'SELECT * FROM notification_settings WHERE task_id IS NULL ORDER BY time ASC'
+  );
+}
+
+export async function getNotificationSettingsForTask(
+  db: SQLite.SQLiteDatabase, taskId: number
+): Promise<NotificationSetting[]> {
+  return db.getAllAsync<NotificationSetting>(
+    'SELECT * FROM notification_settings WHERE task_id = ? ORDER BY time ASC', [taskId]
+  );
 }
 
 export async function addNotificationSetting(
-  db: SQLite.SQLiteDatabase, time: string, notification_type: string, identifier: string | null
+  db: SQLite.SQLiteDatabase, time: string, notification_type: string, identifier: string | null, taskId?: number
 ): Promise<void> {
   await db.runAsync(
-    'INSERT INTO notification_settings (time, notification_type, identifier) VALUES (?, ?, ?)',
-    [time, notification_type, identifier]
+    'INSERT INTO notification_settings (time, notification_type, identifier, task_id) VALUES (?, ?, ?, ?)',
+    [time, notification_type, identifier, taskId ?? null]
   );
 }
 
