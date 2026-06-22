@@ -134,7 +134,7 @@ export default function StatsScreen({ navigation }: Props) {
       )}
 
       <View style={s.sectionBar}>
-        <Text style={s.metaLabel}>EXECUTION RATE  {periodLabel()}</Text>
+        <Text style={s.metaLabel}>実行率  {periodLabel()}</Text>
       </View>
 
       {rates.length === 0 ? (

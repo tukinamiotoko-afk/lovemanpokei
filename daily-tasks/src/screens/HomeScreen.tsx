@@ -90,7 +90,7 @@ export default function HomeScreen({ navigation }: Props) {
             <Text style={s.chipSecondaryText}>実行率</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.chipPrimary} onPress={() => setShowAdd(true)}>
-            <Text style={s.chipPrimaryText}>＋ ADD</Text>
+            <Text style={s.chipPrimaryText}>＋ 追加</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -100,7 +100,7 @@ export default function HomeScreen({ navigation }: Props) {
       </View>
 
       <View style={s.progressPanel}>
-        <Text style={s.metaLabel}>TODAY'S PROGRESS</Text>
+        <Text style={s.metaLabel}>今日の進捗</Text>
         <View style={s.progressRow}>
           <View style={s.progressBg}>
             <View style={[s.progressFill, { width: `${progress * 100}%` as any }]} />
@@ -110,14 +110,14 @@ export default function HomeScreen({ navigation }: Props) {
       </View>
 
       <View style={s.sectionBar}>
-        <Text style={s.metaLabel}>CHECKLIST</Text>
+        <Text style={s.metaLabel}>チェックリスト</Text>
         {total > 0 && <Text style={s.stone}>{total}件</Text>}
       </View>
 
       {tasks.length === 0 ? (
         <View style={s.empty}>
           <View style={s.emptyBox}>
-            <Text style={s.emptyTitle}>NO TASKS</Text>
+            <Text style={s.emptyTitle}>タスクなし</Text>
             <Text style={s.emptyBody}>毎日やることを追加しましょう</Text>
             <TouchableOpacity style={s.emptyButton} onPress={() => setShowAdd(true)}>
               <Text style={s.emptyButtonText}>＋</Text>
@@ -147,7 +147,7 @@ export default function HomeScreen({ navigation }: Props) {
                 </Text>
                 {isDone && (
                   <View style={s.doneBadge}>
-                    <Text style={s.doneBadgeText}>DONE</Text>
+                    <Text style={s.doneBadgeText}>完了</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -166,7 +166,7 @@ export default function HomeScreen({ navigation }: Props) {
       <Modal visible={showAdd} transparent animationType="fade" onRequestClose={() => setShowAdd(false)}>
         <KeyboardAvoidingView style={s.modalBg} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={s.modalCard}>
-            <Text style={s.modalTitle}>ADD TASK</Text>
+            <Text style={s.modalTitle}>タスクを追加</Text>
             <View style={s.modalDivider} />
             <Text style={s.modalLabel}>タスク名</Text>
             <TextInput
