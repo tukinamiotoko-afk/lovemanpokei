@@ -537,6 +537,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory, dailyTask
                 composable("settings") { SettingsScreen(navController, viewModel) }
                 composable("debug") { DebugScreen(navController, viewModel) }
                 composable("daily_tasks") { DailyTaskScreen(navController, dailyTaskViewModel) }
+                composable("daily_task_stats") { DailyTaskStatsScreen(navController, dailyTaskViewModel) }
             }
             key(navTrigger) {
                 if (navTrigger > 0) CharacterPullOverlay()

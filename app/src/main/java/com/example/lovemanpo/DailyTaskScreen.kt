@@ -53,7 +53,7 @@ private val N64InkSoft = Color(0xFF3d4f97)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DailyTaskScreen(navController: NavController, viewModel: DailyTaskViewModel) {
+fun DailyTaskScreen(navController: NavController, viewModel: DailyTaskViewModel, onStatsClick: () -> Unit = { navController.navigate("daily_task_stats") }) {
     val tasksWithStatus by viewModel.tasksWithStatus.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var taskToDelete by remember { mutableStateOf<DailyTask?>(null) }
@@ -108,6 +108,25 @@ fun DailyTaskScreen(navController: NavController, viewModel: DailyTaskViewModel)
                         modifier = Modifier.weight(1f)
                     )
 
+                    // Stats button (carbon chip)
+                    Box(
+                        modifier = Modifier
+                            .height(28.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(N64MutedIndigo)
+                            .clickable { onStatsClick() }
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "実行率",
+                            color = N64OnPrimary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
                     // Add button (amber chip)
                     Box(
                         modifier = Modifier
