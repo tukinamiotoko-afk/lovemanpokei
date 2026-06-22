@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, Modal,
   TextInput, StyleSheet, Alert, KeyboardAvoidingView,
-  Platform, StatusBar,
+  Platform, StatusBar, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -35,6 +35,8 @@ export default function HomeScreen({ navigation }: Props) {
   const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
   const [showAdd, setShowAdd] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+  const [showThumb, setShowThumb] = useState(false);
+  const thumbAnim = useRef(new Animated.Value(0)).current;
   const today = getToday();
 
   const load = useCallback(async () => {
@@ -46,11 +48,22 @@ export default function HomeScreen({ navigation }: Props) {
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
+  const triggerCelebration = () => {
+    setShowThumb(true);
+    thumbAnim.setValue(0);
+    Animated.sequence([
+      Animated.spring(thumbAnim, { toValue: 1, useNativeDriver: true, tension: 180, friction: 6 }),
+      Animated.delay(500),
+      Animated.timing(thumbAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+    ]).start(() => setShowThumb(false));
+  };
+
   const toggle = async (id: number) => {
     if (completedIds.has(id)) {
       await markIncomplete(db, id, today);
     } else {
       await markComplete(db, id, today);
+      triggerCelebration();
     }
     load();
   };
@@ -160,6 +173,15 @@ export default function HomeScreen({ navigation }: Props) {
       <TouchableOpacity style={s.fab} onPress={() => setShowAdd(true)} activeOpacity={0.85}>
         <Text style={s.fabText}>＋</Text>
       </TouchableOpacity>
+
+      {showThumb && (
+        <Animated.View style={[s.thumbOverlay, {
+          opacity: thumbAnim,
+          transform: [{ scale: thumbAnim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] }) }],
+        }]} pointerEvents="none">
+          <Text style={s.thumbEmoji}>👍</Text>
+        </Animated.View>
+      )}
 
       <Modal visible={showAdd} transparent animationType="fade" onRequestClose={() => setShowAdd(false)}>
         <KeyboardAvoidingView style={s.modalBg} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -308,4 +330,10 @@ const s = StyleSheet.create({
   modalConfirm: { backgroundColor: C.primary, borderRadius: 2, paddingHorizontal: 20, paddingVertical: 9 },
   modalConfirmDisabled: { backgroundColor: C.border },
   modalConfirmText: { color: C.onPrimary, fontSize: 13, fontWeight: '700' },
+
+  thumbOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  thumbEmoji: { fontSize: 80 },
 });
