@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "backgroundColor": "#ffffff",
     "ios": { "supportsTablet": false },
-    "android": { "adaptiveIcon": { "backgroundColor": "#76b900" } },
+    "android": { "adaptiveIcon": { "backgroundColor": "#76b900" }, "navigationBar": { "backgroundColor": "#ffffff", "barStyle": "dark-content" } },
     "plugins": ["expo-sqlite", "expo-notifications"]
   }
 }

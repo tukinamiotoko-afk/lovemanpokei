@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, Modal,
   TextInput, StyleSheet, Alert, KeyboardAvoidingView,
@@ -13,7 +13,8 @@ import * as Notifications from 'expo-notifications';
 import { RootStackParamList } from '../../App';
 import {
   Task, getToday, getTasks, addTask, updateTask, deleteTask,
-  getCompletedTaskIds, markComplete, markIncomplete,
+  updateTaskPriority, updateTaskIcon, updateTaskTargetTime, updateTaskFrequency,
+  getCompletionsForDate, markComplete, markIncomplete,
   NotificationSetting, getNotificationSettingsForTask,
   addNotificationSetting, deleteNotificationSetting,
 } from '../db/database';
@@ -32,7 +33,11 @@ const C = {
   error:     '#e52020',
 };
 
+const ICONS = ['✅', '⭐', '💪', '🏃', '🧘', '📚', '💊', '🍎', '💧', '🎯', '🛌', '🧹', '🎵', '🌱', '✍️', '🔔', '🚿', '☀️', '🏆', '🎮'];
+const WEEKDAY_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
+
 type NotifType = 'full' | 'silent';
+type FreqMode = 'daily' | 'weekly' | 'days';
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Home'> };
 
 async function scheduleNotif(time: string, type: NotifType): Promise<string | null> {
@@ -50,32 +55,69 @@ async function scheduleNotif(time: string, type: NotifType): Promise<string | nu
   } catch { return null; }
 }
 
+function formatTime(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function parseFreq(frequency: string): { mode: FreqMode; weeklyN: number; days: number[] } {
+  if (!frequency || frequency === 'daily') return { mode: 'daily', weeklyN: 1, days: [] };
+  if (frequency.startsWith('weekly:')) {
+    return { mode: 'weekly', weeklyN: parseInt(frequency.split(':')[1], 10) || 1, days: [] };
+  }
+  if (frequency.startsWith('days:')) {
+    const days = frequency.split(':')[1].split(',').map(Number).filter(n => !isNaN(n));
+    return { mode: 'days', weeklyN: 1, days };
+  }
+  return { mode: 'daily', weeklyN: 1, days: [] };
+}
+
 export default function HomeScreen({ navigation }: Props) {
   const db = useSQLiteContext();
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [completedIds, setCompletedIds] = useState<Set<number>>(new Set());
+  const [completedMap, setCompletedMap] = useState<Map<number, string | null>>(new Map());
   const [showAdd, setShowAdd] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [showThumb, setShowThumb] = useState(false);
   const thumbAnim = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
   const today = getToday();
 
-  // Task detail sheet
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [detailTitle, setDetailTitle] = useState('');
   const [taskNotifs, setTaskNotifs] = useState<NotificationSetting[]>([]);
   const [notifType, setNotifType] = useState<NotifType>('full');
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showTargetPicker, setShowTargetPicker] = useState(false);
   const [pickerTime, setPickerTime] = useState(new Date());
+  const [targetPickerTime, setTargetPickerTime] = useState(new Date());
+  const [freqMode, setFreqMode] = useState<FreqMode>('daily');
+  const [freqWeeklyN, setFreqWeeklyN] = useState(1);
+  const [freqDays, setFreqDays] = useState<number[]>([]);
 
   const load = useCallback(async () => {
     const ts = await getTasks(db);
-    const ids = await getCompletedTaskIds(db, today);
+    const cs = await getCompletionsForDate(db, today);
+    const map = new Map<number, string | null>();
+    for (const c of cs) map.set(c.task_id, c.completed_at);
     setTasks(ts);
-    setCompletedIds(new Set(ids));
+    setCompletedMap(map);
   }, [db, today]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const done = tasks.filter((t) => completedMap.has(t.id)).length;
+  const total = tasks.length;
+  const progress = total > 0 ? done / total : 0;
+
+  useEffect(() => {
+    Animated.timing(progressAnim, {
+      toValue: progress,
+      duration: 700,
+      useNativeDriver: false,
+    }).start();
+  }, [progress]);
 
   const triggerCelebration = () => {
     setShowThumb(true);
@@ -88,7 +130,7 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   const toggle = async (id: number) => {
-    if (completedIds.has(id)) {
+    if (completedMap.has(id)) {
       await markIncomplete(db, id, today);
     } else {
       await markComplete(db, id, today);
@@ -108,9 +150,18 @@ export default function HomeScreen({ navigation }: Props) {
 
   const openDetail = async (task: Task) => {
     const notifs = await getNotificationSettingsForTask(db, task.id);
+    const freq = parseFreq(task.frequency ?? 'daily');
     setDetailTask(task);
     setDetailTitle(task.title);
     setTaskNotifs(notifs);
+    setFreqMode(freq.mode);
+    setFreqWeeklyN(freq.weeklyN);
+    setFreqDays(freq.days);
+    if (task.target_time) {
+      const [h, m] = task.target_time.split(':').map(Number);
+      const d = new Date(); d.setHours(h, m, 0, 0);
+      setTargetPickerTime(d);
+    }
   };
 
   const handleSaveTitle = async () => {
@@ -118,6 +169,57 @@ export default function HomeScreen({ navigation }: Props) {
     await updateTask(db, detailTask.id, detailTitle.trim());
     setDetailTask(t => t ? { ...t, title: detailTitle.trim() } : null);
     load();
+  };
+
+  const handleSetIcon = async (icon: string) => {
+    if (!detailTask) return;
+    await updateTaskIcon(db, detailTask.id, icon);
+    setDetailTask(t => t ? { ...t, icon } : null);
+    load();
+  };
+
+  const handleSetPriority = async (priority: number) => {
+    if (!detailTask) return;
+    await updateTaskPriority(db, detailTask.id, priority);
+    setDetailTask(t => t ? { ...t, priority } : null);
+    load();
+  };
+
+  const handleSetTargetTime = async (date: Date) => {
+    setShowTargetPicker(false);
+    if (!detailTask) return;
+    const time = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    await updateTaskTargetTime(db, detailTask.id, time);
+    setDetailTask(t => t ? { ...t, target_time: time } : null);
+    load();
+  };
+
+  const handleClearTargetTime = async () => {
+    if (!detailTask) return;
+    await updateTaskTargetTime(db, detailTask.id, null);
+    setDetailTask(t => t ? { ...t, target_time: null } : null);
+    load();
+  };
+
+  const buildFrequency = (mode: FreqMode, n: number, days: number[]): string => {
+    if (mode === 'daily') return 'daily';
+    if (mode === 'weekly') return `weekly:${n}`;
+    if (mode === 'days' && days.length > 0) return `days:${[...days].sort().join(',')}`;
+    return 'daily';
+  };
+
+  const handleFreqChange = async (mode: FreqMode, n: number, days: number[]) => {
+    if (!detailTask) return;
+    const freq = buildFrequency(mode, n, days);
+    await updateTaskFrequency(db, detailTask.id, freq);
+    setDetailTask(t => t ? { ...t, frequency: freq } : null);
+    load();
+  };
+
+  const toggleFreqDay = (day: number) => {
+    const newDays = freqDays.includes(day) ? freqDays.filter(d => d !== day) : [...freqDays, day];
+    setFreqDays(newDays);
+    handleFreqChange('days', freqWeeklyN, newDays);
   };
 
   const handleAddNotif = async (date: Date) => {
@@ -154,16 +256,12 @@ export default function HomeScreen({ navigation }: Props) {
         onPress: async () => {
           const identifiers = await deleteTask(db, task.id);
           for (const id of identifiers) await Notifications.cancelScheduledNotificationAsync(id);
-          if (detailTask?.id === task.id) setDetailTask(null);
+          setDetailTask(null);
           load();
         },
       },
     ]);
   };
-
-  const done = tasks.filter((t) => completedIds.has(t.id)).length;
-  const total = tasks.length;
-  const progress = total > 0 ? done / total : 0;
 
   const now = new Date();
   const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
@@ -178,7 +276,9 @@ export default function HomeScreen({ navigation }: Props) {
         <Text style={s.headerLabel}>今日の進捗</Text>
         <View style={s.progressRow}>
           <View style={s.progressBg}>
-            <View style={[s.progressFill, { width: `${progress * 100}%` as any }]} />
+            <Animated.View style={[s.progressFill, {
+              width: progressAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+            }]} />
           </View>
           <Text style={s.progressText}>{done} / {total}</Text>
         </View>
@@ -202,26 +302,40 @@ export default function HomeScreen({ navigation }: Props) {
           </View>
         }
         renderItem={({ item }) => {
-          const isDone = completedIds.has(item.id);
+          const isDone = completedMap.has(item.id);
+          const completedAt = formatTime(completedMap.get(item.id));
+          const targetTime = item.target_time ?? null;
+          const showTimes = targetTime || completedAt;
           return (
-            <View style={[s.taskCard, isDone && s.taskCardDone]}>
+            <TouchableOpacity
+              style={[s.taskCard, isDone && s.taskCardDone]}
+              onPress={() => openDetail(item)}
+              activeOpacity={0.85}
+            >
+              {item.priority === 2 && <View style={s.priorityBar} />}
               <TouchableOpacity
                 style={[s.checkBox, isDone && s.checkBoxDone]}
                 onPress={() => toggle(item.id)}
-                hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
               >
                 {isDone && <Text style={s.checkMark}>✓</Text>}
               </TouchableOpacity>
-              <TouchableOpacity style={s.taskBody} onPress={() => openDetail(item)} activeOpacity={0.7}>
-                <Text style={[s.taskTitle, isDone && s.taskTitleDone]} numberOfLines={2}>
-                  {item.title}
-                </Text>
-                {isDone && <View style={s.doneBadge}><Text style={s.doneBadgeText}>完了</Text></View>}
-              </TouchableOpacity>
-              <TouchableOpacity style={s.deleteBtn} onPress={() => handleDelete(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={s.deleteBtnText}>🗑️</Text>
-              </TouchableOpacity>
-            </View>
+              <View style={s.taskBody}>
+                <View style={s.taskRow}>
+                  <Text style={s.taskIcon}>{item.icon || '✅'}</Text>
+                  <Text style={[s.taskTitle, isDone && s.taskTitleDone]} numberOfLines={2}>
+                    {item.title}
+                  </Text>
+                  {isDone && <View style={s.doneBadge}><Text style={s.doneBadgeText}>完了</Text></View>}
+                </View>
+                {showTimes && (
+                  <View style={s.timeRow}>
+                    {targetTime && <Text style={s.timeLabel}>目標 {targetTime}</Text>}
+                    {completedAt && <Text style={[s.timeLabel, s.timeDone]}>完了 {completedAt}</Text>}
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
           );
         }}
         ListFooterComponent={<View style={{ height: 80 }} />}
@@ -273,56 +387,161 @@ export default function HomeScreen({ navigation }: Props) {
             <TouchableOpacity activeOpacity={1} onPress={() => {}}>
               <View style={s.sheet}>
                 <View style={s.sheetHandle} />
+                <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-                {/* Title edit */}
-                <Text style={s.sheetSection}>タスク名</Text>
-                <View style={s.sheetTitleRow}>
-                  <TextInput
-                    style={s.sheetTitleInput}
-                    value={detailTitle}
-                    onChangeText={setDetailTitle}
-                    returnKeyType="done"
-                    onSubmitEditing={handleSaveTitle}
-                  />
-                  <TouchableOpacity
-                    style={[s.sheetSaveBtn, detailTitle === detailTask?.title && s.sheetSaveBtnDisabled]}
-                    onPress={handleSaveTitle}
-                    disabled={detailTitle === detailTask?.title}
-                  >
-                    <Text style={s.sheetSaveBtnText}>保存</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Notification section */}
-                <Text style={[s.sheetSection, { marginTop: 16 }]}>通知</Text>
-                <View style={s.typeRow}>
-                  <TouchableOpacity style={[s.typeChip, notifType === 'full' && s.typeChipActive]} onPress={() => setNotifType('full')}>
-                    <Text style={[s.typeChipText, notifType === 'full' && s.typeChipTextActive]}>🔔 通常</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[s.typeChip, notifType === 'silent' && s.typeChipActive]} onPress={() => setNotifType('silent')}>
-                    <Text style={[s.typeChipText, notifType === 'silent' && s.typeChipTextActive]}>🔕 サイレント</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {taskNotifs.map((n) => (
-                  <View key={n.id} style={s.notifRow}>
-                    <Text style={s.notifTime}>{n.time}</Text>
-                    <Text style={s.notifType}>{n.notification_type === 'full' ? '🔔' : '🔕'}</Text>
-                    <TouchableOpacity onPress={() => handleDeleteNotif(n)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <Text style={s.deleteBtnText}>🗑️</Text>
+                  {/* タスク名 */}
+                  <Text style={s.sheetSection}>タスク名</Text>
+                  <View style={s.sheetTitleRow}>
+                    <TextInput
+                      style={s.sheetTitleInput}
+                      value={detailTitle}
+                      onChangeText={setDetailTitle}
+                      returnKeyType="done"
+                      onSubmitEditing={handleSaveTitle}
+                    />
+                    <TouchableOpacity
+                      style={[s.sheetSaveBtn, detailTitle === detailTask?.title && s.sheetSaveBtnDisabled]}
+                      onPress={handleSaveTitle}
+                      disabled={detailTitle === detailTask?.title}
+                    >
+                      <Text style={s.sheetSaveBtnText}>保存</Text>
                     </TouchableOpacity>
                   </View>
-                ))}
 
-                <TouchableOpacity style={s.addNotifBtn} onPress={() => setShowTimePicker(true)}>
-                  <Text style={s.addNotifBtnText}>＋ 通知時間を追加</Text>
-                </TouchableOpacity>
+                  {/* アイコン */}
+                  <Text style={[s.sheetSection, { marginTop: 16 }]}>アイコン</Text>
+                  <View style={s.iconGrid}>
+                    {ICONS.map((icon) => (
+                      <TouchableOpacity
+                        key={icon}
+                        style={[s.iconBtn, detailTask?.icon === icon && s.iconBtnActive]}
+                        onPress={() => handleSetIcon(icon)}
+                      >
+                        <Text style={s.iconEmoji}>{icon}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* 優先順位 */}
+                  <Text style={[s.sheetSection, { marginTop: 16 }]}>優先順位</Text>
+                  <View style={s.typeRow}>
+                    {([0, 1, 2] as const).map((p) => (
+                      <TouchableOpacity
+                        key={p}
+                        style={[s.typeChip, (detailTask?.priority ?? 1) === p && s.typeChipActive]}
+                        onPress={() => handleSetPriority(p)}
+                      >
+                        <Text style={[s.typeChipText, (detailTask?.priority ?? 1) === p && s.typeChipTextActive]}>
+                          {p === 0 ? '低' : p === 1 ? '中' : '⚡ 高'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* 目標時間 */}
+                  <Text style={[s.sheetSection, { marginTop: 16 }]}>目標時間</Text>
+                  <View style={s.targetRow}>
+                    <TouchableOpacity style={s.targetBtn} onPress={() => setShowTargetPicker(true)}>
+                      <Text style={s.targetBtnText}>
+                        {detailTask?.target_time ? `🕐 ${detailTask.target_time}` : '＋ 時間を設定'}
+                      </Text>
+                    </TouchableOpacity>
+                    {detailTask?.target_time && (
+                      <TouchableOpacity style={s.targetClearBtn} onPress={handleClearTargetTime}>
+                        <Text style={s.targetClearText}>×</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {/* 頻度 */}
+                  <Text style={[s.sheetSection, { marginTop: 16 }]}>頻度</Text>
+                  <View style={s.typeRow}>
+                    {(['daily', 'weekly', 'days'] as FreqMode[]).map((m) => (
+                      <TouchableOpacity
+                        key={m}
+                        style={[s.typeChip, freqMode === m && s.typeChipActive]}
+                        onPress={() => {
+                          setFreqMode(m);
+                          if (m !== 'days') handleFreqChange(m, freqWeeklyN, freqDays);
+                        }}
+                      >
+                        <Text style={[s.typeChipText, freqMode === m && s.typeChipTextActive]}>
+                          {m === 'daily' ? '毎日' : m === 'weekly' ? '週N回' : '曜日'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  {freqMode === 'weekly' && (
+                    <View style={s.weeklyRow}>
+                      <TouchableOpacity
+                        style={s.weeklyBtn}
+                        onPress={() => { const n = Math.max(1, freqWeeklyN - 1); setFreqWeeklyN(n); handleFreqChange('weekly', n, freqDays); }}
+                      >
+                        <Text style={s.weeklyBtnText}>－</Text>
+                      </TouchableOpacity>
+                      <Text style={s.weeklyNum}>週{freqWeeklyN}回</Text>
+                      <TouchableOpacity
+                        style={s.weeklyBtn}
+                        onPress={() => { const n = Math.min(6, freqWeeklyN + 1); setFreqWeeklyN(n); handleFreqChange('weekly', n, freqDays); }}
+                      >
+                        <Text style={s.weeklyBtnText}>＋</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  {freqMode === 'days' && (
+                    <View style={s.daysRow}>
+                      {WEEKDAY_LABELS.map((label, i) => (
+                        <TouchableOpacity
+                          key={i}
+                          style={[s.dayChip, freqDays.includes(i) && s.dayChipActive]}
+                          onPress={() => toggleFreqDay(i)}
+                        >
+                          <Text style={[s.dayChipText, freqDays.includes(i) && s.dayChipTextActive]}>{label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* 通知 */}
+                  <Text style={[s.sheetSection, { marginTop: 16 }]}>通知</Text>
+                  <View style={s.typeRow}>
+                    <TouchableOpacity style={[s.typeChip, notifType === 'full' && s.typeChipActive]} onPress={() => setNotifType('full')}>
+                      <Text style={[s.typeChipText, notifType === 'full' && s.typeChipTextActive]}>🔔 通常</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[s.typeChip, notifType === 'silent' && s.typeChipActive]} onPress={() => setNotifType('silent')}>
+                      <Text style={[s.typeChipText, notifType === 'silent' && s.typeChipTextActive]}>🔕 サイレント</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {taskNotifs.map((n) => (
+                    <View key={n.id} style={s.notifRow}>
+                      <Text style={s.notifTime}>{n.time}</Text>
+                      <Text style={s.notifType}>{n.notification_type === 'full' ? '🔔' : '🔕'}</Text>
+                      <TouchableOpacity onPress={() => handleDeleteNotif(n)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                        <Text style={s.deleteBtnText}>🗑️</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  <TouchableOpacity style={s.addNotifBtn} onPress={() => setShowTimePicker(true)}>
+                    <Text style={s.addNotifBtnText}>＋ 通知時間を追加</Text>
+                  </TouchableOpacity>
+
+                  {/* 削除 */}
+                  <TouchableOpacity
+                    style={s.deleteTaskBtn}
+                    onPress={() => detailTask && handleDelete(detailTask)}
+                  >
+                    <Text style={s.deleteTaskBtnText}>🗑️ このタスクを削除</Text>
+                  </TouchableOpacity>
+
+                  <View style={{ height: 20 }} />
+                </ScrollView>
               </View>
             </TouchableOpacity>
           </KeyboardAvoidingView>
         </TouchableOpacity>
       </Modal>
 
+      {/* Notification time picker */}
       {showTimePicker && (
         <DateTimePicker
           value={pickerTime}
@@ -348,6 +567,33 @@ export default function HomeScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
       )}
+
+      {/* Target time picker */}
+      {showTargetPicker && (
+        <DateTimePicker
+          value={targetPickerTime}
+          mode="time"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(_, date) => {
+            if (Platform.OS === 'android') {
+              if (date) handleSetTargetTime(date);
+              else setShowTargetPicker(false);
+            } else {
+              if (date) setTargetPickerTime(date);
+            }
+          }}
+        />
+      )}
+      {Platform.OS === 'ios' && showTargetPicker && (
+        <View style={s.iosRow}>
+          <TouchableOpacity style={s.iosCancelBtn} onPress={() => setShowTargetPicker(false)}>
+            <Text style={s.iosCancelText}>キャンセル</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.iosConfirmBtn} onPress={() => handleSetTargetTime(targetPickerTime)}>
+            <Text style={s.iosConfirmText}>設定</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -369,23 +615,27 @@ const s = StyleSheet.create({
   stone: { color: C.stone, fontSize: 11, fontWeight: '700' },
 
   taskCard: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.card,
-    borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 14, gap: 12,
+    flexDirection: 'row', alignItems: 'flex-start',
+    backgroundColor: C.card, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 14, gap: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4,
     elevation: 2,
   },
   taskCardDone: { opacity: 0.6 },
-  checkBox: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  priorityBar: { position: 'absolute', left: 0, top: 10, bottom: 10, width: 4, backgroundColor: '#ef4444', borderRadius: 2 },
+  checkBox: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
   checkBoxDone: { backgroundColor: C.primary, borderColor: C.primary },
   checkMark: { color: C.onPrimary, fontSize: 11, fontWeight: '700' },
-  taskBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  taskBody: { flex: 1, gap: 4 },
+  taskRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  taskIcon: { fontSize: 18 },
   taskTitle: { flex: 1, color: C.onDark, fontSize: 14, fontWeight: '500', lineHeight: 20 },
   taskTitleDone: { color: C.muted, textDecorationLine: 'line-through' },
   doneBadge: { backgroundColor: C.header, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   doneBadgeText: { color: C.onPrimary, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
-  deleteBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#fee2e2', alignItems: 'center', justifyContent: 'center' },
+  timeRow: { flexDirection: 'row', gap: 10, paddingLeft: 26 },
+  timeLabel: { color: C.muted, fontSize: 11, fontWeight: '600' },
+  timeDone: { color: '#22c55e' },
   deleteBtnText: { fontSize: 16 },
 
   empty: { paddingVertical: 60, alignItems: 'center', gap: 8 },
@@ -409,24 +659,50 @@ const s = StyleSheet.create({
   modalConfirmText: { color: C.onPrimary, fontSize: 13, fontWeight: '700' },
 
   sheetBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingTop: 12, gap: 8 },
+  sheet: { backgroundColor: C.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingTop: 12, maxHeight: '88%' },
   sheetHandle: { width: 40, height: 4, backgroundColor: C.border, borderRadius: 2, alignSelf: 'center', marginBottom: 12 },
-  sheetSection: { color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  sheetSection: { color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 8 },
   sheetTitleRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   sheetTitleInput: { flex: 1, borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 12, fontSize: 15, color: C.onDark, backgroundColor: C.body },
   sheetSaveBtn: { backgroundColor: C.primary, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12 },
   sheetSaveBtnDisabled: { backgroundColor: C.border },
   sheetSaveBtnText: { color: C.onPrimary, fontSize: 13, fontWeight: '700' },
+
+  iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  iconBtn: { width: 44, height: 44, borderRadius: 10, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  iconBtnActive: { backgroundColor: C.primary, borderColor: C.primary },
+  iconEmoji: { fontSize: 22 },
+
   typeRow: { flexDirection: 'row', gap: 8 },
   typeChip: { flex: 1, borderWidth: 1, borderColor: C.border, borderRadius: 20, paddingVertical: 8, alignItems: 'center' },
   typeChipActive: { backgroundColor: C.primary, borderColor: C.primary },
   typeChipText: { color: C.muted, fontSize: 12, fontWeight: '700' },
   typeChipTextActive: { color: C.onPrimary },
+
+  targetRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  targetBtn: { flex: 1, borderWidth: 1, borderColor: C.border, borderRadius: 10, padding: 12, alignItems: 'center' },
+  targetBtnText: { color: C.primary, fontSize: 14, fontWeight: '700' },
+  targetClearBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#fee2e2', alignItems: 'center', justifyContent: 'center' },
+  targetClearText: { color: C.error, fontSize: 18, fontWeight: '700' },
+
+  weeklyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20, marginTop: 10 },
+  weeklyBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.body, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  weeklyBtnText: { color: C.primary, fontSize: 20, fontWeight: '700' },
+  weeklyNum: { color: C.onDark, fontSize: 16, fontWeight: '700', minWidth: 60, textAlign: 'center' },
+  daysRow: { flexDirection: 'row', gap: 6, marginTop: 10, flexWrap: 'wrap' },
+  dayChip: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  dayChipActive: { backgroundColor: C.primary, borderColor: C.primary },
+  dayChipText: { color: C.muted, fontSize: 12, fontWeight: '700' },
+  dayChipTextActive: { color: C.onPrimary },
+
   notifRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.border, gap: 12 },
   notifTime: { flex: 1, fontSize: 18, fontWeight: '700', color: C.onDark },
   notifType: { fontSize: 16 },
   addNotifBtn: { backgroundColor: C.body, borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginTop: 4 },
   addNotifBtnText: { color: C.primary, fontSize: 14, fontWeight: '700' },
+
+  deleteTaskBtn: { marginTop: 20, borderWidth: 1, borderColor: '#fee2e2', backgroundColor: '#fff5f5', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
+  deleteTaskBtnText: { color: C.error, fontSize: 14, fontWeight: '700' },
 
   iosRow: { flexDirection: 'row', backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.border, padding: 12, gap: 12 },
   iosCancelBtn: { flex: 1, borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingVertical: 12, alignItems: 'center' },

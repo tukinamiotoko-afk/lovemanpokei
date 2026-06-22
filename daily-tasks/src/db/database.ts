@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 
-export type Task = { id: number; title: string; sort_order: number };
+export type Task = { id: number; title: string; sort_order: number; priority: number; icon: string; target_time: string | null; frequency: string };
 export type NotificationSetting = { id: number; time: string; notification_type: string; identifier: string | null; task_id: number | null };
 export type CompletionDetail = { task_id: number; title: string; date: string; completed_at: string | null };
 
@@ -27,6 +27,10 @@ export async function migrateDb(db: SQLite.SQLiteDatabase): Promise<void> {
   `);
   try { await db.execAsync('ALTER TABLE completions ADD COLUMN completed_at TEXT'); } catch {}
   try { await db.execAsync('ALTER TABLE notification_settings ADD COLUMN task_id INTEGER'); } catch {}
+  try { await db.execAsync('ALTER TABLE tasks ADD COLUMN priority INTEGER DEFAULT 1'); } catch {}
+  try { await db.execAsync("ALTER TABLE tasks ADD COLUMN icon TEXT DEFAULT '✅'"); } catch {}
+  try { await db.execAsync('ALTER TABLE tasks ADD COLUMN target_time TEXT'); } catch {}
+  try { await db.execAsync("ALTER TABLE tasks ADD COLUMN frequency TEXT DEFAULT 'daily'"); } catch {}
 }
 
 export function getToday(): string {
@@ -46,7 +50,7 @@ export function daysBetween(start: string, end: string): number {
 }
 
 export async function getTasks(db: SQLite.SQLiteDatabase): Promise<Task[]> {
-  return db.getAllAsync<Task>('SELECT * FROM tasks ORDER BY sort_order ASC, id ASC');
+  return db.getAllAsync<Task>('SELECT * FROM tasks ORDER BY priority DESC, sort_order ASC, id ASC');
 }
 
 export async function addTask(db: SQLite.SQLiteDatabase, title: string): Promise<void> {
@@ -55,6 +59,22 @@ export async function addTask(db: SQLite.SQLiteDatabase, title: string): Promise
 
 export async function updateTask(db: SQLite.SQLiteDatabase, id: number, title: string): Promise<void> {
   await db.runAsync('UPDATE tasks SET title = ? WHERE id = ?', [title, id]);
+}
+
+export async function updateTaskPriority(db: SQLite.SQLiteDatabase, id: number, priority: number): Promise<void> {
+  await db.runAsync('UPDATE tasks SET priority = ? WHERE id = ?', [priority, id]);
+}
+
+export async function updateTaskIcon(db: SQLite.SQLiteDatabase, id: number, icon: string): Promise<void> {
+  await db.runAsync('UPDATE tasks SET icon = ? WHERE id = ?', [icon, id]);
+}
+
+export async function updateTaskTargetTime(db: SQLite.SQLiteDatabase, id: number, target_time: string | null): Promise<void> {
+  await db.runAsync('UPDATE tasks SET target_time = ? WHERE id = ?', [target_time, id]);
+}
+
+export async function updateTaskFrequency(db: SQLite.SQLiteDatabase, id: number, frequency: string): Promise<void> {
+  await db.runAsync('UPDATE tasks SET frequency = ? WHERE id = ?', [frequency, id]);
 }
 
 export async function deleteTask(db: SQLite.SQLiteDatabase, id: number): Promise<string[]> {
@@ -70,6 +90,33 @@ export async function deleteTask(db: SQLite.SQLiteDatabase, id: number): Promise
 export async function getCompletedTaskIds(db: SQLite.SQLiteDatabase, date: string): Promise<number[]> {
   const rows = await db.getAllAsync<{ task_id: number }>('SELECT task_id FROM completions WHERE date = ?', [date]);
   return rows.map((r) => r.task_id);
+}
+
+export async function getCompletionsForDate(
+  db: SQLite.SQLiteDatabase, date: string
+): Promise<{ task_id: number; completed_at: string | null }[]> {
+  return db.getAllAsync<{ task_id: number; completed_at: string | null }>(
+    'SELECT task_id, completed_at FROM completions WHERE date = ?', [date]
+  );
+}
+
+export function expectedCompletions(frequency: string, startDate: string, endDate: string): number {
+  const start = new Date(startDate + 'T00:00:00');
+  const end = new Date(endDate + 'T00:00:00');
+  const totalDays = Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+  if (!frequency || frequency === 'daily') return totalDays;
+  if (frequency.startsWith('weekly:')) {
+    const n = parseInt(frequency.split(':')[1], 10);
+    return Math.ceil(totalDays / 7) * n;
+  }
+  if (frequency.startsWith('days:')) {
+    const days = frequency.split(':')[1].split(',').map(Number);
+    let count = 0;
+    const d = new Date(start);
+    while (d <= end) { if (days.includes(d.getDay())) count++; d.setDate(d.getDate() + 1); }
+    return Math.max(count, 1);
+  }
+  return totalDays;
 }
 
 export async function markComplete(db: SQLite.SQLiteDatabase, taskId: number, date: string): Promise<void> {

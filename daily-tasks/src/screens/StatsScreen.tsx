@@ -6,7 +6,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { RootStackParamList } from '../../App';
-import { Task, getToday, subtractDays, daysBetween, getTasks, getCompletionCountInRange, getFirstCompletionDate } from '../db/database';
+import { Task, getToday, subtractDays, getTasks, getCompletionCountInRange, getFirstCompletionDate, expectedCompletions } from '../db/database';
 import TabBar from '../components/TabBar';
 
 const C = {
@@ -23,6 +23,7 @@ const C = {
 };
 
 type Period = '7日' | '30日' | '全期間' | '任意';
+type Category = '毎日' | 'その他';
 type Rate = { task: Task; completed: number; total: number; rate: number };
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Stats'> };
 
@@ -35,6 +36,7 @@ export default function StatsScreen({ navigation }: Props) {
   const today = getToday();
 
   const [period, setPeriod] = useState<Period>('7日');
+  const [category, setCategory] = useState<Category>('毎日');
   const [customStart, setCustomStart] = useState<Date>(() => { const d = new Date(); d.setDate(d.getDate() - 6); return d; });
   const [customEnd, setCustomEnd] = useState<Date>(new Date());
   const [showStartPicker, setShowStartPicker] = useState(false);
@@ -46,25 +48,31 @@ export default function StatsScreen({ navigation }: Props) {
     if (tasks.length === 0) { setRates([]); return; }
     const computed = await Promise.all(tasks.map(async (task) => {
       let startDate: string;
-      let totalDays: number;
-      if (period === '7日') { startDate = subtractDays(today, 6); totalDays = 7; }
-      else if (period === '30日') { startDate = subtractDays(today, 29); totalDays = 30; }
+      let endDate: string;
+      if (period === '7日') { startDate = subtractDays(today, 6); endDate = today; }
+      else if (period === '30日') { startDate = subtractDays(today, 29); endDate = today; }
       else if (period === '全期間') {
         const first = await getFirstCompletionDate(db, task.id);
         startDate = first ?? today;
-        totalDays = daysBetween(startDate, today);
+        endDate = today;
       } else {
         startDate = toDateString(customStart);
-        totalDays = daysBetween(startDate, toDateString(customEnd));
+        endDate = toDateString(customEnd);
       }
-      const endDate = period === '任意' ? toDateString(customEnd) : today;
       const completed = await getCompletionCountInRange(db, task.id, startDate, endDate);
-      return { task, completed, total: Math.max(totalDays, 1), rate: completed / Math.max(totalDays, 1) };
+      const total = Math.max(expectedCompletions(task.frequency ?? 'daily', startDate, endDate), 1);
+      return { task, completed, total, rate: completed / total };
     }));
     setRates(computed);
   }, [db, period, today, customStart, customEnd]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const filtered = rates.filter(r =>
+    category === '毎日'
+      ? (!r.task.frequency || r.task.frequency === 'daily')
+      : (r.task.frequency && r.task.frequency !== 'daily')
+  );
 
   const periodLabel = (): string => {
     if (period === '7日') return '直近7日間';
@@ -92,6 +100,17 @@ export default function StatsScreen({ navigation }: Props) {
             </TouchableOpacity>
           ))}
         </View>
+        <View style={s.categoryBar}>
+          {(['毎日', 'その他'] as Category[]).map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              style={[s.categoryChip, category === cat && s.categoryChipActive]}
+              onPress={() => setCategory(cat)}
+            >
+              <Text style={[s.categoryChipText, category === cat && s.categoryChipTextActive]}>{cat}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {period === '任意' && (
@@ -110,13 +129,13 @@ export default function StatsScreen({ navigation }: Props) {
         </View>
       )}
 
-      {rates.length === 0 ? (
+      {filtered.length === 0 ? (
         <View style={s.empty}>
           <Text style={s.emptyText}>タスクがありません</Text>
         </View>
       ) : (
         <FlatList
-          data={rates}
+          data={filtered}
           keyExtractor={(item) => String(item.task.id)}
           style={s.list}
           contentContainerStyle={{ padding: 16, gap: 10 }}
@@ -127,9 +146,10 @@ export default function StatsScreen({ navigation }: Props) {
             return (
               <View style={s.rateCard}>
                 <View style={s.rateHeader}>
+                  <Text style={s.rateIcon}>{item.task.icon || '✅'}</Text>
                   <Text style={s.rateTitle} numberOfLines={1}>{item.task.title}</Text>
                   <View style={s.rateRight}>
-                    <Text style={s.rateDays}>{item.completed} / {item.total}日</Text>
+                    <Text style={s.rateDays}>{item.completed} / {item.total}</Text>
                     <View style={[s.rateBadge, { backgroundColor: bc }]}>
                       <Text style={s.ratePct}>{pct}%</Text>
                     </View>
@@ -161,13 +181,18 @@ export default function StatsScreen({ navigation }: Props) {
 
 const s = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: C.header },
-  headerCard: { backgroundColor: C.header, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, gap: 16 },
+  headerCard: { backgroundColor: C.header, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, gap: 12 },
   headerTitle: { color: '#ffffff', fontSize: 20, fontWeight: '700' },
   periodBar: { flexDirection: 'row', gap: 8 },
   periodChip: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
   periodChipActive: { backgroundColor: '#ffffff', borderColor: '#ffffff' },
   periodChipText: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '700' },
   periodChipTextActive: { color: C.header },
+  categoryBar: { flexDirection: 'row', gap: 8 },
+  categoryChip: { borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 6 },
+  categoryChipActive: { backgroundColor: 'rgba(255,255,255,0.2)', borderColor: '#ffffff' },
+  categoryChipText: { color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '700' },
+  categoryChipTextActive: { color: '#ffffff' },
   customBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.card, paddingHorizontal: 16, paddingVertical: 10, gap: 6, borderBottomWidth: 1, borderBottomColor: C.border },
   customLabel: { color: C.stone, fontSize: 11, fontWeight: '700' },
   dateBtn: { borderWidth: 1, borderColor: C.border, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 },
@@ -179,6 +204,7 @@ const s = StyleSheet.create({
   list: { flex: 1, backgroundColor: C.body },
   rateCard: { backgroundColor: C.card, borderRadius: 16, padding: 16, gap: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 3 },
   rateHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  rateIcon: { fontSize: 18 },
   rateTitle: { flex: 1, color: C.onDark, fontSize: 14, fontWeight: '600' },
   rateRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rateDays: { color: C.muted, fontSize: 11, fontWeight: '700' },
