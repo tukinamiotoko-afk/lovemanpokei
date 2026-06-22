@@ -15,13 +15,13 @@ import {
 } from '../db/database';
 
 const C = {
-  dark:      '#000000',
-  elevated:  '#1a1a1a',
-  border:    '#5e5e5e',
+  dark:      '#ffffff',
+  elevated:  '#f7f7f7',
+  border:    '#cccccc',
   primary:   '#76b900',
   onPrimary: '#000000',
-  onDark:    '#ffffff',
-  muted:     'rgba(255,255,255,0.7)',
+  onDark:    '#1a1a1a',
+  muted:     '#757575',
   stone:     '#898989',
   warning:   '#df6500',
 };
@@ -96,7 +96,7 @@ export default function StatsScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={s.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.dark} />
+      <StatusBar barStyle="dark-content" backgroundColor={C.dark} />
 
       <View style={s.navBar}>
         <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()}>

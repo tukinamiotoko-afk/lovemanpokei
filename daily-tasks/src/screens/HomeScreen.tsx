@@ -15,14 +15,14 @@ import {
 } from '../db/database';
 
 const C = {
-  dark:      '#000000',
-  elevated:  '#1a1a1a',
-  border:    '#5e5e5e',
+  dark:      '#ffffff',
+  elevated:  '#f7f7f7',
+  border:    '#cccccc',
   hairline:  '#cccccc',
   primary:   '#76b900',
   onPrimary: '#000000',
-  onDark:    '#ffffff',
-  muted:     'rgba(255,255,255,0.7)',
+  onDark:    '#1a1a1a',
+  muted:     '#757575',
   stone:     '#898989',
   error:     '#e52020',
 };
@@ -81,7 +81,7 @@ export default function HomeScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={s.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.dark} />
+      <StatusBar barStyle="dark-content" backgroundColor={C.dark} />
 
       <View style={s.navBar}>
         <Text style={s.navTitle}>毎日タスク</Text>
@@ -299,7 +299,7 @@ const s = StyleSheet.create({
   modalInput: {
     borderWidth: 1, borderColor: C.border, borderRadius: 2,
     padding: 10, fontSize: 14, color: C.onDark,
-    backgroundColor: C.dark, height: 46,
+    backgroundColor: '#ffffff', height: 46,
   },
   modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 4 },
   modalCancel: {
