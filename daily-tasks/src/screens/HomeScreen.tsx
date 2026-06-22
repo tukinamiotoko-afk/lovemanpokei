@@ -15,15 +15,15 @@ import {
 } from '../db/database';
 
 const C = {
-  dark:      '#ffffff',
-  elevated:  '#f7f7f7',
-  border:    '#cccccc',
-  hairline:  '#cccccc',
-  primary:   '#1a73e8',
+  header:    '#4a5569',
+  body:      '#f0f2f5',
+  card:      '#ffffff',
+  border:    '#e2e8f0',
+  primary:   '#4a5569',
   onPrimary: '#ffffff',
-  onDark:    '#1a1a1a',
-  muted:     '#757575',
-  stone:     '#898989',
+  onDark:    '#2d3748',
+  muted:     '#94a3b8',
+  stone:     '#64748b',
   error:     '#e52020',
 };
 
@@ -92,11 +92,13 @@ export default function HomeScreen({ navigation }: Props) {
   const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
   const dateLabel = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} (${weekdays[now.getDay()]})`;
 
-  const listHeader = (
-    <View style={s.listHeader}>
-      <View style={s.progressPanel}>
+  return (
+    <SafeAreaView style={s.safeArea} edges={['top', 'bottom']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.header} />
+
+      <View style={s.headerCard}>
         <Text style={s.dateText}>{dateLabel}</Text>
-        <Text style={s.metaLabel}>今日の進捗</Text>
+        <Text style={s.headerLabel}>今日の進捗</Text>
         <View style={s.progressRow}>
           <View style={s.progressBg}>
             <View style={[s.progressFill, { width: `${progress * 100}%` as any }]} />
@@ -104,34 +106,22 @@ export default function HomeScreen({ navigation }: Props) {
           <Text style={s.progressText}>{done} / {total}</Text>
         </View>
       </View>
-      <View style={s.sectionBar}>
-        <Text style={s.metaLabel}>チェックリスト</Text>
-        {total > 0 && <Text style={s.stone}>{total}件</Text>}
-      </View>
-    </View>
-  );
-
-  return (
-    <SafeAreaView style={s.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.dark} />
-
-      <View style={s.navBar} />
 
       <FlatList
         data={tasks}
         keyExtractor={(item) => String(item.id)}
         style={s.list}
-        contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: 8, gap: 6 }}
-        ListHeaderComponent={listHeader}
+        contentContainerStyle={{ padding: 16, gap: 10 }}
+        ListHeaderComponent={
+          <View style={s.sectionBar}>
+            <Text style={s.metaLabel}>チェックリスト</Text>
+            {total > 0 && <Text style={s.stone}>{total}件</Text>}
+          </View>
+        }
         ListEmptyComponent={
           <View style={s.empty}>
-            <View style={s.emptyBox}>
-              <Text style={s.emptyTitle}>タスクなし</Text>
-              <Text style={s.emptyBody}>毎日やることを追加しましょう</Text>
-              <TouchableOpacity style={s.emptyButton} onPress={() => setShowAdd(true)}>
-                <Text style={s.emptyButtonText}>＋</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={s.emptyTitle}>タスクなし</Text>
+            <Text style={s.emptyBody}>右下の ＋ から追加できます</Text>
           </View>
         }
         renderItem={({ item }) => {
@@ -140,7 +130,7 @@ export default function HomeScreen({ navigation }: Props) {
             <TouchableOpacity
               style={[s.taskCard, isDone && s.taskCardDone]}
               onPress={() => toggle(item.id)}
-              activeOpacity={0.75}
+              activeOpacity={0.8}
             >
               <View style={[s.checkBox, isDone && s.checkBoxDone]}>
                 {isDone && <Text style={s.checkMark}>✓</Text>}
@@ -195,7 +185,7 @@ export default function HomeScreen({ navigation }: Props) {
               value={newTitle}
               onChangeText={setNewTitle}
               placeholder="例：歯磨き、運動、水を飲む"
-              placeholderTextColor={C.stone}
+              placeholderTextColor={C.muted}
               autoFocus
               returnKeyType="done"
               onSubmitEditing={handleAdd}
@@ -220,66 +210,47 @@ export default function HomeScreen({ navigation }: Props) {
 }
 
 const s = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: C.dark },
+  safeArea: { flex: 1, backgroundColor: C.header },
 
-  navBar: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.elevated, height: 52, paddingHorizontal: 12,
-    borderBottomWidth: 1, borderBottomColor: C.border,
+  headerCard: {
+    backgroundColor: C.header,
+    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24,
   },
-  navTitle: { flex: 1, color: C.primary, fontSize: 14, fontWeight: '700', letterSpacing: 0.3 },
+  dateText: { color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: '600', marginBottom: 12 },
+  headerLabel: { color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 },
+  progressBg: { flex: 1, height: 4, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 2, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: '#ffffff' },
+  progressText: { color: '#ffffff', fontSize: 11, fontWeight: '700' },
 
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: C.elevated,
-    borderTopWidth: 1, borderTopColor: C.border,
-    height: 52,
-  },
-  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  tabItemActive: { borderTopWidth: 2, borderTopColor: C.primary },
-  tabLabel: { color: C.muted, fontSize: 12, fontWeight: '700' },
-  tabLabelActive: { color: C.primary },
-
-  list: { flex: 1 },
-
-  listHeader: { gap: 8, marginBottom: 4 },
-  dateText: { color: C.stone, fontSize: 11, fontWeight: '700', letterSpacing: 0.3, marginBottom: 6 },
-
-  progressPanel: {
-    backgroundColor: C.elevated,
-    borderRadius: 12, borderWidth: 1, borderColor: C.border, padding: 14,
-  },
-  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
-  progressBg: { flex: 1, height: 4, backgroundColor: C.border, borderRadius: 0, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: C.primary },
-  progressText: { color: C.muted, fontSize: 11, fontWeight: '700' },
-
+  list: { flex: 1, backgroundColor: C.body },
   sectionBar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 4,
-    borderBottomWidth: 1, borderBottomColor: C.border,
+    marginBottom: 4,
   },
   metaLabel: { color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
   stone: { color: C.stone, fontSize: 11, fontWeight: '700' },
 
   taskCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fffbe6',
-    borderWidth: 1, borderColor: C.border, borderRadius: 12,
-    paddingHorizontal: 12, paddingVertical: 13, gap: 10,
+    backgroundColor: C.card,
+    borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 14, gap: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4,
+    elevation: 2,
   },
-  taskCardDone: { borderColor: C.primary, opacity: 0.7 },
+  taskCardDone: { opacity: 0.6 },
   checkBox: {
-    width: 20, height: 20, borderRadius: 2,
-    borderWidth: 1, borderColor: C.border,
+    width: 22, height: 22, borderRadius: 11,
+    borderWidth: 2, borderColor: C.border,
     alignItems: 'center', justifyContent: 'center',
   },
   checkBoxDone: { backgroundColor: C.primary, borderColor: C.primary },
-  checkMark: { color: C.onPrimary, fontSize: 12, fontWeight: '700' },
-  taskTitle: { flex: 1, color: C.onDark, fontSize: 13, fontWeight: '400', lineHeight: 18 },
-  taskTitleDone: { color: C.stone, textDecorationLine: 'line-through' },
+  checkMark: { color: C.onPrimary, fontSize: 11, fontWeight: '700' },
+  taskTitle: { flex: 1, color: C.onDark, fontSize: 14, fontWeight: '500', lineHeight: 20 },
+  taskTitleDone: { color: C.muted, textDecorationLine: 'line-through' },
   doneBadge: {
-    backgroundColor: C.primary, borderRadius: 2, paddingHorizontal: 6, paddingVertical: 2,
+    backgroundColor: C.header, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3,
   },
   doneBadgeText: { color: C.onPrimary, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
 
@@ -288,52 +259,55 @@ const s = StyleSheet.create({
     backgroundColor: '#fee2e2',
     alignItems: 'center', justifyContent: 'center',
   },
-  deleteBtnText: { color: '#e52020', fontSize: 12, fontWeight: '700' },
+  deleteBtnText: { color: C.error, fontSize: 11, fontWeight: '700' },
 
-  empty: { paddingVertical: 40 },
-  emptyBox: {
-    backgroundColor: C.elevated, borderRadius: 2,
-    borderWidth: 1, borderColor: C.border,
-    padding: 32, alignItems: 'center', gap: 12,
-  },
-  emptyTitle: { color: C.onDark, fontSize: 20, fontWeight: '700' },
+  empty: { paddingVertical: 60, alignItems: 'center', gap: 8 },
+  emptyTitle: { color: C.stone, fontSize: 16, fontWeight: '700' },
   emptyBody: { color: C.muted, fontSize: 13 },
-  emptyButton: {
-    width: 44, height: 44, borderRadius: 2,
-    backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', marginTop: 8,
+
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: C.card,
+    borderTopWidth: 1, borderTopColor: C.border,
+    height: 52,
   },
-  emptyButtonText: { color: C.onPrimary, fontSize: 22, fontWeight: '700' },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  tabItemActive: { borderTopWidth: 2, borderTopColor: C.primary },
+  tabLabel: { color: C.muted, fontSize: 12, fontWeight: '700' },
+  tabLabelActive: { color: C.primary },
 
   fab: {
     position: 'absolute', bottom: 68, right: 20,
-    width: 52, height: 52, borderRadius: 2,
+    width: 52, height: 52, borderRadius: 26,
     backgroundColor: C.primary,
     alignItems: 'center', justifyContent: 'center',
-    elevation: 4,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4,
+    elevation: 6,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6,
   },
-  fabText: { color: C.onPrimary, fontSize: 26, fontWeight: '700', lineHeight: 30 },
+  fabText: { color: C.onPrimary, fontSize: 26, fontWeight: '400', lineHeight: 30 },
 
-  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', padding: 20 },
+  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
   modalCard: {
-    backgroundColor: C.elevated, borderRadius: 2,
-    borderWidth: 1, borderColor: C.border, padding: 20, gap: 12,
+    backgroundColor: C.card, borderRadius: 16,
+    padding: 20, gap: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12,
+    elevation: 8,
   },
-  modalTitle: { color: C.primary, fontSize: 14, fontWeight: '700', letterSpacing: 0.5 },
+  modalTitle: { color: C.onDark, fontSize: 16, fontWeight: '700' },
   modalDivider: { height: 1, backgroundColor: C.border },
   modalLabel: { color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
   modalInput: {
-    borderWidth: 1, borderColor: C.border, borderRadius: 2,
-    padding: 10, fontSize: 14, color: C.onDark,
-    backgroundColor: '#ffffff', height: 46,
+    borderWidth: 1, borderColor: C.border, borderRadius: 10,
+    padding: 12, fontSize: 14, color: C.onDark,
+    backgroundColor: C.body,
   },
   modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 4 },
   modalCancel: {
-    borderRadius: 2, borderWidth: 1, borderColor: C.border,
+    borderRadius: 8, borderWidth: 1, borderColor: C.border,
     paddingHorizontal: 16, paddingVertical: 9,
   },
-  modalCancelText: { color: C.onDark, fontSize: 13, fontWeight: '700' },
-  modalConfirm: { backgroundColor: C.primary, borderRadius: 2, paddingHorizontal: 20, paddingVertical: 9 },
+  modalCancelText: { color: C.stone, fontSize: 13, fontWeight: '700' },
+  modalConfirm: { backgroundColor: C.primary, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 9 },
   modalConfirmDisabled: { backgroundColor: C.border },
   modalConfirmText: { color: C.onPrimary, fontSize: 13, fontWeight: '700' },
 

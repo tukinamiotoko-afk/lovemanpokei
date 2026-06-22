@@ -15,14 +15,15 @@ import {
 } from '../db/database';
 
 const C = {
-  dark:      '#ffffff',
-  elevated:  '#f7f7f7',
-  border:    '#cccccc',
-  primary:   '#1a73e8',
+  header:    '#4a5569',
+  body:      '#f0f2f5',
+  card:      '#ffffff',
+  border:    '#e2e8f0',
+  primary:   '#4a5569',
   onPrimary: '#ffffff',
-  onDark:    '#1a1a1a',
-  muted:     '#757575',
-  stone:     '#898989',
+  onDark:    '#2d3748',
+  muted:     '#94a3b8',
+  stone:     '#64748b',
   warning:   '#df6500',
 };
 
@@ -91,27 +92,26 @@ export default function StatsScreen({ navigation }: Props) {
   const barColor = (rate: number) => {
     if (rate >= 0.8) return C.primary;
     if (rate >= 0.5) return C.warning;
-    return C.stone;
+    return C.muted;
   };
 
   return (
     <SafeAreaView style={s.safeArea} edges={['top', 'bottom']}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.dark} />
+      <StatusBar barStyle="light-content" backgroundColor={C.header} />
 
-      <View style={s.navBar}>
-        <Text style={s.navTitle}>実行率</Text>
-      </View>
-
-      <View style={s.periodBar}>
-        {(['7日', '30日', '全期間', '任意'] as Period[]).map((p) => (
-          <TouchableOpacity
-            key={p}
-            style={[s.periodChip, period === p && s.periodChipActive]}
-            onPress={() => { setPeriod(p); }}
-          >
-            <Text style={[s.periodChipText, period === p && s.periodChipTextActive]}>{p}</Text>
-          </TouchableOpacity>
-        ))}
+      <View style={s.headerCard}>
+        <Text style={s.headerTitle}>実行率</Text>
+        <View style={s.periodBar}>
+          {(['7日', '30日', '全期間', '任意'] as Period[]).map((p) => (
+            <TouchableOpacity
+              key={p}
+              style={[s.periodChip, period === p && s.periodChipActive]}
+              onPress={() => { setPeriod(p); }}
+            >
+              <Text style={[s.periodChipText, period === p && s.periodChipTextActive]}>{p}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {period === '任意' && (
@@ -130,10 +130,6 @@ export default function StatsScreen({ navigation }: Props) {
         </View>
       )}
 
-      <View style={s.sectionBar}>
-        <Text style={s.metaLabel}>実行率  {periodLabel()}</Text>
-      </View>
-
       {rates.length === 0 ? (
         <View style={s.empty}>
           <Text style={s.emptyText}>タスクがありません</Text>
@@ -143,7 +139,10 @@ export default function StatsScreen({ navigation }: Props) {
           data={rates}
           keyExtractor={(item) => String(item.task.id)}
           style={s.list}
-          contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 6 }}
+          contentContainerStyle={{ padding: 16, gap: 10 }}
+          ListHeaderComponent={
+            <Text style={s.metaLabel}>{periodLabel()}</Text>
+          }
           renderItem={({ item }) => {
             const pct = Math.round(item.rate * 100);
             const bc = barColor(item.rate);
@@ -207,79 +206,67 @@ export default function StatsScreen({ navigation }: Props) {
 }
 
 const s = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: C.dark },
+  safeArea: { flex: 1, backgroundColor: C.header },
 
-  navBar: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.elevated, height: 52, paddingHorizontal: 12,
-    borderBottomWidth: 1, borderBottomColor: C.border,
+  headerCard: {
+    backgroundColor: C.header,
+    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20, gap: 16,
   },
-  navTitle: { flex: 1, color: C.primary, fontSize: 14, fontWeight: '700', letterSpacing: 0.3 },
+  headerTitle: { color: '#ffffff', fontSize: 20, fontWeight: '700' },
 
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: C.elevated,
-    borderTopWidth: 1, borderTopColor: C.border,
-    height: 52,
-  },
-  tabItem: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-  },
-  tabItemActive: {
-    borderTopWidth: 2, borderTopColor: C.primary,
-  },
-  tabLabel: { color: C.muted, fontSize: 12, fontWeight: '700' },
-  tabLabelActive: { color: C.primary },
-
-  periodBar: {
-    flexDirection: 'row', backgroundColor: C.elevated,
-    paddingHorizontal: 12, paddingVertical: 10, gap: 6,
-    borderBottomWidth: 1, borderBottomColor: C.border,
-  },
+  periodBar: { flexDirection: 'row', gap: 8 },
   periodChip: {
-    borderWidth: 1, borderColor: C.border,
-    borderRadius: 2, paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)',
+    borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6,
   },
-  periodChipActive: { backgroundColor: C.primary, borderColor: C.primary },
-  periodChipText: { color: C.muted, fontSize: 12, fontWeight: '700' },
-  periodChipTextActive: { color: C.onPrimary },
+  periodChipActive: { backgroundColor: '#ffffff', borderColor: '#ffffff' },
+  periodChipText: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '700' },
+  periodChipTextActive: { color: C.header },
 
   customBar: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.elevated, paddingHorizontal: 12, paddingVertical: 10, gap: 6,
+    backgroundColor: C.card, paddingHorizontal: 16, paddingVertical: 10, gap: 6,
     borderBottomWidth: 1, borderBottomColor: C.border,
   },
   customLabel: { color: C.stone, fontSize: 11, fontWeight: '700' },
   dateBtn: {
-    borderWidth: 1, borderColor: C.border, borderRadius: 2,
+    borderWidth: 1, borderColor: C.border, borderRadius: 8,
     paddingHorizontal: 8, paddingVertical: 5,
   },
   dateBtnText: { color: C.onDark, fontSize: 11, fontWeight: '700' },
-  customTilde: { color: C.stone, fontSize: 12 },
-  applyBtn: { backgroundColor: C.primary, borderRadius: 2, paddingHorizontal: 12, paddingVertical: 5 },
+  customTilde: { color: C.muted, fontSize: 12 },
+  applyBtn: { backgroundColor: C.primary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 5 },
   applyBtnText: { color: C.onPrimary, fontSize: 11, fontWeight: '700' },
 
-  sectionBar: {
-    paddingHorizontal: 12, paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: C.border,
-  },
-  metaLabel: { color: C.stone, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  metaLabel: { color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
 
-  list: { flex: 1 },
+  list: { flex: 1, backgroundColor: C.body },
   rateCard: {
-    backgroundColor: C.elevated,
-    borderWidth: 1, borderColor: C.border, borderRadius: 2,
-    padding: 12, gap: 8,
+    backgroundColor: C.card,
+    borderRadius: 12, padding: 14, gap: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4,
+    elevation: 2,
   },
   rateHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  rateTitle: { flex: 1, color: C.onDark, fontSize: 13, fontWeight: '700' },
+  rateTitle: { flex: 1, color: C.onDark, fontSize: 14, fontWeight: '600' },
   rateRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  rateDays: { color: C.stone, fontSize: 11, fontWeight: '700' },
-  rateBadge: { borderRadius: 2, paddingHorizontal: 8, paddingVertical: 3 },
+  rateDays: { color: C.muted, fontSize: 11, fontWeight: '700' },
+  rateBadge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   ratePct: { color: C.onPrimary, fontSize: 11, fontWeight: '700' },
-  barBg: { height: 3, backgroundColor: C.border, borderRadius: 0, overflow: 'hidden' },
+  barBg: { height: 4, backgroundColor: C.border, borderRadius: 2, overflow: 'hidden' },
   barFill: { height: '100%' },
 
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyText: { color: C.stone, fontSize: 13, fontWeight: '700' },
+  empty: { flex: 1, backgroundColor: C.body, alignItems: 'center', justifyContent: 'center' },
+  emptyText: { color: C.muted, fontSize: 14, fontWeight: '600' },
+
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: C.card,
+    borderTopWidth: 1, borderTopColor: C.border,
+    height: 52,
+  },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  tabItemActive: { borderTopWidth: 2, borderTopColor: C.primary },
+  tabLabel: { color: C.muted, fontSize: 12, fontWeight: '700' },
+  tabLabelActive: { color: C.primary },
 });
