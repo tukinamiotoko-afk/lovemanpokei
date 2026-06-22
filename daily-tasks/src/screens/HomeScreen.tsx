@@ -94,10 +94,8 @@ export default function HomeScreen({ navigation }: Props) {
 
   const listHeader = (
     <View style={s.listHeader}>
-      <View style={s.dateStrip}>
-        <Text style={s.dateText}>{dateLabel}</Text>
-      </View>
       <View style={s.progressPanel}>
+        <Text style={s.dateText}>{dateLabel}</Text>
         <Text style={s.metaLabel}>今日の進捗</Text>
         <View style={s.progressRow}>
           <View style={s.progressBg}>
@@ -117,9 +115,7 @@ export default function HomeScreen({ navigation }: Props) {
     <SafeAreaView style={s.safeArea} edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" backgroundColor={C.dark} />
 
-      <View style={s.navBar}>
-        <Text style={s.navTitle}>毎日タスク</Text>
-      </View>
+      <View style={s.navBar} />
 
       <FlatList
         data={tasks}
@@ -245,12 +241,11 @@ const s = StyleSheet.create({
   list: { flex: 1 },
 
   listHeader: { gap: 8, marginBottom: 4 },
-  dateStrip: { paddingVertical: 4 },
-  dateText: { color: C.stone, fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
+  dateText: { color: C.stone, fontSize: 11, fontWeight: '700', letterSpacing: 0.3, marginBottom: 6 },
 
   progressPanel: {
     backgroundColor: C.elevated,
-    borderRadius: 2, borderWidth: 1, borderColor: C.border, padding: 12,
+    borderRadius: 12, borderWidth: 1, borderColor: C.border, padding: 14,
   },
   progressRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
   progressBg: { flex: 1, height: 4, backgroundColor: C.border, borderRadius: 0, overflow: 'hidden' },
@@ -267,8 +262,8 @@ const s = StyleSheet.create({
 
   taskCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff4e6',
-    borderWidth: 1, borderColor: C.border, borderRadius: 2,
+    backgroundColor: '#fffbe6',
+    borderWidth: 1, borderColor: C.border, borderRadius: 12,
     paddingHorizontal: 12, paddingVertical: 13, gap: 10,
   },
   taskCardDone: { borderColor: C.primary, opacity: 0.7 },
