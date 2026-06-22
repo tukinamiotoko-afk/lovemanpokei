@@ -4154,14 +4154,14 @@ data class TouchDialogue(val text: String, val expr: Int)
 
 val touchDialoguesLv5 = listOf(
     TouchDialogue("○○さんって、なんでこんないい感じなんですか？（本当に聞いてます）", R.drawable.hikari_blush),
-    TouchDialogue("一緒に歩いていると時間の流れが変わる気がします。不思議ですよね。", R.drawable.hikari_smile),
-    TouchDialogue("また一緒に出かけましょうね！いつでも呼んでください♪", R.drawable.hikari_smile)
+    TouchDialogue("今日どのあたり歩いてますか？なんか気になります。", R.drawable.hikari_smile),
+    TouchDialogue("最近何か面白いことありましたか？話してほしいです♪", R.drawable.hikari_smile)
 )
 
 val touchDialoguesLv7 = listOf(
-    TouchDialogue("○○さんのそばにいると、落ち着きますよ…", R.drawable.hikari_blush),
-    TouchDialogue("ずっと隣にいてほしいです。…なんちゃって！", R.drawable.hikari_blush),
-    TouchDialogue("○○さんって、ちょっとズルいですよ。こんなに好きになってしまって。", R.drawable.hikari_blush)
+    TouchDialogue("○○さんのそばにいると、落ち着きますよ…最近どんな感じですか？", R.drawable.hikari_blush),
+    TouchDialogue("ずっと隣にいてほしいです。…なんちゃって！何か話しましょうか？", R.drawable.hikari_blush),
+    TouchDialogue("○○さんって、ちょっとズルいですよ。こんなに気になってしまって。今日何してましたか？", R.drawable.hikari_blush)
 )
 
 val touchDialoguesLv9 = listOf(
@@ -4177,47 +4177,47 @@ val touchDialoguesLv10 = listOf(
 )
 
 val stepDialoguesLv1 = listOf(
-    StepDialogue(0,     "今日も来ましたね。さあ、行きましょうか♪", R.drawable.hikari_smile),
-    StepDialogue(1000,  "1000歩！靴がようやく本気を出してきましたよ。", R.drawable.hikari_smile),
-    StepDialogue(3000,  "3000歩！「今日はここまで」って思った自分を完全に無視しましたね♪", R.drawable.hikari_celebrate),
-    StepDialogue(5000,  "5000歩！足が「もういい？」って言ってますが聞かなくていいですよ。", R.drawable.hikari_smile),
-    StepDialogue(8000,  "8000歩！体重計もびっくりしてると思いますよ。", R.drawable.hikari_blush),
-    StepDialogue(10000, "1万歩！靴もここまで来るとは思っていなかったと思います♪", R.drawable.hikari_celebrate),
-    StepDialogue(20000, "2万歩！今日のモードが違いますよ。何かありましたか？", R.drawable.hikari_celebrate),
-    StepDialogue(30000, "もはや伝説ですよ…ご本人に確認をとりたいくらいです。", R.drawable.hikari_smile)
+    StepDialogue(0,     "今日も来ましたね！今日はどのあたりを歩く予定ですか？", R.drawable.hikari_smile),
+    StepDialogue(1000,  "1000歩！靴がようやく本気を出してきましたよ。調子はどうですか？", R.drawable.hikari_smile),
+    StepDialogue(3000,  "3000歩！いい感じですよ。今どのあたりにいますか？", R.drawable.hikari_celebrate),
+    StepDialogue(5000,  "5000歩！足が「もういい？」って言ってますが無視していいですよ。今日の気分は？", R.drawable.hikari_smile),
+    StepDialogue(8000,  "8000歩！体重計もびっくりしてると思いますよ。何か話しかけてみてください♪", R.drawable.hikari_blush),
+    StepDialogue(10000, "1万歩！靴もここまで来るとは思っていなかったと思います♪ 今日どんな感じでしたか？", R.drawable.hikari_celebrate),
+    StepDialogue(20000, "2万歩！今日のモードが違いますよ。何かあったんですか？", R.drawable.hikari_celebrate),
+    StepDialogue(30000, "もはや伝説ですよ…今日一日どんな感じでしたか？", R.drawable.hikari_smile)
 )
 
 val stepDialoguesLv3 = listOf(
-    StepDialogue(0,     "○○さん！来てくれましたね。もう逃がしませんよ（笑）", R.drawable.hikari_smile),
-    StepDialogue(1000,  "1000歩！このペース、○○さんの靴もそろそろ覚えてきたと思います♪", R.drawable.hikari_smile),
-    StepDialogue(3000,  "3000歩！体が温まってきた感じがしますよね？ここからが本番ですよ。", R.drawable.hikari_smile),
-    StepDialogue(5000,  "5000歩！体重計に「よくやった」って言わせましょう！", R.drawable.hikari_blush),
-    StepDialogue(8000,  "8000歩！体より先に根性が決めた感じがします♪", R.drawable.hikari_blush),
-    StepDialogue(10000, "1万歩！達成！靴もちょっと誇らしそうですよ。", R.drawable.hikari_celebrate),
-    StepDialogue(20000, "2万歩！？今日のモードが完全に違いますよ○○さん。", R.drawable.hikari_celebrate),
-    StepDialogue(30000, "もはや伝説ですよ…ご本人に確認をとりたいくらいです。", R.drawable.hikari_smile)
+    StepDialogue(0,     "○○さん！今日はどんな一日になりそうですか？", R.drawable.hikari_smile),
+    StepDialogue(1000,  "1000歩！体は温まってきましたか？今日どのあたりを歩いてますか？", R.drawable.hikari_smile),
+    StepDialogue(3000,  "3000歩！体が温まってきた感じがしますよね。今日の空気はどうですか？", R.drawable.hikari_smile),
+    StepDialogue(5000,  "5000歩！体重計に「よくやった」って言わせましょう！何か話しかけてみてください♪", R.drawable.hikari_blush),
+    StepDialogue(8000,  "8000歩！体より先に根性が決めた感じがします。最近調子どうですか？", R.drawable.hikari_blush),
+    StepDialogue(10000, "1万歩！達成！○○さん、今日は何か話したいことありますか？", R.drawable.hikari_celebrate),
+    StepDialogue(20000, "2万歩！？今日のモードが違いますよ○○さん。何かあったんですか？", R.drawable.hikari_celebrate),
+    StepDialogue(30000, "もはや伝説ですよ…今日どんな一日でしたか？", R.drawable.hikari_smile)
 )
 
 val stepDialoguesLv5 = listOf(
-    StepDialogue(0,     "○○さん！今日も来てくれましたね♡ 待ってましたよ（本当です）", R.drawable.hikari_smile),
-    StepDialogue(1000,  "1000歩！○○さんのペース、もう覚えてしまいましたよ。", R.drawable.hikari_smile),
-    StepDialogue(3000,  "3000歩！○○さんと歩くと時間の流れが変わる気がします、不思議ですよね。", R.drawable.hikari_blush),
-    StepDialogue(5000,  "5000歩…○○さんって、歩き始めたら止まらないタイプですよね。", R.drawable.hikari_blush),
-    StepDialogue(8000,  "8000歩！体より先に気持ちが動いた感じがします♪", R.drawable.hikari_celebrate),
-    StepDialogue(10000, "1万歩！今日の○○さん、なんか輝いて見えますよ（本当のことです）", R.drawable.hikari_blush),
-    StepDialogue(20000, "2万歩！○○さんのこと、ちょっと心配になってきました（褒め言葉です）", R.drawable.hikari_celebrate),
-    StepDialogue(30000, "3万歩…！○○さんのこと、もっと知りたくなってしまいます。", R.drawable.hikari_blush)
+    StepDialogue(0,     "○○さん！今日はどんな感じですか？何か話しかけてください♡", R.drawable.hikari_smile),
+    StepDialogue(1000,  "1000歩！○○さんのペース、もう覚えてしまいましたよ。今日の気分はどうですか？", R.drawable.hikari_smile),
+    StepDialogue(3000,  "3000歩！○○さんと歩くと時間の流れが変わる気がします。今どのあたりですか？", R.drawable.hikari_blush),
+    StepDialogue(5000,  "5000歩…○○さんって歩き始めたら止まらないタイプですよね。何か話しましょうか？", R.drawable.hikari_blush),
+    StepDialogue(8000,  "8000歩！体より先に気持ちが動いた感じがします♪ 最近どうですか？", R.drawable.hikari_celebrate),
+    StepDialogue(10000, "1万歩！今日の○○さん、なんか輝いて見えますよ。何かいいことありましたか？", R.drawable.hikari_blush),
+    StepDialogue(20000, "2万歩！○○さんのこと、ちょっと心配になってきました（褒め言葉です）今日何かありましたか？", R.drawable.hikari_celebrate),
+    StepDialogue(30000, "3万歩…！○○さんのこと、もっと知りたくなってしまいます。今日どんな話しましょうか？", R.drawable.hikari_blush)
 )
 
 val stepDialoguesLv7 = listOf(
-    StepDialogue(0,     "おはようございます♡ ○○さんの隣で歩けること、とても幸せです", R.drawable.hikari_blush),
-    StepDialogue(1000,  "1000歩！○○さんと歩く1000歩は、なんか特別な感じがしますよ", R.drawable.hikari_blush),
-    StepDialogue(3000,  "3000歩…ずっとこのまま歩いていたいですよ", R.drawable.hikari_blush),
-    StepDialogue(5000,  "5000歩…ずっと、○○さんとこうして歩いていたいですよ", R.drawable.hikari_blush),
-    StepDialogue(8000,  "8000歩！○○さんのこと、ずっと応援していますよ♡", R.drawable.hikari_smile),
-    StepDialogue(10000, "1万歩！○○さんといたら、どこまでだって歩いていけそうです", R.drawable.hikari_celebrate),
-    StepDialogue(20000, "2万歩…！○○さんの頑張り、全部そばで見ていたいです", R.drawable.hikari_blush),
-    StepDialogue(30000, "3万歩…！もう、○○さんのことが大好きです。ずっと一緒に歩きましょうね", R.drawable.hikari_celebrate)
+    StepDialogue(0,     "○○さんの顔が見られてよかった♡ 今日はどんな一日になりそうですか？", R.drawable.hikari_blush),
+    StepDialogue(1000,  "1000歩！○○さんと歩く時間は特別な気がしますよ。今日何か話しませんか？", R.drawable.hikari_blush),
+    StepDialogue(3000,  "3000歩…ずっとこのまま歩いていたいですよ。今どんな気持ちですか？", R.drawable.hikari_blush),
+    StepDialogue(5000,  "5000歩…ずっと、○○さんとこうして歩いていたいですよ。今日の調子はどうですか？", R.drawable.hikari_blush),
+    StepDialogue(8000,  "8000歩！○○さんのこと、ずっと応援していますよ♡ 何か話しかけてください。", R.drawable.hikari_smile),
+    StepDialogue(10000, "1万歩！○○さんといたら、どこまでだって歩いていけそうです。今日はどんな話をしましょうか？", R.drawable.hikari_celebrate),
+    StepDialogue(20000, "2万歩…！○○さんの頑張り、全部そばで見ていたいです。何かありましたか？", R.drawable.hikari_blush),
+    StepDialogue(30000, "3万歩…！大好きです。今日どんなことを考えながら歩いてましたか？", R.drawable.hikari_celebrate)
 )
 
 val stepDialoguesLv9 = stepDialoguesLv7
