@@ -157,11 +157,9 @@ export default function HomeScreen({ navigation }: Props) {
         />
       )}
 
-      <View style={s.bottomBar}>
-        <TouchableOpacity style={s.addButton} onPress={() => setShowAdd(true)} activeOpacity={0.85}>
-          <Text style={s.addButtonText}>＋ タスクを追加する</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity style={s.fab} onPress={() => setShowAdd(true)} activeOpacity={0.85}>
+        <Text style={s.fabText}>＋</Text>
+      </TouchableOpacity>
 
       <Modal visible={showAdd} transparent animationType="fade" onRequestClose={() => setShowAdd(false)}>
         <KeyboardAvoidingView style={s.modalBg} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -278,15 +276,15 @@ const s = StyleSheet.create({
   },
   emptyButtonText: { color: C.onPrimary, fontSize: 22, fontWeight: '700' },
 
-  bottomBar: {
-    backgroundColor: C.elevated, padding: 12,
-    borderTopWidth: 1, borderTopColor: C.border,
+  fab: {
+    position: 'absolute', bottom: 24, right: 20,
+    width: 52, height: 52, borderRadius: 2,
+    backgroundColor: C.primary,
+    alignItems: 'center', justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4,
   },
-  addButton: {
-    backgroundColor: C.primary, borderRadius: 2,
-    height: 46, alignItems: 'center', justifyContent: 'center',
-  },
-  addButtonText: { color: C.onPrimary, fontSize: 14, fontWeight: '700', letterSpacing: 0.3 },
+  fabText: { color: C.onPrimary, fontSize: 26, fontWeight: '700', lineHeight: 30 },
 
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', padding: 20 },
   modalCard: {
