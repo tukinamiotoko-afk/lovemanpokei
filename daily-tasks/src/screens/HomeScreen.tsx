@@ -4,6 +4,7 @@ import {
   TextInput, StyleSheet, Alert, KeyboardAvoidingView,
   Platform, StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,15 +15,16 @@ import {
 } from '../db/database';
 
 const C = {
-  canvas:   '#000000',
-  elevated: '#121314',
-  card:     '#181818',
-  primary:  '#0070d1',
-  onDark:   '#ffffff',
-  bodyDark: 'rgba(255,255,255,0.7)',
-  muteDark: 'rgba(229,229,229,0.55)',
-  hairline: 'rgba(229,229,229,0.2)',
-  warning:  '#c81b3a',
+  dark:      '#000000',
+  elevated:  '#1a1a1a',
+  border:    '#5e5e5e',
+  hairline:  '#cccccc',
+  primary:   '#76b900',
+  onPrimary: '#000000',
+  onDark:    '#ffffff',
+  muted:     'rgba(255,255,255,0.7)',
+  stone:     '#898989',
+  error:     '#e52020',
 };
 
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Home'> };
@@ -73,14 +75,13 @@ export default function HomeScreen({ navigation }: Props) {
   const total = tasks.length;
   const progress = total > 0 ? done / total : 0;
 
-  // Japanese date display
   const now = new Date();
   const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
   const dateLabel = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')} (${weekdays[now.getDay()]})`;
 
   return (
-    <View style={s.root}>
-      <StatusBar barStyle="light-content" backgroundColor={C.canvas} />
+    <SafeAreaView style={s.safeArea} edges={['top', 'bottom']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.dark} />
 
       <View style={s.navBar}>
         <Text style={s.navTitle}>毎日タスク</Text>
@@ -104,13 +105,13 @@ export default function HomeScreen({ navigation }: Props) {
           <View style={s.progressBg}>
             <View style={[s.progressFill, { width: `${progress * 100}%` as any }]} />
           </View>
-          <Text style={s.progressText}>{done} / {total} 完了</Text>
+          <Text style={s.progressText}>{done} / {total}</Text>
         </View>
       </View>
 
       <View style={s.sectionBar}>
         <Text style={s.metaLabel}>CHECKLIST</Text>
-        {total > 0 && <Text style={s.metaLabel}>{total}件</Text>}
+        {total > 0 && <Text style={s.stone}>{total}件</Text>}
       </View>
 
       {tasks.length === 0 ? (
@@ -128,7 +129,7 @@ export default function HomeScreen({ navigation }: Props) {
           data={tasks}
           keyExtractor={(item) => String(item.id)}
           style={s.list}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8, gap: 8 }}
+          contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 6 }}
           renderItem={({ item }) => {
             const isDone = completedIds.has(item.id);
             return (
@@ -136,9 +137,9 @@ export default function HomeScreen({ navigation }: Props) {
                 style={[s.taskCard, isDone && s.taskCardDone]}
                 onPress={() => toggle(item.id)}
                 onLongPress={() => handleDelete(item)}
-                activeOpacity={0.7}
+                activeOpacity={0.75}
               >
-                <View style={[s.checkCircle, isDone && s.checkCircleDone]}>
+                <View style={[s.checkBox, isDone && s.checkBoxDone]}>
                   {isDone && <Text style={s.checkMark}>✓</Text>}
                 </View>
                 <Text style={[s.taskTitle, isDone && s.taskTitleDone]} numberOfLines={2}>
@@ -152,20 +153,20 @@ export default function HomeScreen({ navigation }: Props) {
               </TouchableOpacity>
             );
           }}
-          ListFooterComponent={<View style={{ height: 16 }} />}
+          ListFooterComponent={<View style={{ height: 8 }} />}
         />
       )}
 
       <View style={s.bottomBar}>
         <TouchableOpacity style={s.addButton} onPress={() => setShowAdd(true)} activeOpacity={0.85}>
-          <Text style={s.addButtonText}>タスクを追加する</Text>
+          <Text style={s.addButtonText}>＋ タスクを追加する</Text>
         </TouchableOpacity>
       </View>
 
       <Modal visible={showAdd} transparent animationType="fade" onRequestClose={() => setShowAdd(false)}>
         <KeyboardAvoidingView style={s.modalBg} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={s.modalCard}>
-            <Text style={s.modalTitle}>タスクを追加</Text>
+            <Text style={s.modalTitle}>ADD TASK</Text>
             <View style={s.modalDivider} />
             <Text style={s.modalLabel}>タスク名</Text>
             <TextInput
@@ -173,7 +174,7 @@ export default function HomeScreen({ navigation }: Props) {
               value={newTitle}
               onChangeText={setNewTitle}
               placeholder="例：歯磨き、運動、水を飲む"
-              placeholderTextColor="rgba(0,0,0,0.35)"
+              placeholderTextColor={C.stone}
               autoFocus
               returnKeyType="done"
               onSubmitEditing={handleAdd}
@@ -182,100 +183,131 @@ export default function HomeScreen({ navigation }: Props) {
               <TouchableOpacity style={s.modalCancel} onPress={() => { setShowAdd(false); setNewTitle(''); }}>
                 <Text style={s.modalCancelText}>キャンセル</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.modalConfirm, !newTitle.trim() && s.modalConfirmDisabled]} onPress={handleAdd} disabled={!newTitle.trim()}>
+              <TouchableOpacity
+                style={[s.modalConfirm, !newTitle.trim() && s.modalConfirmDisabled]}
+                onPress={handleAdd}
+                disabled={!newTitle.trim()}
+              >
                 <Text style={s.modalConfirmText}>追加</Text>
               </TouchableOpacity>
             </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.canvas },
+  safeArea: { flex: 1, backgroundColor: C.dark },
 
   navBar: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.canvas, height: 52, paddingHorizontal: 16,
-    borderBottomWidth: 1, borderBottomColor: C.hairline,
+    backgroundColor: C.elevated, height: 52, paddingHorizontal: 12,
+    borderBottomWidth: 1, borderBottomColor: C.border,
   },
-  navTitle: { flex: 1, color: C.onDark, fontSize: 16, fontWeight: '500', letterSpacing: 0.4 },
-  navButtons: { flexDirection: 'row', gap: 8 },
+  navTitle: { flex: 1, color: C.primary, fontSize: 14, fontWeight: '700', letterSpacing: 0.3 },
+  navButtons: { flexDirection: 'row', gap: 6 },
   chipSecondary: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 7,
+    borderWidth: 1, borderColor: C.border,
+    borderRadius: 2, paddingHorizontal: 12, paddingVertical: 6,
   },
-  chipSecondaryText: { color: C.onDark, fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
+  chipSecondaryText: { color: C.onDark, fontSize: 12, fontWeight: '700' },
   chipPrimary: {
     backgroundColor: C.primary,
-    borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 7,
+    borderRadius: 2, paddingHorizontal: 12, paddingVertical: 6,
   },
-  chipPrimaryText: { color: C.onDark, fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
+  chipPrimaryText: { color: C.onPrimary, fontSize: 12, fontWeight: '700' },
 
   dateStrip: {
-    backgroundColor: C.elevated, paddingHorizontal: 16, paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: C.hairline,
+    backgroundColor: C.dark, paddingHorizontal: 12, paddingVertical: 7,
+    borderBottomWidth: 1, borderBottomColor: C.border,
   },
-  dateText: { color: C.muteDark, fontSize: 12, fontWeight: '400', letterSpacing: 0.2 },
+  dateText: { color: C.stone, fontSize: 11, fontWeight: '700', letterSpacing: 0.3 },
 
-  progressPanel: { margin: 16, backgroundColor: C.card, borderRadius: 8, padding: 16 },
-  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 },
-  progressBg: { flex: 1, height: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: C.primary, borderRadius: 2 },
-  progressText: { color: C.bodyDark, fontSize: 12, fontWeight: '500' },
+  progressPanel: {
+    margin: 12, backgroundColor: C.elevated,
+    borderRadius: 2, borderWidth: 1, borderColor: C.border, padding: 12,
+  },
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 },
+  progressBg: { flex: 1, height: 4, backgroundColor: C.border, borderRadius: 0, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: C.primary },
+  progressText: { color: C.muted, fontSize: 11, fontWeight: '700' },
 
   sectionBar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 8,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderBottomWidth: 1, borderBottomColor: C.border,
   },
-  metaLabel: { color: C.muteDark, fontSize: 11, fontWeight: '500', letterSpacing: 0.5 },
+  metaLabel: { color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  stone: { color: C.stone, fontSize: 11, fontWeight: '700' },
 
   list: { flex: 1 },
   taskCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.card, borderRadius: 8,
-    paddingHorizontal: 16, paddingVertical: 14, gap: 12,
+    backgroundColor: C.elevated,
+    borderWidth: 1, borderColor: C.border, borderRadius: 2,
+    paddingHorizontal: 12, paddingVertical: 13, gap: 10,
   },
-  taskCardDone: { opacity: 0.55 },
-  checkCircle: {
-    width: 24, height: 24, borderRadius: 12,
-    borderWidth: 1, borderColor: C.hairline,
+  taskCardDone: { borderColor: C.primary, opacity: 0.7 },
+  checkBox: {
+    width: 20, height: 20, borderRadius: 2,
+    borderWidth: 1, borderColor: C.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  checkCircleDone: { backgroundColor: C.primary, borderColor: C.primary },
-  checkMark: { color: C.onDark, fontSize: 13, fontWeight: '700' },
-  taskTitle: { flex: 1, color: C.onDark, fontSize: 14, fontWeight: '400', lineHeight: 20 },
-  taskTitleDone: { color: C.bodyDark, textDecorationLine: 'line-through' },
-  doneBadge: { backgroundColor: C.primary, borderRadius: 9999, paddingHorizontal: 8, paddingVertical: 3 },
-  doneBadgeText: { color: C.onDark, fontSize: 10, fontWeight: '700', letterSpacing: 0.3 },
+  checkBoxDone: { backgroundColor: C.primary, borderColor: C.primary },
+  checkMark: { color: C.onPrimary, fontSize: 12, fontWeight: '700' },
+  taskTitle: { flex: 1, color: C.onDark, fontSize: 13, fontWeight: '400', lineHeight: 18 },
+  taskTitleDone: { color: C.stone, textDecorationLine: 'line-through' },
+  doneBadge: {
+    backgroundColor: C.primary, borderRadius: 2, paddingHorizontal: 6, paddingVertical: 2,
+  },
+  doneBadgeText: { color: C.onPrimary, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
 
   empty: { flex: 1, padding: 24, justifyContent: 'center' },
-  emptyBox: { backgroundColor: C.card, borderRadius: 8, padding: 32, alignItems: 'center', gap: 12 },
-  emptyTitle: { color: C.onDark, fontSize: 22, fontWeight: '300', letterSpacing: 0.1 },
-  emptyBody: { color: C.bodyDark, fontSize: 14 },
-  emptyButton: { width: 48, height: 48, borderRadius: 9999, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
-  emptyButtonText: { color: C.onDark, fontSize: 24, fontWeight: '300' },
+  emptyBox: {
+    backgroundColor: C.elevated, borderRadius: 2,
+    borderWidth: 1, borderColor: C.border,
+    padding: 32, alignItems: 'center', gap: 12,
+  },
+  emptyTitle: { color: C.onDark, fontSize: 20, fontWeight: '700' },
+  emptyBody: { color: C.muted, fontSize: 13 },
+  emptyButton: {
+    width: 44, height: 44, borderRadius: 2,
+    backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', marginTop: 8,
+  },
+  emptyButtonText: { color: C.onPrimary, fontSize: 22, fontWeight: '700' },
 
-  bottomBar: { backgroundColor: C.elevated, padding: 16, borderTopWidth: 1, borderTopColor: C.hairline },
-  addButton: { backgroundColor: C.primary, borderRadius: 9999, height: 48, alignItems: 'center', justifyContent: 'center' },
-  addButtonText: { color: C.onDark, fontSize: 14, fontWeight: '700', letterSpacing: 0.45 },
+  bottomBar: {
+    backgroundColor: C.elevated, padding: 12,
+    borderTopWidth: 1, borderTopColor: C.border,
+  },
+  addButton: {
+    backgroundColor: C.primary, borderRadius: 2,
+    height: 46, alignItems: 'center', justifyContent: 'center',
+  },
+  addButtonText: { color: C.onPrimary, fontSize: 14, fontWeight: '700', letterSpacing: 0.3 },
 
-  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', padding: 24 },
-  modalCard: { backgroundColor: C.elevated, borderRadius: 8, padding: 24, gap: 12 },
-  modalTitle: { color: C.onDark, fontSize: 22, fontWeight: '300' },
-  modalDivider: { height: 1, backgroundColor: C.hairline },
-  modalLabel: { color: C.muteDark, fontSize: 12, fontWeight: '500', letterSpacing: 0.3 },
+  modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', padding: 20 },
+  modalCard: {
+    backgroundColor: C.elevated, borderRadius: 2,
+    borderWidth: 1, borderColor: C.border, padding: 20, gap: 12,
+  },
+  modalTitle: { color: C.primary, fontSize: 14, fontWeight: '700', letterSpacing: 0.5 },
+  modalDivider: { height: 1, backgroundColor: C.border },
+  modalLabel: { color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
   modalInput: {
-    borderWidth: 1, borderColor: 'rgba(229,229,229,0.3)',
-    borderRadius: 4, padding: 12, fontSize: 14,
-    color: '#000000', backgroundColor: '#ffffff', height: 48,
+    borderWidth: 1, borderColor: C.border, borderRadius: 2,
+    padding: 10, fontSize: 14, color: C.onDark,
+    backgroundColor: C.dark, height: 46,
   },
   modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 4 },
-  modalCancel: { borderRadius: 9999, borderWidth: 1, borderColor: C.hairline, paddingHorizontal: 20, paddingVertical: 10 },
+  modalCancel: {
+    borderRadius: 2, borderWidth: 1, borderColor: C.border,
+    paddingHorizontal: 16, paddingVertical: 9,
+  },
   modalCancelText: { color: C.onDark, fontSize: 13, fontWeight: '700' },
-  modalConfirm: { backgroundColor: C.primary, borderRadius: 9999, paddingHorizontal: 24, paddingVertical: 10 },
-  modalConfirmDisabled: { backgroundColor: 'rgba(255,255,255,0.15)' },
-  modalConfirmText: { color: C.onDark, fontSize: 13, fontWeight: '700' },
+  modalConfirm: { backgroundColor: C.primary, borderRadius: 2, paddingHorizontal: 20, paddingVertical: 9 },
+  modalConfirmDisabled: { backgroundColor: C.border },
+  modalConfirmText: { color: C.onPrimary, fontSize: 13, fontWeight: '700' },
 });

@@ -3,6 +3,7 @@ import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, Platform, StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -14,22 +15,19 @@ import {
 } from '../db/database';
 
 const C = {
-  canvas:   '#000000',
-  elevated: '#121314',
-  card:     '#181818',
-  primary:  '#0070d1',
-  onDark:   '#ffffff',
-  bodyDark: 'rgba(255,255,255,0.7)',
-  muteDark: 'rgba(229,229,229,0.55)',
-  hairline: 'rgba(229,229,229,0.2)',
-  psGold:   '#f5a623',
-  muted:    '#6b6b6b',
+  dark:      '#000000',
+  elevated:  '#1a1a1a',
+  border:    '#5e5e5e',
+  primary:   '#76b900',
+  onPrimary: '#000000',
+  onDark:    '#ffffff',
+  muted:     'rgba(255,255,255,0.7)',
+  stone:     '#898989',
+  warning:   '#df6500',
 };
 
 type Period = '7日' | '30日' | '全期間' | '任意';
-
 type Rate = { task: Task; completed: number; total: number; rate: number };
-
 type Props = { navigation: NativeStackNavigationProp<RootStackParamList, 'Stats'> };
 
 function toDateString(d: Date): string {
@@ -66,7 +64,6 @@ export default function StatsScreen({ navigation }: Props) {
         startDate = first ?? today;
         totalDays = daysBetween(startDate, today);
       } else {
-        // custom
         startDate = toDateString(customStart);
         const endStr = toDateString(customEnd);
         totalDays = daysBetween(startDate, endStr);
@@ -93,13 +90,13 @@ export default function StatsScreen({ navigation }: Props) {
 
   const barColor = (rate: number) => {
     if (rate >= 0.8) return C.primary;
-    if (rate >= 0.5) return C.psGold;
-    return C.muted;
+    if (rate >= 0.5) return C.warning;
+    return C.stone;
   };
 
   return (
-    <View style={s.root}>
-      <StatusBar barStyle="light-content" backgroundColor={C.canvas} />
+    <SafeAreaView style={s.safeArea} edges={['top', 'bottom']}>
+      <StatusBar barStyle="light-content" backgroundColor={C.dark} />
 
       <View style={s.navBar}>
         <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()}>
@@ -149,7 +146,7 @@ export default function StatsScreen({ navigation }: Props) {
           data={rates}
           keyExtractor={(item) => String(item.task.id)}
           style={s.list}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8, gap: 8 }}
+          contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8, gap: 6 }}
           renderItem={({ item }) => {
             const pct = Math.round(item.rate * 100);
             const bc = barColor(item.rate);
@@ -170,11 +167,10 @@ export default function StatsScreen({ navigation }: Props) {
               </View>
             );
           }}
-          ListFooterComponent={<View style={{ height: 16 }} />}
+          ListFooterComponent={<View style={{ height: 8 }} />}
         />
       )}
 
-      {/* ── Date pickers ────────────────────────────────────────────── */}
       {showStartPicker && (
         <DateTimePicker
           value={customStart}
@@ -200,66 +196,71 @@ export default function StatsScreen({ navigation }: Props) {
           }}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.canvas },
+  safeArea: { flex: 1, backgroundColor: C.dark },
 
   navBar: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.canvas, height: 52, paddingHorizontal: 16,
-    borderBottomWidth: 1, borderBottomColor: C.hairline,
+    backgroundColor: C.elevated, height: 52, paddingHorizontal: 12,
+    borderBottomWidth: 1, borderBottomColor: C.border,
   },
-  backBtn: { marginRight: 16 },
+  backBtn: { marginRight: 12 },
   backText: { color: C.primary, fontSize: 14, fontWeight: '700' },
-  navTitle: { flex: 1, color: C.onDark, fontSize: 16, fontWeight: '500', letterSpacing: 0.4 },
+  navTitle: { flex: 1, color: C.primary, fontSize: 14, fontWeight: '700', letterSpacing: 0.3 },
 
   periodBar: {
     flexDirection: 'row', backgroundColor: C.elevated,
-    paddingHorizontal: 16, paddingVertical: 10, gap: 8,
-    borderBottomWidth: 1, borderBottomColor: C.hairline,
+    paddingHorizontal: 12, paddingVertical: 10, gap: 6,
+    borderBottomWidth: 1, borderBottomColor: C.border,
   },
   periodChip: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 7,
+    borderWidth: 1, borderColor: C.border,
+    borderRadius: 2, paddingHorizontal: 12, paddingVertical: 6,
   },
-  periodChipActive: { backgroundColor: C.onDark },
-  periodChipText: { color: C.bodyDark, fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
-  periodChipTextActive: { color: C.canvas },
+  periodChipActive: { backgroundColor: C.primary, borderColor: C.primary },
+  periodChipText: { color: C.muted, fontSize: 12, fontWeight: '700' },
+  periodChipTextActive: { color: C.onPrimary },
 
   customBar: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.card, paddingHorizontal: 16, paddingVertical: 10, gap: 8,
-    borderBottomWidth: 1, borderBottomColor: C.hairline,
+    backgroundColor: C.elevated, paddingHorizontal: 12, paddingVertical: 10, gap: 6,
+    borderBottomWidth: 1, borderBottomColor: C.border,
   },
-  customLabel: { color: C.muteDark, fontSize: 12, fontWeight: '500' },
+  customLabel: { color: C.stone, fontSize: 11, fontWeight: '700' },
   dateBtn: {
-    backgroundColor: C.elevated, borderRadius: 4,
-    borderWidth: 1, borderColor: C.hairline,
-    paddingHorizontal: 10, paddingVertical: 6,
+    borderWidth: 1, borderColor: C.border, borderRadius: 2,
+    paddingHorizontal: 8, paddingVertical: 5,
   },
-  dateBtnText: { color: C.onDark, fontSize: 12, fontWeight: '700' },
-  customTilde: { color: C.muteDark, fontSize: 14 },
-  applyBtn: { backgroundColor: C.primary, borderRadius: 9999, paddingHorizontal: 14, paddingVertical: 6 },
-  applyBtnText: { color: C.onDark, fontSize: 12, fontWeight: '700' },
+  dateBtnText: { color: C.onDark, fontSize: 11, fontWeight: '700' },
+  customTilde: { color: C.stone, fontSize: 12 },
+  applyBtn: { backgroundColor: C.primary, borderRadius: 2, paddingHorizontal: 12, paddingVertical: 5 },
+  applyBtnText: { color: C.onPrimary, fontSize: 11, fontWeight: '700' },
 
-  sectionBar: { paddingHorizontal: 16, paddingVertical: 10 },
-  metaLabel: { color: C.muteDark, fontSize: 11, fontWeight: '500', letterSpacing: 0.5 },
+  sectionBar: {
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: C.border,
+  },
+  metaLabel: { color: C.stone, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
 
   list: { flex: 1 },
-
-  rateCard: { backgroundColor: C.card, borderRadius: 8, padding: 16, gap: 10 },
+  rateCard: {
+    backgroundColor: C.elevated,
+    borderWidth: 1, borderColor: C.border, borderRadius: 2,
+    padding: 12, gap: 8,
+  },
   rateHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  rateTitle: { flex: 1, color: C.onDark, fontSize: 14, fontWeight: '400' },
+  rateTitle: { flex: 1, color: C.onDark, fontSize: 13, fontWeight: '700' },
   rateRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  rateDays: { color: C.muteDark, fontSize: 12, fontWeight: '400' },
-  rateBadge: { borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 4 },
-  ratePct: { color: C.onDark, fontSize: 12, fontWeight: '700' },
-  barBg: { height: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' },
-  barFill: { height: '100%', borderRadius: 2 },
+  rateDays: { color: C.stone, fontSize: 11, fontWeight: '700' },
+  rateBadge: { borderRadius: 2, paddingHorizontal: 8, paddingVertical: 3 },
+  ratePct: { color: C.onPrimary, fontSize: 11, fontWeight: '700' },
+  barBg: { height: 3, backgroundColor: C.border, borderRadius: 0, overflow: 'hidden' },
+  barFill: { height: '100%' },
 
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  emptyText: { color: C.muteDark, fontSize: 14, fontWeight: '300' },
+  emptyText: { color: C.stone, fontSize: 13, fontWeight: '700' },
 });
