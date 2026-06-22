@@ -62,8 +62,9 @@ export async function getTasks(db: SQLite.SQLiteDatabase): Promise<Task[]> {
   return db.getAllAsync<Task>('SELECT * FROM tasks ORDER BY priority DESC, sort_order ASC, id ASC');
 }
 
-export async function addTask(db: SQLite.SQLiteDatabase, title: string): Promise<void> {
-  await db.runAsync('INSERT INTO tasks (title) VALUES (?)', [title]);
+export async function addTask(db: SQLite.SQLiteDatabase, title: string): Promise<number> {
+  const result = await db.runAsync('INSERT INTO tasks (title) VALUES (?)', [title]);
+  return result.lastInsertRowId;
 }
 
 export async function updateTask(db: SQLite.SQLiteDatabase, id: number, title: string): Promise<void> {
