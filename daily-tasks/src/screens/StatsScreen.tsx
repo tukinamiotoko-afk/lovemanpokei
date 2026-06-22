@@ -99,9 +99,6 @@ export default function StatsScreen({ navigation }: Props) {
       <StatusBar barStyle="dark-content" backgroundColor={C.dark} />
 
       <View style={s.navBar}>
-        <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={s.backText}>‹ 戻る</Text>
-        </TouchableOpacity>
         <Text style={s.navTitle}>実行率</Text>
       </View>
 
@@ -171,6 +168,15 @@ export default function StatsScreen({ navigation }: Props) {
         />
       )}
 
+      <View style={s.tabBar}>
+        <TouchableOpacity style={s.tabItem} onPress={() => navigation.goBack()}>
+          <Text style={s.tabLabel}>タスク一覧</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[s.tabItem, s.tabItemActive]} onPress={() => {}}>
+          <Text style={[s.tabLabel, s.tabLabelActive]}>実行率</Text>
+        </TouchableOpacity>
+      </View>
+
       {showStartPicker && (
         <DateTimePicker
           value={customStart}
@@ -208,9 +214,22 @@ const s = StyleSheet.create({
     backgroundColor: C.elevated, height: 52, paddingHorizontal: 12,
     borderBottomWidth: 1, borderBottomColor: C.border,
   },
-  backBtn: { marginRight: 12 },
-  backText: { color: C.primary, fontSize: 14, fontWeight: '700' },
   navTitle: { flex: 1, color: C.primary, fontSize: 14, fontWeight: '700', letterSpacing: 0.3 },
+
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: C.elevated,
+    borderTopWidth: 1, borderTopColor: C.border,
+    height: 52,
+  },
+  tabItem: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+  },
+  tabItemActive: {
+    borderTopWidth: 2, borderTopColor: C.primary,
+  },
+  tabLabel: { color: C.muted, fontSize: 12, fontWeight: '700' },
+  tabLabelActive: { color: C.primary },
 
   periodBar: {
     flexDirection: 'row', backgroundColor: C.elevated,

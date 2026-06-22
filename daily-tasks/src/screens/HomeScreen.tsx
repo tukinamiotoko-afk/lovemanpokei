@@ -98,14 +98,6 @@ export default function HomeScreen({ navigation }: Props) {
 
       <View style={s.navBar}>
         <Text style={s.navTitle}>毎日タスク</Text>
-        <View style={s.navButtons}>
-          <TouchableOpacity style={s.chipSecondary} onPress={() => navigation.navigate('Stats')}>
-            <Text style={s.chipSecondaryText}>実行率</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={s.chipPrimary} onPress={() => setShowAdd(true)}>
-            <Text style={s.chipPrimaryText}>＋ 追加</Text>
-          </TouchableOpacity>
-        </View>
       </View>
 
       <View style={s.dateStrip}>
@@ -170,6 +162,15 @@ export default function HomeScreen({ navigation }: Props) {
         />
       )}
 
+      <View style={s.tabBar}>
+        <TouchableOpacity style={[s.tabItem, s.tabItemActive]} onPress={() => {}}>
+          <Text style={[s.tabLabel, s.tabLabelActive]}>タスク一覧</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={s.tabItem} onPress={() => navigation.navigate('Stats')}>
+          <Text style={s.tabLabel}>実行率</Text>
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity style={s.fab} onPress={() => setShowAdd(true)} activeOpacity={0.85}>
         <Text style={s.fabText}>＋</Text>
       </TouchableOpacity>
@@ -227,17 +228,21 @@ const s = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: C.border,
   },
   navTitle: { flex: 1, color: C.primary, fontSize: 14, fontWeight: '700', letterSpacing: 0.3 },
-  navButtons: { flexDirection: 'row', gap: 6 },
-  chipSecondary: {
-    borderWidth: 1, borderColor: C.border,
-    borderRadius: 2, paddingHorizontal: 12, paddingVertical: 6,
+
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: C.elevated,
+    borderTopWidth: 1, borderTopColor: C.border,
+    height: 52,
   },
-  chipSecondaryText: { color: C.onDark, fontSize: 12, fontWeight: '700' },
-  chipPrimary: {
-    backgroundColor: C.primary,
-    borderRadius: 2, paddingHorizontal: 12, paddingVertical: 6,
+  tabItem: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
   },
-  chipPrimaryText: { color: C.onPrimary, fontSize: 12, fontWeight: '700' },
+  tabItemActive: {
+    borderTopWidth: 2, borderTopColor: C.primary,
+  },
+  tabLabel: { color: C.muted, fontSize: 12, fontWeight: '700' },
+  tabLabelActive: { color: C.primary },
 
   dateStrip: {
     backgroundColor: C.dark, paddingHorizontal: 12, paddingVertical: 7,
