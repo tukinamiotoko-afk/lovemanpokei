@@ -169,9 +169,11 @@ export default function StatsScreen({ navigation }: Props) {
 
       <View style={s.tabBar}>
         <TouchableOpacity style={s.tabItem} onPress={() => navigation.goBack()}>
+          <Text style={s.tabIcon}>📋</Text>
           <Text style={s.tabLabel}>タスク一覧</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[s.tabItem, s.tabItemActive]} onPress={() => {}}>
+          <Text style={s.tabIcon}>📊</Text>
           <Text style={[s.tabLabel, s.tabLabelActive]}>実行率</Text>
         </TouchableOpacity>
       </View>
@@ -243,9 +245,9 @@ const s = StyleSheet.create({
   list: { flex: 1, backgroundColor: C.body },
   rateCard: {
     backgroundColor: C.card,
-    borderRadius: 12, padding: 14, gap: 10,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4,
-    elevation: 2,
+    borderRadius: 16, padding: 16, gap: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6,
+    elevation: 3,
   },
   rateHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rateTitle: { flex: 1, color: C.onDark, fontSize: 14, fontWeight: '600' },
@@ -265,8 +267,9 @@ const s = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: C.border,
     height: 52,
   },
-  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
   tabItemActive: { borderTopWidth: 2, borderTopColor: C.primary },
-  tabLabel: { color: C.muted, fontSize: 12, fontWeight: '700' },
+  tabIcon: { fontSize: 18 },
+  tabLabel: { color: C.muted, fontSize: 10, fontWeight: '700' },
   tabLabelActive: { color: C.primary },
 });

@@ -144,7 +144,7 @@ export default function HomeScreen({ navigation }: Props) {
                 </View>
               )}
               <TouchableOpacity style={s.deleteBtn} onPress={() => handleDelete(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={s.deleteBtnText}>✕</Text>
+                <Text style={s.deleteBtnText}>🗑️</Text>
               </TouchableOpacity>
             </TouchableOpacity>
           );
@@ -154,9 +154,11 @@ export default function HomeScreen({ navigation }: Props) {
 
       <View style={s.tabBar}>
         <TouchableOpacity style={[s.tabItem, s.tabItemActive]} onPress={() => {}}>
+          <Text style={s.tabIcon}>📋</Text>
           <Text style={[s.tabLabel, s.tabLabelActive]}>タスク一覧</Text>
         </TouchableOpacity>
         <TouchableOpacity style={s.tabItem} onPress={() => navigation.navigate('Stats')}>
+          <Text style={s.tabIcon}>📊</Text>
           <Text style={s.tabLabel}>実行率</Text>
         </TouchableOpacity>
       </View>
@@ -255,11 +257,11 @@ const s = StyleSheet.create({
   doneBadgeText: { color: C.onPrimary, fontSize: 9, fontWeight: '700', letterSpacing: 0.5 },
 
   deleteBtn: {
-    width: 28, height: 28, borderRadius: 14,
+    width: 32, height: 32, borderRadius: 16,
     backgroundColor: '#fee2e2',
     alignItems: 'center', justifyContent: 'center',
   },
-  deleteBtnText: { color: C.error, fontSize: 11, fontWeight: '700' },
+  deleteBtnText: { fontSize: 16 },
 
   empty: { paddingVertical: 60, alignItems: 'center', gap: 8 },
   emptyTitle: { color: C.stone, fontSize: 16, fontWeight: '700' },
@@ -271,9 +273,10 @@ const s = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: C.border,
     height: 52,
   },
-  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2 },
   tabItemActive: { borderTopWidth: 2, borderTopColor: C.primary },
-  tabLabel: { color: C.muted, fontSize: 12, fontWeight: '700' },
+  tabIcon: { fontSize: 18 },
+  tabLabel: { color: C.muted, fontSize: 10, fontWeight: '700' },
   tabLabelActive: { color: C.primary },
 
   fab: {
