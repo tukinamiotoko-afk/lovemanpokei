@@ -7,6 +7,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import StatsScreen from './src/screens/StatsScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
 import NotificationScreen from './src/screens/NotificationScreen';
+import TimerScreen from './src/screens/TimerScreen';
 import { migrateDb } from './src/db/database';
 
 export type RootStackParamList = {
@@ -14,6 +15,7 @@ export type RootStackParamList = {
   Stats: undefined;
   Calendar: undefined;
   Notifications: undefined;
+  Timer: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -28,6 +30,7 @@ export default function App() {
           <Stack.Screen name="Stats" component={StatsScreen} />
           <Stack.Screen name="Calendar" component={CalendarScreen} />
           <Stack.Screen name="Notifications" component={NotificationScreen} />
+          <Stack.Screen name="Timer" component={TimerScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </SQLiteProvider>

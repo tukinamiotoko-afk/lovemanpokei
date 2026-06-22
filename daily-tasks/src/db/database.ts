@@ -3,6 +3,7 @@ import * as SQLite from 'expo-sqlite';
 export type Task = { id: number; title: string; sort_order: number; priority: number; icon: string; target_time: string | null; frequency: string };
 export type NotificationSetting = { id: number; time: string; notification_type: string; identifier: string | null; task_id: number | null };
 export type CompletionDetail = { task_id: number; title: string; date: string; completed_at: string | null };
+export type TimeLog = { id: number; task_id: number; date: string; duration: number; type: string; started_at: string };
 
 export async function migrateDb(db: SQLite.SQLiteDatabase): Promise<void> {
   await db.execAsync(`
@@ -23,6 +24,14 @@ export async function migrateDb(db: SQLite.SQLiteDatabase): Promise<void> {
       notification_type TEXT NOT NULL DEFAULT 'full',
       identifier TEXT,
       task_id INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS time_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_id INTEGER NOT NULL,
+      date TEXT NOT NULL,
+      duration INTEGER NOT NULL,
+      type TEXT NOT NULL DEFAULT 'stopwatch',
+      started_at TEXT NOT NULL
     );
   `);
   try { await db.execAsync('ALTER TABLE completions ADD COLUMN completed_at TEXT'); } catch {}
@@ -182,6 +191,22 @@ export async function addNotificationSetting(
   await db.runAsync(
     'INSERT INTO notification_settings (time, notification_type, identifier, task_id) VALUES (?, ?, ?, ?)',
     [time, notification_type, identifier, taskId ?? null]
+  );
+}
+
+export async function addTimeLog(
+  db: SQLite.SQLiteDatabase, taskId: number, duration: number, type: string, startedAt: string
+): Promise<void> {
+  const date = startedAt.slice(0, 10);
+  await db.runAsync(
+    'INSERT INTO time_logs (task_id, date, duration, type, started_at) VALUES (?, ?, ?, ?, ?)',
+    [taskId, date, duration, type, startedAt]
+  );
+}
+
+export async function getTimeLogsForTask(db: SQLite.SQLiteDatabase, taskId: number): Promise<TimeLog[]> {
+  return db.getAllAsync<TimeLog>(
+    'SELECT * FROM time_logs WHERE task_id = ? ORDER BY started_at DESC', [taskId]
   );
 }
 

@@ -2,8 +2,9 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 const TABS = [
-  { name: 'Home',          label: 'タスク一覧', icon: '📋' },
+  { name: 'Home',          label: 'タスク',     icon: '📋' },
   { name: 'Calendar',      label: 'カレンダー', icon: '📅' },
+  { name: 'Timer',         label: 'タイマー',   icon: '⏱️' },
   { name: 'Stats',         label: '実行率',     icon: '📊' },
   { name: 'Notifications', label: '通知',       icon: '🔔' },
 ] as const;
