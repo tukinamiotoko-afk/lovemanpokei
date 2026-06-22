@@ -111,6 +111,12 @@ export default function HomeScreen({ navigation }: Props) {
   const total = tasks.length;
   const progress = total > 0 ? done / total : 0;
 
+  const sortedTasks = [...tasks].sort((a, b) => {
+    const aDone = completedMap.has(a.id) ? 1 : 0;
+    const bDone = completedMap.has(b.id) ? 1 : 0;
+    return bDone - aDone;
+  });
+
   useEffect(() => {
     Animated.timing(progressAnim, {
       toValue: progress,
@@ -285,7 +291,7 @@ export default function HomeScreen({ navigation }: Props) {
       </View>
 
       <FlatList
-        data={tasks}
+        data={sortedTasks}
         keyExtractor={(item) => String(item.id)}
         style={s.list}
         contentContainerStyle={{ padding: 16, gap: 10 }}
