@@ -103,19 +103,6 @@ class StepCounterService : Service(), SensorEventListener {
             else            -> notificationDialoguesLv5
         }
 
-        enum class WeatherCondition { CLEAR, RAINY, SNOWY, STORMY }
-        val weatherDialogues = mapOf(
-            WeatherCondition.RAINY to "雨か…傘、持った？でも一緒に歩こう！",
-            WeatherCondition.SNOWY to "雪！！テンション上がる〜！転ばないでね！",
-            WeatherCondition.STORMY to "今日は無理しないでね…室内で運動でもいいよ！"
-        )
-        fun weatherCodeToCondition(code: Int): WeatherCondition = when (code) {
-            in listOf(51, 53, 55, 61, 63, 65, 80, 81, 82) -> WeatherCondition.RAINY
-            in listOf(71, 73, 75, 77, 85, 86)              -> WeatherCondition.SNOWY
-            in listOf(95, 96, 99)                          -> WeatherCondition.STORMY
-            else                                           -> WeatherCondition.CLEAR
-        }
-
     }
 
     override fun onCreate() {
@@ -339,9 +326,7 @@ class StepCounterService : Service(), SensorEventListener {
         val loveCount = repository.loveCount
         val dialogues = dialoguesForLoveLevel(loveCount)
         val stepDialogue = dialogues.lastOrNull { steps >= it.thresholdSteps } ?: dialogues.first()
-        val weatherCondition = weatherCodeToCondition(repository.currentWeatherCode)
-        val rawDialogue = weatherDialogues[weatherCondition]
-            ?: stepDialogue.text
+        val rawDialogue = stepDialogue.text
         val dialogue = rawDialogue.replace("○○", playerName)
 
         val remoteViews = RemoteViews(packageName, R.layout.notification_step_counter).apply {
