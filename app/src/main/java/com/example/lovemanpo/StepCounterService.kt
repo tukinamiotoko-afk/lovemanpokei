@@ -22,10 +22,13 @@ import android.util.Log
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import com.example.lovemanpo.R
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
 import java.time.LocalTime
 
@@ -39,6 +42,11 @@ class StepCounterService : Service(), SensorEventListener {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val handler = Handler(Looper.getMainLooper())
+
+    // 歩数計算の read-modify-write を直列化して競合を防ぐ（計算式は変えない）
+    private val stepMutex = Mutex()
+    // initializeData() のDB読み込み完了までセンサー処理を待たせる
+    private val initialized = CompletableDeferred<Unit>()
 
     private var todayStepsCached: Int = 0
     private var lastCounterValue: Int? = null
@@ -143,13 +151,18 @@ class StepCounterService : Service(), SensorEventListener {
     private fun initializeData() {
         val today = LocalDate.now().toString()
         serviceScope.launch {
-            val records = repository.getAllStepRecords()
-            val todayRecord = records.find { it.date == today }
-            
-            todayStepsCached = todayRecord?.stepCount ?: 0
-            todayWalkingTimeMs = todayRecord?.activeTimeMillis ?: 0L
-            
-            updateNotification(todayStepsCached)
+            try {
+                val records = repository.getAllStepRecords()
+                val todayRecord = records.find { it.date == today }
+
+                todayStepsCached = todayRecord?.stepCount ?: 0
+                todayWalkingTimeMs = todayRecord?.activeTimeMillis ?: 0L
+
+                updateNotification(todayStepsCached)
+            } finally {
+                // 読み込み成否に関わらずセンサー処理をブロックし続けない
+                initialized.complete(Unit)
+            }
         }
     }
 
@@ -221,68 +234,73 @@ class StepCounterService : Service(), SensorEventListener {
         val now = System.currentTimeMillis()
 
         serviceScope.launch {
-            val lastSavedDay = repository.lastUpdateDay
+            // DB初期化完了を待ってから処理（起動時レースで0上書きを防ぐ）
+            initialized.await()
+            // センサーイベントごとの並行処理を直列化（計算式は不変）
+            stepMutex.withLock {
+                val lastSavedDay = repository.lastUpdateDay
 
-            if (lastSavedDay != today) {
-                repository.lastUpdateDay = today
-                lastCounterValue = currentValue
-                repository.lastSensorValue = currentValue
-                todayStepsCached = 0
-                todayWalkingTimeMs = 0L
-                walkingStartTime = 0L
-                sessionTimeAlreadyRecordedMs = 0L
-                updateNotification(0)
-                repository.recordSteps(today, 0, 0L)
-                // 新しい日の最初の時間帯も初期化
-                stepDao.upsertHourly(HourlyStepRecord(today, currentHour, 0, 0L))
-                return@launch
-            }
-
-            val previousValue = lastCounterValue ?: repository.lastSensorValue.let { if (it < 0) null else it }
-
-            if (previousValue == null) {
-                lastCounterValue = currentValue
-                repository.lastSensorValue = currentValue
-                return@launch
-            }
-
-            val diff = currentValue - previousValue
-
-            if (diff > 0) {
-                if (walkingStartTime == 0L) {
-                    walkingStartTime = now
+                if (lastSavedDay != today) {
+                    repository.lastUpdateDay = today
+                    lastCounterValue = currentValue
+                    repository.lastSensorValue = currentValue
+                    todayStepsCached = 0
+                    todayWalkingTimeMs = 0L
+                    walkingStartTime = 0L
                     sessionTimeAlreadyRecordedMs = 0L
+                    updateNotification(0)
+                    repository.recordSteps(today, 0, 0L)
+                    // 新しい日の最初の時間帯も初期化
+                    stepDao.upsertHourly(HourlyStepRecord(today, currentHour, 0, 0L))
+                    return@withLock
                 }
-                lastStepTime = now
 
-                repository.cumulativeSteps += diff
-                todayStepsCached += diff
-                
-                // 累積時間の計算（増分だけを足していく方式に変更）
-                val currentSessionMs = now - walkingStartTime
-                val timeIncrement = currentSessionMs - sessionTimeAlreadyRecordedMs
-                if (timeIncrement > 0) {
-                    todayWalkingTimeMs += timeIncrement
-                    sessionTimeAlreadyRecordedMs = currentSessionMs
+                val previousValue = lastCounterValue ?: repository.lastSensorValue.let { if (it < 0) null else it }
+
+                if (previousValue == null) {
+                    lastCounterValue = currentValue
+                    repository.lastSensorValue = currentValue
+                    return@withLock
                 }
-                
-                // 1日単位の更新
-                repository.recordSteps(today, todayStepsCached, todayWalkingTimeMs)
-                
-                // 時間単位の更新
-                val hourlyRecords = stepDao.getHourlyRecordsForDay(today)
-                val currentHourly = hourlyRecords.find { it.hour == currentHour }
-                val newHourlySteps = (currentHourly?.stepCount ?: 0) + diff
-                val newHourlyTime = (currentHourly?.activeTimeMillis ?: 0L) + (if (timeIncrement > 0) timeIncrement else 0L)
-                stepDao.upsertHourly(HourlyStepRecord(today, currentHour, newHourlySteps, newHourlyTime))
-                
-                lastCounterValue = currentValue
-                repository.lastSensorValue = currentValue
-                
-                updateNotification(todayStepsCached)
-            } else if (diff < 0) {
-                lastCounterValue = currentValue
-                repository.lastSensorValue = currentValue
+
+                val diff = currentValue - previousValue
+
+                if (diff > 0) {
+                    if (walkingStartTime == 0L) {
+                        walkingStartTime = now
+                        sessionTimeAlreadyRecordedMs = 0L
+                    }
+                    lastStepTime = now
+
+                    repository.cumulativeSteps += diff
+                    todayStepsCached += diff
+
+                    // 累積時間の計算（増分だけを足していく方式に変更）
+                    val currentSessionMs = now - walkingStartTime
+                    val timeIncrement = currentSessionMs - sessionTimeAlreadyRecordedMs
+                    if (timeIncrement > 0) {
+                        todayWalkingTimeMs += timeIncrement
+                        sessionTimeAlreadyRecordedMs = currentSessionMs
+                    }
+
+                    // 1日単位の更新
+                    repository.recordSteps(today, todayStepsCached, todayWalkingTimeMs)
+
+                    // 時間単位の更新
+                    val hourlyRecords = stepDao.getHourlyRecordsForDay(today)
+                    val currentHourly = hourlyRecords.find { it.hour == currentHour }
+                    val newHourlySteps = (currentHourly?.stepCount ?: 0) + diff
+                    val newHourlyTime = (currentHourly?.activeTimeMillis ?: 0L) + (if (timeIncrement > 0) timeIncrement else 0L)
+                    stepDao.upsertHourly(HourlyStepRecord(today, currentHour, newHourlySteps, newHourlyTime))
+
+                    lastCounterValue = currentValue
+                    repository.lastSensorValue = currentValue
+
+                    updateNotification(todayStepsCached)
+                } else if (diff < 0) {
+                    lastCounterValue = currentValue
+                    repository.lastSensorValue = currentValue
+                }
             }
         }
     }
