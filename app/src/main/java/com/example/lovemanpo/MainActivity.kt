@@ -1589,72 +1589,74 @@ fun HomeScreenContent(
 
                 HintSdHikari(modifier = Modifier.align(Alignment.BottomStart).offset(x = (-20).dp))
             }
+        } // キャラ表示用Column（吹き出しカードを含まないため、カードが伸びてもキャラの枠は一切変化しない）
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .offset(y = (-30).dp)
-                    .shadow(8.dp, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                    .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                    .background(
-                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                            listOf(Color(0xFFF0F8FF), Color(0xFFD6EEFF))
-                        )
+        // 吹き出しカードは独立したオーバーレイ。伸びてもキャラの枠を押し縮めず、上に被さるだけ
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .offset(y = (-30).dp)
+                .shadow(8.dp, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                .background(
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(Color(0xFFF0F8FF), Color(0xFFD6EEFF))
                     )
-            ) {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    val formattedMessage = dialogueMessage.replace("○○", playerName)
-                    HomeCommentBanner(formattedMessage, onRefresh = onRefreshDialogue, onClick = onCharacterClick)
+                )
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                val formattedMessage = dialogueMessage.replace("○○", playerName)
+                HomeCommentBanner(formattedMessage, onRefresh = onRefreshDialogue, onClick = onCharacterClick)
 
-                    var homeInput by remember { mutableStateOf("") }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp)
-                            .shadow(2.dp, RoundedCornerShape(24.dp))
-                            .clip(RoundedCornerShape(24.dp))
-                            .background(Color.White)
-                            .padding(horizontal = 14.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        androidx.compose.foundation.text.BasicTextField(
-                            value = homeInput,
-                            onValueChange = { homeInput = it },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = Color.Black),
-                            decorationBox = { inner ->
-                                if (homeInput.isEmpty()) Text("ひかりに話しかける…", color = Color.Gray, fontSize = 14.sp)
-                                inner()
+                var homeInput by remember { mutableStateOf("") }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp)
+                        .shadow(2.dp, RoundedCornerShape(24.dp))
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color.White)
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    androidx.compose.foundation.text.BasicTextField(
+                        value = homeInput,
+                        onValueChange = { homeInput = it },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = Color.Black),
+                        decorationBox = { inner ->
+                            if (homeInput.isEmpty()) Text("ひかりに話しかける…", color = Color.Gray, fontSize = 14.sp)
+                            inner()
+                        }
+                    )
+                    if (isHomeChatLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFFEC407A))
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Send,
+                            contentDescription = null,
+                            tint = if (homeInput.isNotBlank()) Color(0xFFEC407A) else Color.LightGray,
+                            modifier = Modifier.size(20.dp).clickable {
+                                if (homeInput.isNotBlank()) { onHomeChatSend(homeInput); homeInput = "" }
                             }
                         )
-                        if (isHomeChatLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFFEC407A))
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Send,
-                                contentDescription = null,
-                                tint = if (homeInput.isNotBlank()) Color(0xFFEC407A) else Color.LightGray,
-                                modifier = Modifier.size(20.dp).clickable {
-                                    if (homeInput.isNotBlank()) { onHomeChatSend(homeInput); homeInput = "" }
-                                }
-                            )
-                        }
                     }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, null, Color(0xFFF06292))
-                        HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "歩行距離", distanceStr, null, Color(0xFF4FC3F7))
-                        HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
-                    }
-                    Spacer(modifier = Modifier.height(44.dp))
                 }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    HomeStatItemSmall(Icons.Default.Schedule, "歩いた時間", activeTimeStr, null, Color(0xFFF06292))
+                    HomeStatItemSmall(Icons.AutoMirrored.Filled.DirectionsWalk, "歩行距離", distanceStr, null, Color(0xFF4FC3F7))
+                    HomeStatItemSmall(Icons.Default.Whatshot, "消費カロリー", caloriesStr, null, Color(0xFFFF8A65))
+                }
+                Spacer(modifier = Modifier.height(44.dp))
             }
-        } // outer Column
+        }
 
         HomeCustomBottomNav(
             modifier = Modifier
@@ -1974,7 +1976,8 @@ fun splitMessageIntoPages(text: String): List<String> {
 }
 
 // バナー計測用と実描画用で必ず同一のTextStyleを使う（不一致だと2行判定なのに3行目が切り捨てられる）
-val bannerTextStyle = TextStyle(fontSize = 12.sp)
+// lineHeightも明示し、テーマ既定の24spを継承して2行が間延びするのを防ぐ
+val bannerTextStyle = TextStyle(fontSize = 11.sp, lineHeight = 15.sp)
 
 fun splitByTextMeasure(text: String, measurer: TextMeasurer, style: TextStyle, widthPx: Int, maxLines: Int = 2): List<String> {
     // 計測誤差の安全マージン（端末フォントレンダリング差でのはみ出し防止）
