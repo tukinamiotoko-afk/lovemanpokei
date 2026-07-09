@@ -1996,9 +1996,12 @@ fun splitByTextMeasure(text: String, measurer: TextMeasurer, style: TextStyle, w
 @Composable
 fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick: () -> Unit = {}) {
     val textMeasurer = rememberTextMeasurer()
+    // Text() は指定していないプロパティ（letterSpacing等）をLocalTextStyleから継承する。
+    // 計測もそれに合わせて解決済みスタイルを使わないと、実描画とlineCountがズレる。
+    val resolvedTextStyle = bannerTextStyle.merge(LocalTextStyle.current)
     var columnWidthPx by remember { mutableStateOf(0) }
-    val pages = remember(message, columnWidthPx) {
-        if (columnWidthPx > 0) splitByTextMeasure(message, textMeasurer, bannerTextStyle, columnWidthPx)
+    val pages = remember(message, columnWidthPx, resolvedTextStyle) {
+        if (columnWidthPx > 0) splitByTextMeasure(message, textMeasurer, resolvedTextStyle, columnWidthPx)
         else splitMessageIntoPages(message)
     }
     var pageIndex by remember(message) { mutableStateOf(0) }
@@ -2007,7 +2010,8 @@ fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick:
     val multiPage = pages.size > 1
 
     Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0)), modifier = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }) {
-        Row(modifier = Modifier.padding(10.dp).height(IntrinsicSize.Max), verticalAlignment = Alignment.CenterVertically) {
+        // IntrinsicSize.Max は二重測定パスを要求し、onSizeChangedが途中経過の幅を拾うレースを招くため使わない
+        Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f).padding(horizontal = 6.dp).onSizeChanged { columnWidthPx = it.width }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
@@ -2030,7 +2034,7 @@ fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick:
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
-                    Text(currentText, style = bannerTextStyle, color = Color(0xFF1A1A1A), maxLines = 2, overflow = TextOverflow.Clip)
+                    Text(currentText, style = resolvedTextStyle, color = Color(0xFF1A1A1A), maxLines = 2, overflow = TextOverflow.Clip)
                 }
                 if (onRefresh != null) {
                     Spacer(modifier = Modifier.width(6.dp))
