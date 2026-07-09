@@ -2006,10 +2006,9 @@ fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick:
     val currentText = pages.getOrElse(safePageIndex) { message }
     val multiPage = pages.size > 1
 
-    Box {
     Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0)), modifier = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }) {
         Row(modifier = Modifier.padding(10.dp).height(IntrinsicSize.Max), verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f).onSizeChanged { columnWidthPx = it.width }) {
+                Column(modifier = Modifier.weight(1f).padding(horizontal = 6.dp).onSizeChanged { columnWidthPx = it.width }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                         if (multiPage) {
@@ -2033,30 +2032,24 @@ fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick:
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
                     Text(currentText, style = bannerTextStyle, color = Color(0xFF1A1A1A), maxLines = 2, overflow = TextOverflow.Clip)
                 }
+                if (onRefresh != null) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFFFE8F0),
+                        border = BorderStroke(1.dp, Color(0xFFFFB7D0)),
+                        modifier = Modifier.clickable { onRefresh() }
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "更新",
+                            tint = Color(0xFFFF6B9D),
+                            modifier = Modifier.padding(5.dp).size(14.dp)
+                        )
+                    }
+                }
         }
     }
-    if (onRefresh != null) {
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = Color(0xFFFFE8F0),
-            border = BorderStroke(1.dp, Color(0xFFFFB7D0)),
-            shadowElevation = 3.dp,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = 4.dp, y = (-8).dp)
-                .clickable { onRefresh() }
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Icon(Icons.Default.Refresh, null, tint = Color(0xFFFF6B9D), modifier = Modifier.size(11.dp))
-                Text("更新", fontSize = 9.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-    } // Box
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
