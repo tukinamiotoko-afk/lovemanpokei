@@ -209,6 +209,10 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getString("FREE_CHAT_HISTORY", "[]") ?: "[]"
         set(value) = prefs.edit { putString("FREE_CHAT_HISTORY", value) }
 
+    var homeChatHistoryJson: String
+        get() = prefs.getString("HOME_CHAT_HISTORY", "[]") ?: "[]"
+        set(value) = prefs.edit { putString("HOME_CHAT_HISTORY", value) }
+
     var hasEverChatted: Boolean
         get() = prefs.getBoolean("HAS_EVER_CHATTED", false)
         set(value) = prefs.edit { putBoolean("HAS_EVER_CHATTED", value) }
@@ -446,6 +450,17 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
         repository.diaryDates = dates.sorted().takeLast(90).toSet()
     }
 
+    // ホームチャットの要約を追記（おしゃべりの要約を上書きしないよう追加方式にする）
+    fun appendDailyDiarySummary(summary: String) {
+        val today = LocalDate.now().toString()
+        val existing = repository.getDailyDiary(today)
+        val merged = if (existing.isBlank()) summary else "$existing\n$summary"
+        repository.setDailyDiary(today, merged.takeLast(600))
+        val dates = repository.diaryDates.toMutableSet()
+        dates.add(today)
+        repository.diaryDates = dates.sorted().takeLast(90).toSet()
+    }
+
     // 800 chars 固定の記憶コンテキストをビルド（新しい日付から降順で埋める）
     fun buildMemoryContext(): String {
         val maxChars = 800
@@ -589,6 +604,29 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
     fun clearFreeChatHistory() {
         freeChatMessages.clear()
         repository.freeChatHistoryJson = "[]"
+    }
+
+    val homeChatMessages = mutableStateListOf<ChatMessage>().also { list ->
+        try {
+            val json = org.json.JSONArray(repository.homeChatHistoryJson)
+            repeat(json.length()) { i ->
+                val obj = json.getJSONObject(i)
+                list.add(ChatMessage(obj.getString("role"), obj.getString("content")))
+            }
+        } catch (_: Exception) {}
+    }
+
+    fun saveHomeChatHistory() {
+        // 直近10件（5往復）のみ保持。無制限に肥大化させない
+        while (homeChatMessages.size > 10) homeChatMessages.removeAt(0)
+        val json = org.json.JSONArray()
+        homeChatMessages.forEach { msg ->
+            json.put(org.json.JSONObject().apply {
+                put("role", msg.role)
+                put("content", msg.content)
+            })
+        }
+        repository.homeChatHistoryJson = json.toString()
     }
 
     private fun getSessionDate(): String {
@@ -1376,13 +1414,22 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         onHomeChatSend = { text ->
             weatherDialogueActive = false
             isHomeChatLoading = true
+            // 会話開始前に表示されていた運営セリフ。最初のターンだけ背景情報として渡す
+            val isFirstTurn = viewModel.homeChatMessages.isEmpty()
+            val openingLine = displayMessage
             scope.launch {
                 try {
+                    val memory = viewModel.buildMemoryContext()
+                    val openingLineNote = if (isFirstTurn) {
+                        "\n（参考）あなたが直前に表示していたセリフ：「${openingLine}」。ユーザーの発言がこれに関連していれば自然に踏まえてください。無関係な話題であれば、このセリフには触れずユーザーの発言だけに応答してください。"
+                    } else ""
+                    val memoryNote = if (memory.isNotBlank())
+                        "\n【会話の記憶】\n$memory\n記憶に触れる場合は自分の言葉で自然に。1会話で言及は1回まで。" else ""
                     val prompt = """あなたは「ひかり」（22歳）。${playerName}さんと散歩中の話し相手。
 返答の先頭に[EMOTION:タグ名]を出力する。タグ: happy / love / shy / sad / worry / normal
 30〜70文字で自然に返す。句読点で区切りやすい文にする。敬語。AIっぽい表現禁止。「${playerName}さん」と「さん」付けで呼ぶ。「今一緒に歩いている」視点で話す。
-今日の歩数：${todaySteps}歩。"""
-                    val history = listOf(ChatMessage(role = "assistant", content = displayMessage))
+今日の歩数：${todaySteps}歩。$openingLineNote$memoryNote"""
+                    val history = viewModel.homeChatMessages.takeLast(10)
                     val raw = callGeminiApi(prompt, history, text, maxTokens = 300)
                     val emotionMatch = Regex("""\[EMOTION:(\w+)\]""").find(raw)
                     val emotion = emotionMatch?.groupValues?.get(1) ?: "normal"
@@ -1394,6 +1441,19 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
                         else                -> R.drawable.hikari_smile
                     }
                     homeChatReply = Pair(replyText, expr)
+                    viewModel.homeChatMessages.add(ChatMessage(role = "user", content = text))
+                    viewModel.homeChatMessages.add(ChatMessage(role = "assistant", content = replyText))
+                    viewModel.saveHomeChatHistory()
+
+                    val userTurnCount = viewModel.homeChatMessages.count { it.role == "user" }
+                    if (userTurnCount % 5 == 0) {
+                        scope.launch {
+                            try {
+                                val newSummary = callGeminiApiForSummary(viewModel.homeChatMessages)
+                                viewModel.appendDailyDiarySummary(newSummary)
+                            } catch (_: Exception) {}
+                        }
+                    }
                 } catch (_: Exception) {
                     homeChatReply = Pair("ごめん、うまく聞こえなかったよ…もう一度話しかけてみて？", R.drawable.hikari_think)
                 } finally {
@@ -1544,7 +1604,7 @@ fun HomeScreenContent(
             ) {
                 Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                     val formattedMessage = dialogueMessage.replace("○○", playerName)
-                    HomeCommentBanner(expressionRes, formattedMessage, onRefresh = onRefreshDialogue, onClick = onCharacterClick)
+                    HomeCommentBanner(formattedMessage, onRefresh = onRefreshDialogue, onClick = onCharacterClick)
 
                     var homeInput by remember { mutableStateOf("") }
                     Row(
@@ -1913,9 +1973,13 @@ fun splitMessageIntoPages(text: String): List<String> {
     return result.ifEmpty { listOf(text) }
 }
 
-fun splitByTextMeasure(text: String, measurer: TextMeasurer, fontSize: TextUnit, widthPx: Int, maxLines: Int = 2): List<String> {
-    val style = TextStyle(fontSize = fontSize)
-    val constraints = Constraints(maxWidth = widthPx)
+// バナー計測用と実描画用で必ず同一のTextStyleを使う（不一致だと2行判定なのに3行目が切り捨てられる）
+val bannerTextStyle = TextStyle(fontSize = 12.sp)
+
+fun splitByTextMeasure(text: String, measurer: TextMeasurer, style: TextStyle, widthPx: Int, maxLines: Int = 2): List<String> {
+    // 計測誤差の安全マージン（端末フォントレンダリング差でのはみ出し防止）
+    val safeWidthPx = (widthPx - 4).coerceAtLeast(1)
+    val constraints = Constraints(maxWidth = safeWidthPx)
     val pages = mutableListOf<String>()
     var remaining = text.trim()
     while (remaining.isNotEmpty()) {
@@ -1930,11 +1994,11 @@ fun splitByTextMeasure(text: String, measurer: TextMeasurer, fontSize: TextUnit,
 }
 
 @Composable
-fun HomeCommentBanner(expr: Int, message: String, onRefresh: (() -> Unit)? = null, onClick: () -> Unit = {}) {
+fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick: () -> Unit = {}) {
     val textMeasurer = rememberTextMeasurer()
     var columnWidthPx by remember { mutableStateOf(0) }
     val pages = remember(message, columnWidthPx) {
-        if (columnWidthPx > 0) splitByTextMeasure(message, textMeasurer, 12.sp, columnWidthPx)
+        if (columnWidthPx > 0) splitByTextMeasure(message, textMeasurer, bannerTextStyle, columnWidthPx)
         else splitMessageIntoPages(message)
     }
     var pageIndex by remember(message) { mutableStateOf(0) }
@@ -1945,18 +2009,6 @@ fun HomeCommentBanner(expr: Int, message: String, onRefresh: (() -> Unit)? = nul
     Box {
     Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0)), modifier = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }) {
         Row(modifier = Modifier.padding(10.dp).height(IntrinsicSize.Max), verticalAlignment = Alignment.CenterVertically) {
-                Image(painter = painterResource(id = expressionToFaceRes(expr)), contentDescription = null, modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFFFE0E9)), contentScale = ContentScale.Crop)
-                Spacer(modifier = Modifier.width(10.dp))
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .fillMaxHeight()
-                        .background(Color(0xFFFFB7D0).copy(alpha = 0.7f))
-                )
-                Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f).onSizeChanged { columnWidthPx = it.width }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
@@ -1979,7 +2031,7 @@ fun HomeCommentBanner(expr: Int, message: String, onRefresh: (() -> Unit)? = nul
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
-                    Text(currentText, fontSize = 12.sp, color = Color(0xFF1A1A1A), maxLines = 2, overflow = TextOverflow.Clip)
+                    Text(currentText, style = bannerTextStyle, color = Color(0xFF1A1A1A), maxLines = 2, overflow = TextOverflow.Clip)
                 }
         }
     }
