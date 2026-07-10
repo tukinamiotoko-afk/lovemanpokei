@@ -1556,12 +1556,11 @@ fun HomeScreenContent(
     // 吹き出しカードのテキスト欄は常に2行分の固定高さ（HomeCommentBanner側で対応済み）なので、
     // カードの高さはメッセージの行数によらず一定になる。実測して、キャラの位置をそこに固定する。
     val density = LocalDensity.current
-    val fallbackCardHeightPx = with(density) { 230.dp.toPx() }
+    val fallbackCardHeightPx = with(density) { 260.dp.toPx() }
     var measuredCardHeightPx by remember { mutableStateOf(0f) }
     val effectiveCardHeightPx = if (measuredCardHeightPx > 0f) measuredCardHeightPx else fallbackCardHeightPx
-    val cardHeightDp = with(density) { effectiveCardHeightPx.toDp() }
-    // ヘルプキャラはキャラより少しだけ余分に逃がす（カード高さが一定になったので大きな余白は不要）
-    val hintExtraClearanceDp = 8.dp
+    // 実測値が僅かに小さく出た場合でもキャラの裾がカードに隠れないよう、安全マージンを載せる
+    val cardHeightDp = with(density) { effectiveCardHeightPx.toDp() } + 16.dp
 
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
@@ -1658,7 +1657,7 @@ fun HomeScreenContent(
                 HintSdHikari(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
-                        .offset(x = (-20).dp, y = -hintExtraClearanceDp)
+                        .offset(x = (-20).dp)
                 )
             }
         } // キャラ表示用Column（吹き出しカードを含まないため、カードが伸びてもキャラの枠は一切変化しない）
@@ -2055,8 +2054,14 @@ fun splitMessageIntoPages(text: String): List<String> {
 }
 
 // バナー計測用と実描画用で必ず同一のTextStyleを使う（不一致だと2行判定なのに3行目が切り捨てられる）
-// lineHeightも明示し、テーマ既定の24spを継承して2行が間延びするのを防ぐ
-val bannerTextStyle = TextStyle(fontSize = 11.sp, lineHeight = 15.sp)
+// lineHeightも明示し、テーマ既定の24spを継承して2行が間延びするのを防ぐ。
+// includeFontPadding=falseで、Android既定の余分な行間パディングによる高さのズレも消しておく
+// （このズレがあると、固定した2行分の高さの箱から実際の描画がわずかにはみ出し下端が切れる）
+val bannerTextStyle = TextStyle(
+    fontSize = 11.sp,
+    lineHeight = 15.sp,
+    platformStyle = PlatformTextStyle(includeFontPadding = false)
+)
 
 fun splitByTextMeasure(text: String, measurer: TextMeasurer, style: TextStyle, widthPx: Int, maxLines: Int = 2): List<String> {
     // 計測誤差の安全マージン（端末フォントレンダリング差でのはみ出し防止）
@@ -2094,7 +2099,7 @@ fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick:
     // テキスト欄は1行の時も常に2行分の高さを確保する。これによりカードの高さが
     // メッセージの行数によらず一定になり、キャラの位置固定がシンプルになる。
     val density = LocalDensity.current
-    val twoLineHeightDp = with(density) { (resolvedTextStyle.lineHeight.toPx() * 2).toDp() }
+    val twoLineHeightDp = with(density) { (resolvedTextStyle.lineHeight.toPx() * 2).toDp() } + 4.dp
 
     Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0)), modifier = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }) {
         // IntrinsicSize.Max は二重測定パスを要求し、onSizeChangedが途中経過の幅を拾うレースを招くため使わない
