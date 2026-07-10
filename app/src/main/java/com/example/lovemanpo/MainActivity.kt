@@ -1553,25 +1553,15 @@ fun HomeScreenContent(
 ) {
     var showWeatherSheet by remember { mutableStateOf(false) }
 
-    // 吹き出しカードの「1行時の高さ」を実測して、キャラの位置をそこに固定する。
-    // カードが2行に伸びても、この基準値自体は動かないためキャラは動かない。
-    //
-    // 「1行だと分かった瞬間だけ記録する」方式は、HomeCommentBanner側のLaunchedEffect（非同期）と
-    // onSizeChanged（レイアウト時、同期）のタイミングがずれるとズレた値のまま固定されてしまう欠陥があった。
-    // そこで「今の実測高さ」と「今の行数」から逆算する方式にする：
-    //   1行時の高さ = 今の実測高さ - (今の行数 - 1) × 1行分の高さ
-    // これなら1行/2行どちらの瞬間に測っても、毎回そこから正しい1行時基準を導出できる。
+    // 吹き出しカードのテキスト欄は常に2行分の固定高さ（HomeCommentBanner側で対応済み）なので、
+    // カードの高さはメッセージの行数によらず一定になる。実測して、キャラの位置をそこに固定する。
     val density = LocalDensity.current
-    val fallbackCardHeightPx = with(density) { 220.dp.toPx() }
-    var lastLineCount by remember { mutableStateOf(1) }
-    var lastMeasuredCardHeightPx by remember { mutableStateOf(0f) }
-    val bannerLineHeightPx = with(density) { 15.sp.toPx() }
-    val effectiveCardHeightPx = if (lastMeasuredCardHeightPx > 0f) {
-        (lastMeasuredCardHeightPx - (lastLineCount - 1).coerceAtLeast(0) * bannerLineHeightPx).coerceAtLeast(0f)
-    } else fallbackCardHeightPx
-    val cardHeight1LineDp = with(density) { effectiveCardHeightPx.toDp() }
-    // ヘルプキャラは2行時（1行時+1行分）でも重ならないよう、さらに上に逃がす
-    val hintExtraClearanceDp = with(density) { bannerLineHeightPx.toDp() } + 6.dp
+    val fallbackCardHeightPx = with(density) { 230.dp.toPx() }
+    var measuredCardHeightPx by remember { mutableStateOf(0f) }
+    val effectiveCardHeightPx = if (measuredCardHeightPx > 0f) measuredCardHeightPx else fallbackCardHeightPx
+    val cardHeightDp = with(density) { effectiveCardHeightPx.toDp() }
+    // ヘルプキャラはキャラより少しだけ余分に逃がす（カード高さが一定になったので大きな余白は不要）
+    val hintExtraClearanceDp = 8.dp
 
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
@@ -1604,36 +1594,39 @@ fun HomeScreenContent(
                     modifier = Modifier.weight(0.72f),
                     pts = actionPoints
                 )
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    HomeTopCircleButton(Icons.Default.Notifications)
-                    HomeTopCircleButton(Icons.Default.Settings)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    HomeTopCircleButton(Icons.Default.Notifications, size = 26.dp)
+                    HomeTopCircleButton(Icons.Default.Settings, size = 26.dp)
                     HomeTopCircleButton(
                         icon = Icons.Default.Storefront,
                         containerColor = Color(0xFFFFE8F0),
                         iconColor = Color(0xFFFF6B9D),
-                        onClick = onShopClick
+                        onClick = onShopClick,
+                        size = 26.dp
                     )
                     HomeTopCircleButton(
                         icon = Icons.Default.Checkroom,
                         containerColor = Color(0xFFFFE8F0),
                         iconColor = Color(0xFFFF6B9D),
-                        onClick = onWardrobeClick
+                        onClick = onWardrobeClick,
+                        size = 26.dp
                     )
                     HomeTopCircleButton(
                         icon = Icons.Default.BugReport,
                         containerColor = Color.Red.copy(alpha = 0.1f),
                         iconColor = Color.Red,
-                        onClick = onDebugClick
+                        onClick = onDebugClick,
+                        size = 26.dp
                     )
                     Surface(
                         shape = CircleShape,
                         color = Color.White,
-                        modifier = Modifier.size(30.dp).clickable(enabled = weatherInfo != null) { showWeatherSheet = true; onWeatherTap() }
+                        modifier = Modifier.size(26.dp).clickable(enabled = weatherInfo != null) { showWeatherSheet = true; onWeatherTap() }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(
                                 text = if (weatherInfo != null) wmoToEmoji(weatherInfo.weatherCode) else "☁",
-                                fontSize = 16.sp
+                                fontSize = 14.sp
                             )
                         }
                     }
@@ -1643,7 +1636,7 @@ fun HomeScreenContent(
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(bottom = 30.dp + cardHeight1LineDp)) {
+                .padding(bottom = 30.dp + cardHeightDp)) {
                 Image(
                     painter = painterResource(id = expressionRes),
                     contentDescription = "ひかり",
@@ -1677,7 +1670,7 @@ fun HomeScreenContent(
                 .fillMaxWidth()
                 .offset(y = (-30).dp)
                 .onSizeChanged { size ->
-                    if (size.height > 0) lastMeasuredCardHeightPx = size.height.toFloat()
+                    if (size.height > 0) measuredCardHeightPx = size.height.toFloat()
                 }
                 .shadow(8.dp, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                 .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
@@ -1692,8 +1685,7 @@ fun HomeScreenContent(
                 HomeCommentBanner(
                     formattedMessage,
                     onRefresh = onRefreshDialogue,
-                    onClick = onCharacterClick,
-                    onLineCountChanged = { count -> lastLineCount = count }
+                    onClick = onCharacterClick
                 )
 
                 var homeInput by remember { mutableStateOf("") }
@@ -1766,11 +1758,11 @@ fun HomeScreenContent(
 
 
 @Composable
-fun HomeTopCircleButton(icon: androidx.compose.ui.graphics.vector.ImageVector, containerColor: Color = Color.White, iconColor: Color = Color.Gray, onClick: () -> Unit = {}) {
+fun HomeTopCircleButton(icon: androidx.compose.ui.graphics.vector.ImageVector, containerColor: Color = Color.White, iconColor: Color = Color.Gray, onClick: () -> Unit = {}, size: androidx.compose.ui.unit.Dp = 30.dp) {
     Surface(shape = CircleShape, color = containerColor, modifier = Modifier
-        .size(30.dp)
+        .size(size)
         .clickable { onClick() }) {
-        Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = iconColor, modifier = Modifier.size(22.dp)) }
+        Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = iconColor, modifier = Modifier.size(size * 0.73f)) }
     }
 }
 
@@ -2084,7 +2076,7 @@ fun splitByTextMeasure(text: String, measurer: TextMeasurer, style: TextStyle, w
 }
 
 @Composable
-fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick: () -> Unit = {}, onLineCountChanged: (Int) -> Unit = {}) {
+fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick: () -> Unit = {}) {
     val textMeasurer = rememberTextMeasurer()
     // Text() は指定していないプロパティ（letterSpacing等）をLocalTextStyleから継承する。
     // 計測もそれに合わせて解決済みスタイルを使わないと、実描画とlineCountがズレる。
@@ -2099,14 +2091,10 @@ fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick:
     val currentText = pages.getOrElse(safePageIndex) { message }
     val multiPage = pages.size > 1
 
-    // 現在表示中のページが実際に何行かを親に伝える（キャラ位置の基準に使うため）
-    val currentLineCount = remember(currentText, columnWidthPx, resolvedTextStyle) {
-        if (columnWidthPx > 0) {
-            val safeWidthPx = (columnWidthPx - 4).coerceAtLeast(1)
-            textMeasurer.measure(currentText, resolvedTextStyle, constraints = Constraints(maxWidth = safeWidthPx)).lineCount
-        } else 1
-    }
-    LaunchedEffect(currentLineCount) { onLineCountChanged(currentLineCount) }
+    // テキスト欄は1行の時も常に2行分の高さを確保する。これによりカードの高さが
+    // メッセージの行数によらず一定になり、キャラの位置固定がシンプルになる。
+    val density = LocalDensity.current
+    val twoLineHeightDp = with(density) { (resolvedTextStyle.lineHeight.toPx() * 2).toDp() }
 
     Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0)), modifier = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }) {
         // IntrinsicSize.Max は二重測定パスを要求し、onSizeChangedが途中経過の幅を拾うレースを招くため使わない
@@ -2149,7 +2137,14 @@ fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick:
                         }
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
-                    Text(currentText, style = resolvedTextStyle, color = Color(0xFF1A1A1A), maxLines = 2, overflow = TextOverflow.Clip)
+                    Text(
+                        currentText,
+                        style = resolvedTextStyle,
+                        color = Color(0xFF1A1A1A),
+                        maxLines = 2,
+                        overflow = TextOverflow.Clip,
+                        modifier = Modifier.height(twoLineHeightDp)
+                    )
                 }
         }
     }
