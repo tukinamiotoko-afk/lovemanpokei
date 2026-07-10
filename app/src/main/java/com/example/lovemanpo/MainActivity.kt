@@ -1512,14 +1512,20 @@ fun HomeScreenContent(
 
     // 吹き出しカードの「1行時の高さ」を実測して、キャラの位置をそこに固定する。
     // カードが2行に伸びても、この基準値自体は動かないためキャラは動かない。
-    // 「観測された最小値」ではなく「実際に1行だと分かっている時の高さ」を使う。
-    // 前者だと、フォールバック推測値が真の1行高さより小さかった場合に永久に補正されないため。
+    //
+    // 「1行だと分かった瞬間だけ記録する」方式は、HomeCommentBanner側のLaunchedEffect（非同期）と
+    // onSizeChanged（レイアウト時、同期）のタイミングがずれるとズレた値のまま固定されてしまう欠陥があった。
+    // そこで「今の実測高さ」と「今の行数」から逆算する方式にする：
+    //   1行時の高さ = 今の実測高さ - (今の行数 - 1) × 1行分の高さ
+    // これなら1行/2行どちらの瞬間に測っても、毎回そこから正しい1行時基準を導出できる。
     val density = LocalDensity.current
     val fallbackCardHeightPx = with(density) { 220.dp.toPx() }
-    var isBannerOneLine by remember { mutableStateOf(true) }
-    var oneLineCardHeightPx by remember { mutableStateOf(0f) }
-    val effectiveCardHeightPx = if (oneLineCardHeightPx > 0f) oneLineCardHeightPx else fallbackCardHeightPx
+    var lastLineCount by remember { mutableStateOf(1) }
+    var lastMeasuredCardHeightPx by remember { mutableStateOf(0f) }
     val bannerLineHeightPx = with(density) { 15.sp.toPx() }
+    val effectiveCardHeightPx = if (lastMeasuredCardHeightPx > 0f) {
+        (lastMeasuredCardHeightPx - (lastLineCount - 1).coerceAtLeast(0) * bannerLineHeightPx).coerceAtLeast(0f)
+    } else fallbackCardHeightPx
     val cardHeight1LineDp = with(density) { effectiveCardHeightPx.toDp() }
     // ヘルプキャラは2行時（1行時+1行分）でも重ならないよう、さらに上に逃がす
     val hintExtraClearanceDp = with(density) { bannerLineHeightPx.toDp() } + 6.dp
@@ -1616,10 +1622,7 @@ fun HomeScreenContent(
                 .fillMaxWidth()
                 .offset(y = (-30).dp)
                 .onSizeChanged { size ->
-                    // 「今表示中のセリフが実際に1行かどうか」が分かっている時だけ基準値を更新する
-                    if (isBannerOneLine && size.height > 0) {
-                        oneLineCardHeightPx = size.height.toFloat()
-                    }
+                    if (size.height > 0) lastMeasuredCardHeightPx = size.height.toFloat()
                 }
                 .shadow(8.dp, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                 .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
@@ -1635,7 +1638,7 @@ fun HomeScreenContent(
                     formattedMessage,
                     onRefresh = onRefreshDialogue,
                     onClick = onCharacterClick,
-                    onLineCountChanged = { count -> isBannerOneLine = count <= 1 }
+                    onLineCountChanged = { count -> lastLineCount = count }
                 )
 
                 var homeInput by remember { mutableStateOf("") }
