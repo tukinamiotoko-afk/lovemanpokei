@@ -1556,11 +1556,10 @@ fun HomeScreenContent(
     // 吹き出しカードのテキスト欄は常に2行分の固定高さ（HomeCommentBanner側で対応済み）なので、
     // カードの高さはメッセージの行数によらず一定になる。実測して、キャラの位置をそこに固定する。
     val density = LocalDensity.current
-    val fallbackCardHeightPx = with(density) { 260.dp.toPx() }
+    val fallbackCardHeightPx = with(density) { 230.dp.toPx() }
     var measuredCardHeightPx by remember { mutableStateOf(0f) }
     val effectiveCardHeightPx = if (measuredCardHeightPx > 0f) measuredCardHeightPx else fallbackCardHeightPx
-    // 実測値が僅かに小さく出た場合でもキャラの裾がカードに隠れないよう、安全マージンを載せる
-    val cardHeightDp = with(density) { effectiveCardHeightPx.toDp() } + 16.dp
+    val cardHeightDp = with(density) { effectiveCardHeightPx.toDp() }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
