@@ -1634,7 +1634,7 @@ fun HomeScreenContent(
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(bottom = 30.dp + cardHeightDp)) {
+                .padding(bottom = 20.dp + cardHeightDp)) {
                 Image(
                     painter = painterResource(id = expressionRes),
                     contentDescription = "ひかり",
@@ -1666,7 +1666,7 @@ fun HomeScreenContent(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .offset(y = (-30).dp)
+                .offset(y = (-20).dp)
                 .onSizeChanged { size ->
                     if (size.height > 0) measuredCardHeightPx = size.height.toFloat()
                 }
@@ -1690,11 +1690,11 @@ fun HomeScreenContent(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 6.dp)
+                        .padding(vertical = 4.dp)
                         .shadow(2.dp, RoundedCornerShape(24.dp))
                         .clip(RoundedCornerShape(24.dp))
                         .background(Color.White)
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                        .padding(horizontal = 14.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     androidx.compose.foundation.text.BasicTextField(
@@ -2048,8 +2048,8 @@ fun splitMessageIntoPages(text: String): List<String> {
 // includeFontPadding=falseで、Android既定の余分な行間パディングによる高さのズレも消しておく
 // （このズレがあると、固定した2行分の高さの箱から実際の描画がわずかにはみ出し下端が切れる）
 val bannerTextStyle = TextStyle(
-    fontSize = 9.sp,
-    lineHeight = 13.sp,
+    fontSize = 7.sp,
+    lineHeight = 10.sp,
     platformStyle = PlatformTextStyle(includeFontPadding = false)
 )
 
