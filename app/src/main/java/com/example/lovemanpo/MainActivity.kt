@@ -4278,7 +4278,7 @@ val costumeCatalog = listOf(
     Costume("default",   "私服",         0,  R.drawable.hikari_smile, R.drawable.hikari_blush, R.drawable.hikari_celebrate, R.drawable.hikari_think),
     Costume("barikyari",  "バリキャリ",    10, R.drawable.hikari_barikyari_smile, R.drawable.hikari_barikyari_blush, R.drawable.hikari_barikyari_celebrate, R.drawable.hikari_bairikyari_think),
     Costume("boisyoutu",  "ボーイッシュ",  8,  R.drawable.hikari_boisyoutu_smile, R.drawable.hikari_boisyoutu_blush, R.drawable.hikari_boisyoutu_celebrate, R.drawable.hikari_boisyoutu_think),
-    Costume("gosurori",   "ゴスロリ",      15, R.drawable.hikari_gosurori_smile, R.drawable.hikari_gosurori_blush, R.drawable.hikari_gosurori_celebrate, R.drawable.hikari_gosurori_think),
+    Costume("punks",      "パンクス",      15, R.drawable.hikari_punks_smile, R.drawable.hikari_punks_blush, R.drawable.hikari_punks_celebrate, R.drawable.hikari_punks_think),
     Costume("mizugi",     "水着",         12, R.drawable.hikari_mizugi_smile, R.drawable.hikari_mizugi_blush, R.drawable.hikari_mizugi_celebrate, R.drawable.hikari_mizugi_think),
     Costume("santa",      "サンタ",       15, R.drawable.hikari_santa_smile, R.drawable.hikari_santa_blush, R.drawable.hikari_santa_cerebrate, R.drawable.hikari_santa_think)
 )
