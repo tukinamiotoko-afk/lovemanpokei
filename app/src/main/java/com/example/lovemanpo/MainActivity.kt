@@ -2073,25 +2073,25 @@ fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick:
                         } else {
                             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
                         }
+                        if (onRefresh != null) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(0xFFFFE8F0),
+                                border = BorderStroke(1.dp, Color(0xFFFFB7D0)),
+                                modifier = Modifier.clickable { onRefresh() }
+                            ) {
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    contentDescription = "更新",
+                                    tint = Color(0xFFFF6B9D),
+                                    modifier = Modifier.padding(4.dp).size(12.dp)
+                                )
+                            }
+                        }
                     }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
                     Text(currentText, style = resolvedTextStyle, color = Color(0xFF1A1A1A), maxLines = 2, overflow = TextOverflow.Clip)
-                }
-                if (onRefresh != null) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFFFE8F0),
-                        border = BorderStroke(1.dp, Color(0xFFFFB7D0)),
-                        modifier = Modifier.clickable { onRefresh() }
-                    ) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "更新",
-                            tint = Color(0xFFFF6B9D),
-                            modifier = Modifier.padding(5.dp).size(14.dp)
-                        )
-                    }
                 }
         }
     }
