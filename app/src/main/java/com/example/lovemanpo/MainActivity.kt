@@ -1512,11 +1512,15 @@ fun HomeScreenContent(
 
     // 吹き出しカードの「1行時の高さ」を実測して、キャラの位置をそこに固定する。
     // カードが2行に伸びても、この基準値自体は動かないためキャラは動かない。
+    // 「観測された最小値」ではなく「実際に1行だと分かっている時の高さ」を使う。
+    // 前者だと、フォールバック推測値が真の1行高さより小さかった場合に永久に補正されないため。
     val density = LocalDensity.current
     val fallbackCardHeightPx = with(density) { 220.dp.toPx() }
-    var minCardHeightPx by remember { mutableStateOf(fallbackCardHeightPx) }
+    var isBannerOneLine by remember { mutableStateOf(true) }
+    var oneLineCardHeightPx by remember { mutableStateOf(0f) }
+    val effectiveCardHeightPx = if (oneLineCardHeightPx > 0f) oneLineCardHeightPx else fallbackCardHeightPx
     val bannerLineHeightPx = with(density) { 15.sp.toPx() }
-    val cardHeight1LineDp = with(density) { minCardHeightPx.toDp() }
+    val cardHeight1LineDp = with(density) { effectiveCardHeightPx.toDp() }
     // ヘルプキャラは2行時（1行時+1行分）でも重ならないよう、さらに上に逃がす
     val hintExtraClearanceDp = with(density) { bannerLineHeightPx.toDp() } + 6.dp
 
@@ -1612,9 +1616,9 @@ fun HomeScreenContent(
                 .fillMaxWidth()
                 .offset(y = (-30).dp)
                 .onSizeChanged { size ->
-                    // 1行時が最小の高さになるので、観測した最小値を「1行時の基準」として使う
-                    if (size.height > 0 && size.height < minCardHeightPx) {
-                        minCardHeightPx = size.height.toFloat()
+                    // 「今表示中のセリフが実際に1行かどうか」が分かっている時だけ基準値を更新する
+                    if (isBannerOneLine && size.height > 0) {
+                        oneLineCardHeightPx = size.height.toFloat()
                     }
                 }
                 .shadow(8.dp, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
@@ -1627,7 +1631,12 @@ fun HomeScreenContent(
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 val formattedMessage = dialogueMessage.replace("○○", playerName)
-                HomeCommentBanner(formattedMessage, onRefresh = onRefreshDialogue, onClick = onCharacterClick)
+                HomeCommentBanner(
+                    formattedMessage,
+                    onRefresh = onRefreshDialogue,
+                    onClick = onCharacterClick,
+                    onLineCountChanged = { count -> isBannerOneLine = count <= 1 }
+                )
 
                 var homeInput by remember { mutableStateOf("") }
                 Row(
@@ -2017,7 +2026,7 @@ fun splitByTextMeasure(text: String, measurer: TextMeasurer, style: TextStyle, w
 }
 
 @Composable
-fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick: () -> Unit = {}) {
+fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick: () -> Unit = {}, onLineCountChanged: (Int) -> Unit = {}) {
     val textMeasurer = rememberTextMeasurer()
     // Text() は指定していないプロパティ（letterSpacing等）をLocalTextStyleから継承する。
     // 計測もそれに合わせて解決済みスタイルを使わないと、実描画とlineCountがズレる。
@@ -2031,6 +2040,15 @@ fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick:
     val safePageIndex = pageIndex.coerceIn(0, (pages.size - 1).coerceAtLeast(0))
     val currentText = pages.getOrElse(safePageIndex) { message }
     val multiPage = pages.size > 1
+
+    // 現在表示中のページが実際に何行かを親に伝える（キャラ位置の基準に使うため）
+    val currentLineCount = remember(currentText, columnWidthPx, resolvedTextStyle) {
+        if (columnWidthPx > 0) {
+            val safeWidthPx = (columnWidthPx - 4).coerceAtLeast(1)
+            textMeasurer.measure(currentText, resolvedTextStyle, constraints = Constraints(maxWidth = safeWidthPx)).lineCount
+        } else 1
+    }
+    LaunchedEffect(currentLineCount) { onLineCountChanged(currentLineCount) }
 
     Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0)), modifier = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }) {
         // IntrinsicSize.Max は二重測定パスを要求し、onSizeChangedが途中経過の幅を拾うレースを招くため使わない
