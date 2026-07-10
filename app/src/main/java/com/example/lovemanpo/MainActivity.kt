@@ -1510,6 +1510,16 @@ fun HomeScreenContent(
 ) {
     var showWeatherSheet by remember { mutableStateOf(false) }
 
+    // 吹き出しカードの「1行時の高さ」を実測して、キャラの位置をそこに固定する。
+    // カードが2行に伸びても、この基準値自体は動かないためキャラは動かない。
+    val density = LocalDensity.current
+    val fallbackCardHeightPx = with(density) { 220.dp.toPx() }
+    var minCardHeightPx by remember { mutableStateOf(fallbackCardHeightPx) }
+    val bannerLineHeightPx = with(density) { 15.sp.toPx() }
+    val cardHeight1LineDp = with(density) { minCardHeightPx.toDp() }
+    // ヘルプキャラは2行時（1行時+1行分）でも重ならないよう、さらに上に逃がす
+    val hintExtraClearanceDp = with(density) { bannerLineHeightPx.toDp() } + 6.dp
+
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = bgRes),
@@ -1568,7 +1578,7 @@ fun HomeScreenContent(
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(bottom = 30.dp)) {
+                .padding(bottom = 30.dp + cardHeight1LineDp)) {
                 Image(
                     painter = painterResource(id = expressionRes),
                     contentDescription = "ひかり",
@@ -1587,7 +1597,11 @@ fun HomeScreenContent(
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
                 }
 
-                HintSdHikari(modifier = Modifier.align(Alignment.BottomStart).offset(x = (-20).dp))
+                HintSdHikari(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .offset(x = (-20).dp, y = -hintExtraClearanceDp)
+                )
             }
         } // キャラ表示用Column（吹き出しカードを含まないため、カードが伸びてもキャラの枠は一切変化しない）
 
@@ -1597,6 +1611,12 @@ fun HomeScreenContent(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .offset(y = (-30).dp)
+                .onSizeChanged { size ->
+                    // 1行時が最小の高さになるので、観測した最小値を「1行時の基準」として使う
+                    if (size.height > 0 && size.height < minCardHeightPx) {
+                        minCardHeightPx = size.height.toFloat()
+                    }
+                }
                 .shadow(8.dp, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                 .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                 .background(
