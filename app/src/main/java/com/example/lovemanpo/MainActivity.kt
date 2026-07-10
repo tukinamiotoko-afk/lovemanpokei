@@ -320,6 +320,14 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getStringSet("UNLOCKED_MEMORY_IDS", emptySet()) ?: emptySet()
         set(value) = prefs.edit { putStringSet("UNLOCKED_MEMORY_IDS", value) }
 
+    var ownedCostumeIds: Set<String>
+        get() = prefs.getStringSet("OWNED_COSTUME_IDS", setOf("default")) ?: setOf("default")
+        set(value) = prefs.edit { putStringSet("OWNED_COSTUME_IDS", value) }
+
+    var equippedCostumeId: String
+        get() = prefs.getString("EQUIPPED_COSTUME_ID", "default") ?: "default"
+        set(value) = prefs.edit { putString("EQUIPPED_COSTUME_ID", value) }
+
     suspend fun recordSteps(date: String, steps: Int, activeTimeMillis: Long = 0L) {
         stepDao.upsert(StepRecord(date = date, stepCount = steps, activeTimeMillis = activeTimeMillis))
     }
@@ -659,6 +667,33 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
         return false
     }
 
+    val ownedCostumeIds = mutableStateOf(repository.ownedCostumeIds)
+    val equippedCostumeId = mutableStateOf(repository.equippedCostumeId)
+
+    fun spendPoints(amount: Int): Boolean {
+        if (currentActionPoints.value >= amount) {
+            repository.spentActionPoints += amount
+            spentActionPoints.intValue = repository.spentActionPoints
+            return true
+        }
+        return false
+    }
+
+    fun buyCostume(costume: Costume): Boolean {
+        if (costume.id in ownedCostumeIds.value) return false
+        if (!spendPoints(costume.price)) return false
+        val updated = ownedCostumeIds.value + costume.id
+        repository.ownedCostumeIds = updated
+        ownedCostumeIds.value = updated
+        return true
+    }
+
+    fun equipCostume(costumeId: String) {
+        if (costumeId !in ownedCostumeIds.value) return
+        repository.equippedCostumeId = costumeId
+        equippedCostumeId.value = costumeId
+    }
+
     fun refundPointForChat() {
         if (repository.spentActionPoints > 0) {
             repository.spentActionPoints--
@@ -958,6 +993,8 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 composable("settings") { SettingsScreen(navController, viewModel) }
                 composable("debug") { DebugScreen(navController, viewModel) }
                 composable("memories") { MemoriesScreen(navController, viewModel) }
+                composable("shop") { ShopScreen(navController, viewModel) }
+                composable("wardrobe") { CostumeChangeScreen(navController, viewModel) }
             }
             key(navTrigger) {
                 if (navTrigger > 0) CharacterPullOverlay()
@@ -1380,7 +1417,9 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     val stepAchievementDialogue = stepDialogue.takeIf { it.thresholdSteps > 0 }
     val activeWeatherDialogue = if (weatherDialogueActive) weatherDialogue else null
     val displayMessage = (homeChatReply?.first ?: touchedDialogue?.text ?: stepAchievementDialogue?.text ?: activeWeatherDialogue?.text ?: stepDialogue.text).replace("○○", playerName)
-    val displayExpression = homeChatReply?.second ?: touchedDialogue?.expr ?: stepAchievementDialogue?.expr ?: activeWeatherDialogue?.expr ?: stepDialogue.expr
+    val baseDisplayExpression = homeChatReply?.second ?: touchedDialogue?.expr ?: stepAchievementDialogue?.expr ?: activeWeatherDialogue?.expr ?: stepDialogue.expr
+    val equippedCostumeId by viewModel.equippedCostumeId
+    val displayExpression = costumedExpressionRes(baseDisplayExpression, equippedCostumeId)
 
     LaunchedEffect(displayMessage, playerName) {
         viewModel.saveCurrentDialogue(displayMessage.replace("○○", playerName))
@@ -1465,7 +1504,9 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         onDiaryClick = { navController.navigate("diary") },
         onRecordsClick = { navController.navigate("records") },
         onMemoriesClick = { navController.navigate("memories") },
-        onDebugClick = { navController.navigate("debug") }
+        onDebugClick = { navController.navigate("debug") },
+        onShopClick = { navController.navigate("shop") },
+        onWardrobeClick = { navController.navigate("wardrobe") }
     )
 
     if (pendingLevelUp > 0) {
@@ -1506,7 +1547,9 @@ fun HomeScreenContent(
     onDiaryClick: () -> Unit,
     onRecordsClick: () -> Unit,
     onMemoriesClick: () -> Unit = {},
-    onDebugClick: () -> Unit
+    onDebugClick: () -> Unit,
+    onShopClick: () -> Unit = {},
+    onWardrobeClick: () -> Unit = {}
 ) {
     var showWeatherSheet by remember { mutableStateOf(false) }
 
@@ -1564,6 +1607,18 @@ fun HomeScreenContent(
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     HomeTopCircleButton(Icons.Default.Notifications)
                     HomeTopCircleButton(Icons.Default.Settings)
+                    HomeTopCircleButton(
+                        icon = Icons.Default.Storefront,
+                        containerColor = Color(0xFFFFE8F0),
+                        iconColor = Color(0xFFFF6B9D),
+                        onClick = onShopClick
+                    )
+                    HomeTopCircleButton(
+                        icon = Icons.Default.Checkroom,
+                        containerColor = Color(0xFFFFE8F0),
+                        iconColor = Color(0xFFFF6B9D),
+                        onClick = onWardrobeClick
+                    )
                     HomeTopCircleButton(
                         icon = Icons.Default.BugReport,
                         containerColor = Color.Red.copy(alpha = 0.1f),
@@ -4217,6 +4272,39 @@ val loveLevelWalls = listOf(
     LoveLevelWall(10, 400_000L),
 )
 
+// ---- 衣装（ショップ・衣装変更）----
+
+data class Costume(
+    val id: String,
+    val name: String,
+    val price: Int,
+    val smileRes: Int,
+    val blushRes: Int,
+    val celebrateRes: Int,
+    val thinkRes: Int
+)
+
+val costumeCatalog = listOf(
+    Costume("default",   "私服",         0,  R.drawable.hikari_smile, R.drawable.hikari_blush, R.drawable.hikari_celebrate, R.drawable.hikari_think),
+    Costume("barikyari",  "バリキャリ",    10, R.drawable.hikari_barikyari_smile, R.drawable.hikari_barikyari_blush, R.drawable.hikari_barikyari_celebrate, R.drawable.hikari_bairikyari_think),
+    Costume("boisyoutu",  "ボーイッシュ",  8,  R.drawable.hikari_boisyoutu_smile, R.drawable.hikari_boisyoutu_blush, R.drawable.hikari_boisyoutu_celebrate, R.drawable.hikari_boisyoutu_think),
+    Costume("gosurori",   "ゴスロリ",      15, R.drawable.hikari_gosurori_smile, R.drawable.hikari_gosurori_blush, R.drawable.hikari_gosurori_celebrate, R.drawable.hikari_gosurori_think),
+    Costume("mizugi",     "水着",         12, R.drawable.hikari_mizugi_smile, R.drawable.hikari_mizugi_blush, R.drawable.hikari_mizugi_celebrate, R.drawable.hikari_mizugi_think),
+    Costume("santa",      "サンタ",       15, R.drawable.hikari_santa_smile, R.drawable.hikari_santa_blush, R.drawable.hikari_santa_cerebrate, R.drawable.hikari_santa_think)
+)
+
+// ホーム画面のベース表情drawableを、現在装備中の衣装の対応する表情に置き換える
+fun costumedExpressionRes(baseRes: Int, costumeId: String): Int {
+    val costume = costumeCatalog.find { it.id == costumeId } ?: return baseRes
+    return when (baseRes) {
+        R.drawable.hikari_smile -> costume.smileRes
+        R.drawable.hikari_blush -> costume.blushRes
+        R.drawable.hikari_celebrate -> costume.celebrateRes
+        R.drawable.hikari_think -> costume.thinkRes
+        else -> baseRes
+    }
+}
+
 // ---- おもいで（コレクション）----
 
 data class MemoryItem(
@@ -5799,5 +5887,216 @@ fun MemoryCard(item: MemoryItem, isAvailable: Boolean, isUnlocked: Boolean) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+// ---- ショップ（衣装購入）----
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ShopScreen(navController: NavController, viewModel: StepViewModel) {
+    val pinkAccent = Color(0xFFFF6B9D)
+    val actionPoints by viewModel.currentActionPoints
+    val ownedIds by viewModel.ownedCostumeIds
+    val shopItems = remember { costumeCatalog.filter { it.id != "default" } }
+    var toastMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(toastMessage) {
+        if (toastMessage != null) {
+            delay(1500)
+            toastMessage = null
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("ショップ", color = pinkAccent, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = pinkAccent)
+                    }
+                },
+                actions = {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
+                        Icon(Icons.Default.Bolt, contentDescription = null, tint = pinkAccent, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text("$actionPoints", fontWeight = FontWeight.Bold, color = pinkAccent)
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(shopItems) { costume ->
+                    ShopCostumeCard(
+                        costume = costume,
+                        isOwned = costume.id in ownedIds,
+                        canAfford = actionPoints >= costume.price,
+                        onBuy = {
+                            if (viewModel.buyCostume(costume)) {
+                                toastMessage = "${costume.name}を購入しました！"
+                            } else {
+                                toastMessage = "行動ポイントが足りません"
+                            }
+                        }
+                    )
+                }
+            }
+
+            toastMessage?.let { msg ->
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color(0xFF333333),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 32.dp)
+                ) {
+                    Text(msg, color = Color.White, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ShopCostumeCard(costume: Costume, isOwned: Boolean, canAfford: Boolean, onBuy: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
+            .padding(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(3f / 4f)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color(0xFFFFF0F5))
+        ) {
+            Image(
+                painter = painterResource(id = costume.smileRes),
+                contentDescription = costume.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(costume.name, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF333333))
+        Spacer(modifier = Modifier.height(6.dp))
+        Button(
+            onClick = onBuy,
+            enabled = !isOwned && canAfford,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isOwned) Color(0xFFCCCCCC) else Color(0xFFFF6B9D)
+            ),
+            modifier = Modifier.fillMaxWidth().height(36.dp),
+            contentPadding = PaddingValues(0.dp)
+        ) {
+            Text(
+                when {
+                    isOwned -> "所持済み"
+                    !canAfford -> "${costume.price}pt（不足）"
+                    else -> "${costume.price}pt で購入"
+                },
+                fontSize = 12.sp
+            )
+        }
+    }
+}
+
+// ---- 衣装変更 ----
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CostumeChangeScreen(navController: NavController, viewModel: StepViewModel) {
+    val pinkAccent = Color(0xFFFF6B9D)
+    val ownedIds by viewModel.ownedCostumeIds
+    val equippedId by viewModel.equippedCostumeId
+    val ownedCostumes = remember(ownedIds) { costumeCatalog.filter { it.id in ownedIds } }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("衣装変更", color = pinkAccent, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = pinkAccent)
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            items(ownedCostumes) { costume ->
+                WardrobeCostumeCard(
+                    costume = costume,
+                    isEquipped = costume.id == equippedId,
+                    onEquip = { viewModel.equipCostume(costume.id) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun WardrobeCostumeCard(costume: Costume, isEquipped: Boolean, onEquip: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
+            .border(
+                width = if (isEquipped) 2.dp else 0.dp,
+                color = if (isEquipped) Color(0xFFFF6B9D) else Color.Transparent,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .clickable(enabled = !isEquipped) { onEquip() }
+            .padding(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(3f / 4f)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color(0xFFFFF0F5))
+        ) {
+            Image(
+                painter = painterResource(id = costume.smileRes),
+                contentDescription = costume.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Fit
+            )
+            if (isEquipped) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFFFF6B9D),
+                    modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
+                ) {
+                    Text("着用中", color = Color.White, fontSize = 9.sp, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(costume.name, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF333333))
     }
 }
