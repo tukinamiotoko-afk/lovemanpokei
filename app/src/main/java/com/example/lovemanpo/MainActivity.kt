@@ -1579,7 +1579,7 @@ fun HomeScreenContent(
         Box(modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(top = 100.dp, bottom = 120.dp)) {
+            .padding(top = 160.dp, bottom = 120.dp)) {
             Image(
                 painter = painterResource(id = expressionRes),
                 contentDescription = "ひかり",
@@ -1593,7 +1593,7 @@ fun HomeScreenContent(
             Column(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(start = 16.dp, top = 70.dp),
+                    .padding(start = 16.dp, top = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 HomeStepCircleGauge(todaySteps, stepGaugeProgress)
