@@ -1560,13 +1560,12 @@ fun HomeScreenContent(
 ) {
     var showWeatherSheet by remember { mutableStateOf(false) }
 
-    // 吹き出しカードのテキスト欄は常に2行分の固定高さ（HomeCommentBanner側で対応済み）なので、
-    // カードの高さはメッセージの行数によらず一定になる。実測して、キャラの位置をそこに固定する。
-    val density = LocalDensity.current
-    val fallbackCardHeightPx = with(density) { 230.dp.toPx() }
-    var measuredCardHeightPx by remember { mutableStateOf(0f) }
-    val effectiveCardHeightPx = if (measuredCardHeightPx > 0f) measuredCardHeightPx else fallbackCardHeightPx
-    val cardHeightDp = with(density) { effectiveCardHeightPx.toDp() }
+    // キャラの裾は「カード本体の実際の高さ」ではなく、その下にある透明なナビ避け
+    // スペーサー（見た目が何もない領域）の下端までを基準にする。
+    // カードの高さを実測してそこに触れさせる方式だと、スペーサー分をどのみち
+    // 足し戻す必要があり差分がゼロになる（測っても意味がない）。
+    // スペーサーの下端は offset(12dp) + spacer(68dp) の固定値なので、実測不要。
+    val characterBottomPadding = 80.dp
 
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
@@ -1641,7 +1640,7 @@ fun HomeScreenContent(
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(bottom = 12.dp + cardHeightDp)) {
+                .padding(bottom = characterBottomPadding)) {
                 Image(
                     painter = painterResource(id = expressionRes),
                     contentDescription = "ひかり",
@@ -1676,62 +1675,68 @@ fun HomeScreenContent(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .offset(y = (-12).dp)
-                .onSizeChanged { size ->
-                    if (size.height > 0) measuredCardHeightPx = size.height.toFloat()
-                }
-                .shadow(8.dp, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                .background(
-                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                        listOf(Color(0xFFF0F8FF), Color(0xFFD6EEFF))
-                    )
-                )
         ) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                val formattedMessage = dialogueMessage.replace("○○", playerName)
-                HomeCommentBanner(
-                    formattedMessage,
-                    onRefresh = onRefreshDialogue,
-                    onClick = onCharacterClick
-                )
-
-                var homeInput by remember { mutableStateOf("") }
-                Row(
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // 見た目のあるカード本体
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .shadow(2.dp, RoundedCornerShape(24.dp))
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(Color.White)
-                        .padding(horizontal = 14.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    androidx.compose.foundation.text.BasicTextField(
-                        value = homeInput,
-                        onValueChange = { homeInput = it },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = Color.Black),
-                        decorationBox = { inner ->
-                            if (homeInput.isEmpty()) Text("ひかりに話しかける…", color = Color.Gray, fontSize = 14.sp)
-                            inner()
-                        }
-                    )
-                    if (isHomeChatLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFFEC407A))
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Send,
-                            contentDescription = null,
-                            tint = if (homeInput.isNotBlank()) Color(0xFFEC407A) else Color.LightGray,
-                            modifier = Modifier.size(20.dp).clickable {
-                                if (homeInput.isNotBlank()) { onHomeChatSend(homeInput); homeInput = "" }
-                            }
+                        .shadow(8.dp, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                        .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                        .background(
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                listOf(Color(0xFFF0F8FF), Color(0xFFD6EEFF))
+                            )
                         )
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        val formattedMessage = dialogueMessage.replace("○○", playerName)
+                        HomeCommentBanner(
+                            formattedMessage,
+                            onRefresh = onRefreshDialogue,
+                            onClick = onCharacterClick
+                        )
+
+                        var homeInput by remember { mutableStateOf("") }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .shadow(2.dp, RoundedCornerShape(24.dp))
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(Color.White)
+                                .padding(horizontal = 14.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            androidx.compose.foundation.text.BasicTextField(
+                                value = homeInput,
+                                onValueChange = { homeInput = it },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, color = Color.Black),
+                                decorationBox = { inner ->
+                                    if (homeInput.isEmpty()) Text("ひかりに話しかける…", color = Color.Gray, fontSize = 14.sp)
+                                    inner()
+                                }
+                            )
+                            if (isHomeChatLoading) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = Color(0xFFEC407A))
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Send,
+                                    contentDescription = null,
+                                    tint = if (homeInput.isNotBlank()) Color(0xFFEC407A) else Color.LightGray,
+                                    modifier = Modifier.size(20.dp).clickable {
+                                        if (homeInput.isNotBlank()) { onHomeChatSend(homeInput); homeInput = "" }
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
 
-                // 下部ナビゲーションバー（80dp）から入力欄が隠れない最小限の余白のみ確保
+                // 下部ナビゲーションバー（80dp）から入力欄が隠れないための透明な余白。
+                // 見た目に何もないのでキャラが重なっても問題ない
                 Spacer(modifier = Modifier.height(68.dp))
             }
         }
