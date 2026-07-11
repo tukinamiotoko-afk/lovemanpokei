@@ -1722,9 +1722,8 @@ fun HomeScreenContent(
                     }
                 }
 
-                // 統計3枚の行を削除し、めり込み量も30dp→20dpに縮めた分、
-                // 下部ナビゲーションバー（80dp）が入力欄に被らないよう余白を確保する
-                Spacer(modifier = Modifier.height(90.dp))
+                // 下部ナビゲーションバー（80dp）から入力欄が隠れない最小限の余白のみ確保
+                Spacer(modifier = Modifier.height(60.dp))
             }
         }
 
@@ -2050,8 +2049,8 @@ fun splitMessageIntoPages(text: String): List<String> {
 // includeFontPadding=falseで、Android既定の余分な行間パディングによる高さのズレも消しておく
 // （このズレがあると、固定した2行分の高さの箱から実際の描画がわずかにはみ出し下端が切れる）
 val bannerTextStyle = TextStyle(
-    fontSize = 7.sp,
-    lineHeight = 10.sp,
+    fontSize = 12.sp,
+    lineHeight = 16.sp,
     platformStyle = PlatformTextStyle(includeFontPadding = false)
 )
 
