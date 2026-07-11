@@ -1564,6 +1564,14 @@ fun HomeScreenContent(
     // ヘルプキャラ(HintSdHikari)専用の固定位置。メインキャラの余白値とは無関係。
     val characterBottomPadding = 240.dp
 
+    // メインキャラの接地位置＝セリフ枠（バナー＋入力欄）の実際の見た目の上端。
+    // テキスト欄は常に2行固定高さなのでカードの高さは安定しており、実測してよい。
+    val density = LocalDensity.current
+    var visualCardHeightPx by remember { mutableStateOf(0f) }
+    val fallbackVisualCardHeightPx = with(density) { 150.dp.toPx() }
+    val effectiveVisualCardHeightPx = if (visualCardHeightPx > 0f) visualCardHeightPx else fallbackVisualCardHeightPx
+    val characterGroundPadding = 12.dp + with(density) { effectiveVisualCardHeightPx.toDp() }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = bgRes),
@@ -1574,13 +1582,14 @@ fun HomeScreenContent(
 
         // キャラ表示エリア：ステータスバー直下からほぼ画面全体を使う。
         // 上部カード・吹き出しカードは共に独立したオーバーレイなので、キャラはその裏にも回り込める。
-        // 足元（接地位置）は bottom=120dp で完全固定し、サイズは characterScale だけで調整する。
+        // 足元（接地位置）はセリフ枠の見た目の上端（characterGroundPadding）で固定し、
+        // サイズは characterScale だけで調整する。
         // 拡大率は下端(transformOrigin y=1f)を軸にするので、スケールを変えても接地位置は動かない。
         val characterScale = 0.8f
         Box(modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(bottom = 120.dp)) {
+            .padding(bottom = characterGroundPadding)) {
             Image(
                 painter = painterResource(id = expressionRes),
                 contentDescription = "ひかり",
@@ -1681,10 +1690,14 @@ fun HomeScreenContent(
                 .offset(y = (-12).dp)
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                // 見た目のあるカード本体
+                // 見た目のあるカード本体。実測してキャラの接地位置に使う
+                // （テキスト欄は常に2行固定高さなので、この値はメッセージ内容によらず安定する）
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .onSizeChanged { size ->
+                            if (size.height > 0) visualCardHeightPx = size.height.toFloat()
+                        }
                         .shadow(8.dp, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                         .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                         .background(
