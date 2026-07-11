@@ -1585,7 +1585,7 @@ fun HomeScreenContent(
         // 足元（接地位置）はセリフ枠の見た目の上端（characterGroundPadding）で固定し、
         // サイズは characterScale だけで調整する。
         // 拡大率は下端(transformOrigin y=1f)を軸にするので、スケールを変えても接地位置は動かない。
-        val characterScale = 0.8f
+        val characterScale = 0.88f
         Box(modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
