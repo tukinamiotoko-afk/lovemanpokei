@@ -69,6 +69,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
@@ -1572,20 +1573,25 @@ fun HomeScreenContent(
         )
 
         // キャラ表示エリア：ステータスバー直下からほぼ画面全体を使う。
-        // 上部カード・吹き出しカードは共に独立したオーバーレイなので、
-        // キャラはその裏にも回り込める。
-        // 下(bottom)はセリフ枠に触れる固定位置、上(top)を追加で削ってサイズだけ調整する
-        // ことで、「枠に接触したまま大きさだけ変える」を両立させる。
+        // 上部カード・吹き出しカードは共に独立したオーバーレイなので、キャラはその裏にも回り込める。
+        // 足元（接地位置）は bottom=120dp で完全固定し、サイズは characterScale だけで調整する。
+        // 拡大率は下端(transformOrigin y=1f)を軸にするので、スケールを変えても接地位置は動かない。
+        val characterScale = 0.8f
         Box(modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(top = 160.dp, bottom = 120.dp)) {
+            .padding(bottom = 120.dp)) {
             Image(
                 painter = painterResource(id = expressionRes),
                 contentDescription = "ひかり",
                 modifier = Modifier
                     .fillMaxHeight(1.0f)
-                    .align(Alignment.BottomCenter),
+                    .align(Alignment.BottomCenter)
+                    .graphicsLayer {
+                        scaleX = characterScale
+                        scaleY = characterScale
+                        transformOrigin = TransformOrigin(0.5f, 1f)
+                    },
                 contentScale = ContentScale.Fit
             )
 
@@ -1593,7 +1599,7 @@ fun HomeScreenContent(
             Column(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(start = 16.dp, top = 10.dp),
+                    .padding(start = 16.dp, top = 170.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 HomeStepCircleGauge(todaySteps, stepGaugeProgress)
