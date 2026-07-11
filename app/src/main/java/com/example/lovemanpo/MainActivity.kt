@@ -1634,7 +1634,7 @@ fun HomeScreenContent(
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(bottom = 20.dp + cardHeightDp)) {
+                .padding(bottom = 12.dp + cardHeightDp)) {
                 Image(
                     painter = painterResource(id = expressionRes),
                     contentDescription = "ひかり",
@@ -1644,10 +1644,12 @@ fun HomeScreenContent(
                     contentScale = ContentScale.Fit
                 )
 
+                // キャラの大きさ（下部の余白量）とは無関係に、独立して位置を決める
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopStart)
-                        .padding(start = 16.dp),
+                        .padding(start = 16.dp)
+                        .offset(y = (-20).dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     HomeStepCircleGauge(todaySteps, stepGaugeProgress)
@@ -1666,7 +1668,7 @@ fun HomeScreenContent(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .offset(y = (-20).dp)
+                .offset(y = (-12).dp)
                 .onSizeChanged { size ->
                     if (size.height > 0) measuredCardHeightPx = size.height.toFloat()
                 }
@@ -1723,7 +1725,7 @@ fun HomeScreenContent(
                 }
 
                 // 下部ナビゲーションバー（80dp）から入力欄が隠れない最小限の余白のみ確保
-                Spacer(modifier = Modifier.height(60.dp))
+                Spacer(modifier = Modifier.height(68.dp))
             }
         }
 
