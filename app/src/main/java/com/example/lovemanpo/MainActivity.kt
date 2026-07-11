@@ -1579,7 +1579,7 @@ fun HomeScreenContent(
         Box(modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(top = 100.dp, bottom = 80.dp)) {
+            .padding(top = 100.dp, bottom = 120.dp)) {
             Image(
                 painter = painterResource(id = expressionRes),
                 contentDescription = "ひかり",
