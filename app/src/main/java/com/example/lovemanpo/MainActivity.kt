@@ -1722,7 +1722,9 @@ fun HomeScreenContent(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(44.dp))
+                // 統計3枚の行を削除し、めり込み量も30dp→20dpに縮めた分、
+                // 下部ナビゲーションバー（80dp）が入力欄に被らないよう余白を確保する
+                Spacer(modifier = Modifier.height(90.dp))
             }
         }
 
@@ -2075,7 +2077,7 @@ fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick:
     val textMeasurer = rememberTextMeasurer()
     // Text() は指定していないプロパティ（letterSpacing等）をLocalTextStyleから継承する。
     // 計測もそれに合わせて解決済みスタイルを使わないと、実描画とlineCountがズレる。
-    val resolvedTextStyle = bannerTextStyle.merge(LocalTextStyle.current)
+    val resolvedTextStyle = LocalTextStyle.current.merge(bannerTextStyle)
     var columnWidthPx by remember { mutableStateOf(0) }
     val pages = remember(message, columnWidthPx, resolvedTextStyle) {
         if (columnWidthPx > 0) splitByTextMeasure(message, textMeasurer, resolvedTextStyle, columnWidthPx)
