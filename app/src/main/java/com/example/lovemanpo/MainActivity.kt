@@ -1611,7 +1611,8 @@ fun HomeScreenContent(
                     .padding(start = 16.dp, top = 170.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                HomeStepCircleGauge(todaySteps, stepGaugeProgress)
+                // 表示のみ一時的に非表示（todaySteps/stepGaugeProgressの計算はそのまま維持）
+                // HomeStepCircleGauge(todaySteps, stepGaugeProgress)
             }
         }
 
