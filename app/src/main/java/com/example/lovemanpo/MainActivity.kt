@@ -1469,7 +1469,9 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
 30〜70文字で自然に返す。句読点で区切りやすい文にする。敬語。AIっぽい表現禁止。「${playerName}さん」と「さん」付けで呼ぶ。「今一緒に歩いている」視点で話す。
 今日の歩数：${todaySteps}歩。$openingLineNote$memoryNote"""
                     val history = viewModel.homeChatMessages.takeLast(10)
-                    val raw = callGeminiApi(prompt, history, text, maxTokens = 300)
+                    // thinking系モデルは内部思考トークンもmaxOutputTokensに含まれることがあるため、
+                    // 本文が思考トークンに食われて途中で切れないよう余裕を持たせる
+                    val raw = callGeminiApi(prompt, history, text, maxTokens = 1000)
                     val emotionMatch = Regex("""\[EMOTION:(\w+)\]""").find(raw)
                     val emotion = emotionMatch?.groupValues?.get(1) ?: "normal"
                     val replyText = raw.replace(emotionMatch?.value ?: "", "").trim()
@@ -5233,7 +5235,12 @@ suspend fun callGeminiApi(
             put("parts", JSONArray().put(JSONObject().apply { put("text", systemPrompt) }))
         })
         put("contents", contents)
-        put("generationConfig", JSONObject().apply { put("maxOutputTokens", maxTokens) })
+        put("generationConfig", JSONObject().apply {
+            put("maxOutputTokens", maxTokens)
+            // thinking対応モデルが内部思考トークンでmaxOutputTokensを使い切り、
+            // 本文が途中で切れるのを防ぐ（プロキシがそのまま転送してくれる場合のみ有効）
+            put("thinkingConfig", JSONObject().apply { put("thinkingBudget", 0) })
+        })
     }.toString()
 
     conn.outputStream.write(body.toByteArray(Charsets.UTF_8))
