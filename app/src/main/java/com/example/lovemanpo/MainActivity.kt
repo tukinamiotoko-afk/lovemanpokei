@@ -1575,99 +1575,96 @@ fun HomeScreenContent(
             contentScale = ContentScale.Crop
         )
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-        ) {
-            // カード行 + ボタン列
-            Row(
+        // キャラ表示エリア：ステータスバー直下からほぼ画面全体を使う。
+        // 上部カード・吹き出しカードは共に独立したオーバーレイなので、
+        // キャラはその裏にも回り込め、以前より大きく表示できる
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(bottom = characterBottomPadding)) {
+            Image(
+                painter = painterResource(id = expressionRes),
+                contentDescription = "ひかり",
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    .fillMaxHeight(1.0f)
+                    .align(Alignment.BottomCenter),
+                contentScale = ContentScale.Fit
+            )
+
+            // 上部カード行の高さぶん、明示的に下げてから表示する
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 16.dp, top = 210.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                HomeLoveLevelCard(
-                    modifier = Modifier.weight(1f),
-                    lv = loveCount,
-                    progress = heartGaugeProgress,
-                    hearts = heartCount
+                HomeStepCircleGauge(todaySteps, stepGaugeProgress)
+            }
+
+            HintSdHikari(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .offset(x = (-20).dp)
+            )
+        }
+
+        // 上部カード行 + ボタン列。独立したオーバーレイとしてキャラの上に被さる
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            HomeLoveLevelCard(
+                modifier = Modifier.weight(1f),
+                lv = loveCount,
+                progress = heartGaugeProgress,
+                hearts = heartCount
+            )
+            HomeActionPointsCard(
+                modifier = Modifier.weight(0.72f),
+                pts = actionPoints
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                HomeTopCircleButton(Icons.Default.Notifications, size = 26.dp)
+                HomeTopCircleButton(Icons.Default.Settings, size = 26.dp)
+                HomeTopCircleButton(
+                    icon = Icons.Default.Storefront,
+                    containerColor = Color(0xFFFFE8F0),
+                    iconColor = Color(0xFFFF6B9D),
+                    onClick = onShopClick,
+                    size = 26.dp
                 )
-                HomeActionPointsCard(
-                    modifier = Modifier.weight(0.72f),
-                    pts = actionPoints
+                HomeTopCircleButton(
+                    icon = Icons.Default.Checkroom,
+                    containerColor = Color(0xFFFFE8F0),
+                    iconColor = Color(0xFFFF6B9D),
+                    onClick = onWardrobeClick,
+                    size = 26.dp
                 )
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    HomeTopCircleButton(Icons.Default.Notifications, size = 26.dp)
-                    HomeTopCircleButton(Icons.Default.Settings, size = 26.dp)
-                    HomeTopCircleButton(
-                        icon = Icons.Default.Storefront,
-                        containerColor = Color(0xFFFFE8F0),
-                        iconColor = Color(0xFFFF6B9D),
-                        onClick = onShopClick,
-                        size = 26.dp
-                    )
-                    HomeTopCircleButton(
-                        icon = Icons.Default.Checkroom,
-                        containerColor = Color(0xFFFFE8F0),
-                        iconColor = Color(0xFFFF6B9D),
-                        onClick = onWardrobeClick,
-                        size = 26.dp
-                    )
-                    HomeTopCircleButton(
-                        icon = Icons.Default.BugReport,
-                        containerColor = Color.Red.copy(alpha = 0.1f),
-                        iconColor = Color.Red,
-                        onClick = onDebugClick,
-                        size = 26.dp
-                    )
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White,
-                        modifier = Modifier.size(26.dp).clickable(enabled = weatherInfo != null) { showWeatherSheet = true; onWeatherTap() }
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = if (weatherInfo != null) wmoToEmoji(weatherInfo.weatherCode) else "☁",
-                                fontSize = 14.sp
-                            )
-                        }
+                HomeTopCircleButton(
+                    icon = Icons.Default.BugReport,
+                    containerColor = Color.Red.copy(alpha = 0.1f),
+                    iconColor = Color.Red,
+                    onClick = onDebugClick,
+                    size = 26.dp
+                )
+                Surface(
+                    shape = CircleShape,
+                    color = Color.White,
+                    modifier = Modifier.size(26.dp).clickable(enabled = weatherInfo != null) { showWeatherSheet = true; onWeatherTap() }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = if (weatherInfo != null) wmoToEmoji(weatherInfo.weatherCode) else "☁",
+                            fontSize = 14.sp
+                        )
                     }
                 }
             }
-
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(bottom = characterBottomPadding)) {
-                Image(
-                    painter = painterResource(id = expressionRes),
-                    contentDescription = "ひかり",
-                    modifier = Modifier
-                        .fillMaxHeight(1.0f)
-                        .align(Alignment.BottomCenter),
-                    contentScale = ContentScale.Fit
-                )
-
-                // キャラの大きさ（下部の余白量）とは無関係に、独立して位置を決める
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(start = 16.dp)
-                        .offset(y = (-20).dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    HomeStepCircleGauge(todaySteps, stepGaugeProgress)
-                }
-
-                HintSdHikari(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .offset(x = (-20).dp)
-                )
-            }
-        } // キャラ表示用Column（吹き出しカードを含まないため、カードが伸びてもキャラの枠は一切変化しない）
+        }
 
         // 吹き出しカードは独立したオーバーレイ。伸びてもキャラの枠を押し縮めず、上に被さるだけ
         Box(
