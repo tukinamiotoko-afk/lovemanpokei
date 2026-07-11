@@ -2101,56 +2101,54 @@ fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick:
     val density = LocalDensity.current
     val twoLineHeightDp = with(density) { (resolvedTextStyle.lineHeight.toPx() * 2).toDp() } + 4.dp
 
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0)), modifier = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }) {
-        // IntrinsicSize.Max は二重測定パスを要求し、onSizeChangedが途中経過の幅を拾うレースを招くため使わない
-        Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f).padding(horizontal = 6.dp).onSizeChanged { columnWidthPx = it.width }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                        if (multiPage) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                                contentDescription = "前へ",
-                                tint = if (safePageIndex > 0) Color(0xFFFF6B9D) else Color.LightGray,
-                                modifier = Modifier.size(16.dp).clickable(enabled = safePageIndex > 0) { pageIndex-- }
-                            )
-                            Text("${safePageIndex + 1}/${pages.size}", fontSize = 9.sp, color = Color.Gray, modifier = Modifier.padding(horizontal = 2.dp))
-                            Icon(
-                                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = "次へ",
-                                tint = if (safePageIndex < pages.size - 1) Color(0xFFFF6B9D) else Color.LightGray,
-                                modifier = Modifier.size(16.dp).clickable(enabled = safePageIndex < pages.size - 1) { pageIndex++ }
-                            )
-                        } else {
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
-                        }
-                        if (onRefresh != null) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = Color(0xFFFFE8F0),
-                                border = BorderStroke(1.dp, Color(0xFFFFB7D0)),
-                                modifier = Modifier.clickable { onRefresh() }
-                            ) {
+    Box {
+        Surface(shape = RoundedCornerShape(16.dp), color = Color.White, shadowElevation = 14.dp, border = BorderStroke(1.5.dp, Color(0xFFFFB7D0)), modifier = Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClick() }) {
+            // IntrinsicSize.Max は二重測定パスを要求し、onSizeChangedが途中経過の幅を拾うレースを招くため使わない
+            Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f).padding(horizontal = 6.dp).onSizeChanged { columnWidthPx = it.width }) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("ひかり", fontSize = 11.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                            if (multiPage) {
                                 Icon(
-                                    Icons.Default.Refresh,
-                                    contentDescription = "更新",
-                                    tint = Color(0xFFFF6B9D),
-                                    modifier = Modifier.padding(4.dp).size(12.dp)
+                                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                    contentDescription = "前へ",
+                                    tint = if (safePageIndex > 0) Color(0xFFFF6B9D) else Color.LightGray,
+                                    modifier = Modifier.size(16.dp).clickable(enabled = safePageIndex > 0) { pageIndex-- }
                                 )
+                                Text("${safePageIndex + 1}/${pages.size}", fontSize = 9.sp, color = Color.Gray, modifier = Modifier.padding(horizontal = 2.dp))
+                                Icon(
+                                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = "次へ",
+                                    tint = if (safePageIndex < pages.size - 1) Color(0xFFFF6B9D) else Color.LightGray,
+                                    modifier = Modifier.size(16.dp).clickable(enabled = safePageIndex < pages.size - 1) { pageIndex++ }
+                                )
+                            } else {
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.LightGray)
                             }
                         }
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
+                        Text(
+                            currentText,
+                            style = resolvedTextStyle,
+                            color = Color(0xFF1A1A1A),
+                            maxLines = 2,
+                            overflow = TextOverflow.Clip,
+                            modifier = Modifier.height(twoLineHeightDp)
+                        )
                     }
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), thickness = 0.5.dp, color = Color(0xFFFFB7D0).copy(alpha = 0.8f))
-                    Text(
-                        currentText,
-                        style = resolvedTextStyle,
-                        color = Color(0xFF1A1A1A),
-                        maxLines = 2,
-                        overflow = TextOverflow.Clip,
-                        modifier = Modifier.height(twoLineHeightDp)
-                    )
-                }
+            }
+        }
+        if (onRefresh != null) {
+            Icon(
+                Icons.Default.Refresh,
+                contentDescription = "更新",
+                tint = Color(0xFFFF6B9D),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .size(16.dp)
+                    .clickable { onRefresh() }
+            )
         }
     }
 }
