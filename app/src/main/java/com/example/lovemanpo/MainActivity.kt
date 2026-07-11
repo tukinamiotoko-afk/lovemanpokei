@@ -1560,11 +1560,7 @@ fun HomeScreenContent(
 ) {
     var showWeatherSheet by remember { mutableStateOf(false) }
 
-    // キャラの裾は「カード本体の実際の高さ」ではなく、その下にある透明なナビ避け
-    // スペーサー（見た目が何もない領域）の下端までを基準にする。
-    // カードの高さを実測してそこに触れさせる方式だと、スペーサー分をどのみち
-    // 足し戻す必要があり差分がゼロになる（測っても意味がない）。
-    // スペーサーの下端は offset(12dp) + spacer(68dp) の固定値なので、実測不要。
+    // ヘルプキャラ(HintSdHikari)専用の固定位置。メインキャラの余白値とは無関係。
     val characterBottomPadding = 240.dp
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -1577,11 +1573,13 @@ fun HomeScreenContent(
 
         // キャラ表示エリア：ステータスバー直下からほぼ画面全体を使う。
         // 上部カード・吹き出しカードは共に独立したオーバーレイなので、
-        // キャラはその裏にも回り込め、以前より大きく表示できる
+        // キャラはその裏にも回り込める。
+        // 下(bottom)はセリフ枠に触れる固定位置、上(top)を追加で削ってサイズだけ調整する
+        // ことで、「枠に接触したまま大きさだけ変える」を両立させる。
         Box(modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(bottom = characterBottomPadding)) {
+            .padding(top = 100.dp, bottom = 80.dp)) {
             Image(
                 painter = painterResource(id = expressionRes),
                 contentDescription = "ひかり",
@@ -1595,18 +1593,21 @@ fun HomeScreenContent(
             Column(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(start = 16.dp, top = 170.dp),
+                    .padding(start = 16.dp, top = 70.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 HomeStepCircleGauge(todaySteps, stepGaugeProgress)
             }
-
-            HintSdHikari(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .offset(x = (-20).dp)
-            )
         }
+
+        // ヘルプキャラはメインキャラと切り離し、独立した固定位置に置く
+        // （メインキャラの余白を変えても一切動かない）
+        HintSdHikari(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(bottom = characterBottomPadding)
+                .offset(x = (-20).dp)
+        )
 
         // 上部カード行 + ボタン列。独立したオーバーレイとしてキャラの上に被さる
         Row(
