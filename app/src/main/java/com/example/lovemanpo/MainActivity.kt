@@ -1611,8 +1611,15 @@ fun HomeScreenContent(
                     .padding(start = 16.dp, top = 170.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // 表示のみ一時的に非表示（todaySteps/stepGaugeProgressの計算はそのまま維持）
-                // HomeStepCircleGauge(todaySteps, stepGaugeProgress)
+                HomeStepCircleGauge(
+                    todaySteps,
+                    stepGaugeProgress,
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = 0.75f
+                        scaleY = 0.75f
+                        transformOrigin = TransformOrigin(0f, 0f)
+                    }
+                )
             }
         }
 
@@ -1789,13 +1796,13 @@ fun HomeTopCircleButton(icon: androidx.compose.ui.graphics.vector.ImageVector, c
 }
 
 @Composable
-fun HomeStepCircleGauge(steps: Int, progress: Float) {
+fun HomeStepCircleGauge(steps: Int, progress: Float, modifier: Modifier = Modifier) {
     val animatedSteps by animateIntAsState(
         targetValue = steps,
         animationSpec = tween(durationMillis = 600, easing = LinearEasing),
         label = "stepCount"
     )
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
