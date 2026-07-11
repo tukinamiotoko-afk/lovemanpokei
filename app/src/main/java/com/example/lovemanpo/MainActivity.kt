@@ -1565,7 +1565,7 @@ fun HomeScreenContent(
     // カードの高さを実測してそこに触れさせる方式だと、スペーサー分をどのみち
     // 足し戻す必要があり差分がゼロになる（測っても意味がない）。
     // スペーサーの下端は offset(12dp) + spacer(68dp) の固定値なので、実測不要。
-    val characterBottomPadding = 120.dp
+    val characterBottomPadding = 240.dp
 
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
