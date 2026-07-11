@@ -1450,7 +1450,11 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         isHomeChatLoading = isHomeChatLoading,
         onRefreshDialogue = { homeChatReply = null },
         onWeatherTap = { weatherDialogueActive = true },
-        onHomeChatSend = { text ->
+        onHomeChatSend = homeChatSend@{ text ->
+            if (!viewModel.spendPointForChat()) {
+                homeChatReply = Pair("行動ポイントが足りないみたい…2000歩でもう1ポイントもらえるよ！", R.drawable.hikari_think)
+                return@homeChatSend
+            }
             weatherDialogueActive = false
             isHomeChatLoading = true
             // 会話開始前に表示されていた運営セリフ。最初のターンだけ背景情報として渡す
@@ -1496,6 +1500,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
                         }
                     }
                 } catch (_: Exception) {
+                    viewModel.refundPointForChat()
                     homeChatReply = Pair("ごめん、うまく聞こえなかったよ…もう一度話しかけてみて？", R.drawable.hikari_think)
                 } finally {
                     isHomeChatLoading = false
