@@ -5199,7 +5199,11 @@ suspend fun callGeminiApi(
     userMessage: String,
     maxTokens: Int = 400,
     imageBase64: String? = null,
-    imageMimeType: String? = null
+    imageMimeType: String? = null,
+    // 思考用トークンの上限。本文用(maxTokens)とは別枠として扱い、
+    // 実際にAPIへ送るmaxOutputTokensは合計値にすることで、
+    // 思考にどれだけ使われても本文分は必ず確保されるようにする
+    thinkingBudget: Int = 0
 ): String = withContext(Dispatchers.IO) {
     val url = URL("https://lovemanpokei.tukinamiotoko.workers.dev")
     val conn = url.openConnection() as HttpURLConnection
@@ -5236,10 +5240,10 @@ suspend fun callGeminiApi(
         })
         put("contents", contents)
         put("generationConfig", JSONObject().apply {
-            put("maxOutputTokens", maxTokens)
-            // thinking対応モデルが内部思考トークンでmaxOutputTokensを使い切り、
-            // 本文が途中で切れるのを防ぐ（プロキシがそのまま転送してくれる場合のみ有効）
-            put("thinkingConfig", JSONObject().apply { put("thinkingBudget", 0) })
+            // maxOutputTokensは「本文用(maxTokens)＋思考用(thinkingBudget)」の合計にする。
+            // これにより思考が上限まで使われても、本文用の枠は必ず残る
+            put("maxOutputTokens", maxTokens + thinkingBudget)
+            put("thinkingConfig", JSONObject().apply { put("thinkingBudget", thinkingBudget) })
         })
     }.toString()
 
