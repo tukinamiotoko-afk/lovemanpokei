@@ -1926,38 +1926,27 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 }
 
 // 文字の周りに白い縁取りを付けたテキスト（フォント自体には縁取り機能がないため、
-// 同じ文字を円周上の16方向にずらして塗りつぶし描画＋通常の塗りつぶしを重ねて表現する。
-// 8方向(斜めが対角で遠くなり不均一)だとジャギジャギになるため、均等な円周配置にしている。
-// ストローク描画のPaintに頼ると小さいフォントサイズでは太さが見た目に反映されないため、この方式にしている）
+// 一回り大きい白文字を背後に中央揃えで置き、その上に本来の大きさの色文字を重ねて表現する）
 @Composable
 fun OutlinedText(
     text: String,
     fontSize: androidx.compose.ui.unit.TextUnit,
     color: Color,
     outlineColor: Color = Color.White,
-    outlineWidth: androidx.compose.ui.unit.Dp = 1.3.dp,
+    outlineScale: Float = 1.18f,
     fontWeight: FontWeight? = null,
     fontFamily: FontFamily? = null,
     modifier: Modifier = Modifier
 ) {
-    val directionCount = 16
-    val directions = remember {
-        (0 until directionCount).map { i ->
-            val angle = Math.toRadians(360.0 / directionCount * i)
-            kotlin.math.cos(angle).toFloat() to kotlin.math.sin(angle).toFloat()
-        }
-    }
-    Box(modifier = modifier) {
-        directions.forEach { (dx, dy) ->
-            Text(
-                text,
-                fontSize = fontSize,
-                fontWeight = fontWeight,
-                fontFamily = fontFamily,
-                color = outlineColor,
-                modifier = Modifier.offset(x = outlineWidth * dx, y = outlineWidth * dy)
-            )
-        }
+    val outlineFontSize = androidx.compose.ui.unit.TextUnit(fontSize.value * outlineScale, fontSize.type)
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Text(
+            text,
+            fontSize = outlineFontSize,
+            fontWeight = fontWeight,
+            fontFamily = fontFamily,
+            color = outlineColor
+        )
         Text(
             text,
             fontSize = fontSize,
