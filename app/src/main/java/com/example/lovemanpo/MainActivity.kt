@@ -1647,7 +1647,7 @@ fun HomeScreenContent(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 HomeLoveLevelCard(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    modifier = Modifier.weight(0.72f).fillMaxHeight(),
                     lv = loveCount,
                     progress = heartGaugeProgress,
                     hearts = heartCount
