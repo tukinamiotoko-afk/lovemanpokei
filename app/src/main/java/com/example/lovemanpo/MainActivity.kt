@@ -5412,6 +5412,17 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 Text("❤$heartCount/10", fontSize = 11.sp, color = Color.White)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("💬$actionPoints", fontSize = 11.sp, color = Color.White)
+                Spacer(modifier = Modifier.width(8.dp))
+                // 恋人モード：好感度9以上で解放。未解放時は鍵アイコンで表示
+                if (loveCount > 8) {
+                    Text("💕恋人", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Lock, contentDescription = "恋人モード未解放", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(11.dp))
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text("恋人(Lv.9)", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
+                    }
+                }
                 Spacer(modifier = Modifier.weight(1f))
                 Text("📍$currentLocation", fontSize = 11.sp, color = Color.White.copy(alpha = 0.9f))
                 Spacer(modifier = Modifier.width(8.dp))
