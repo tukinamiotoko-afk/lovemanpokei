@@ -1863,10 +1863,11 @@ fun HomeStepCircleGauge(steps: Int, progress: Float, modifier: Modifier = Modifi
                     val tickY = cy + radius * sin
                     val t = (tickY / size.height).coerceIn(0f, 1f)
                     val tickColor = lerp(gradientTop, gradientBottom, t)
+                    val tickOuterGap = tickOuter - 1.5.dp.toPx()
                     drawLine(
                         color = tickColor,
                         start = Offset(cx + tickInner * cos, cy + tickInner * sin),
-                        end = Offset(cx + tickOuter * cos, cy + tickOuter * sin),
+                        end = Offset(cx + tickOuterGap * cos, cy + tickOuterGap * sin),
                         strokeWidth = 1.dp.toPx()
                     )
                 }
