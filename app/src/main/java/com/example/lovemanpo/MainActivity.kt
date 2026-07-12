@@ -1933,7 +1933,7 @@ fun OutlinedText(
     fontSize: androidx.compose.ui.unit.TextUnit,
     color: Color,
     outlineColor: Color = Color.White,
-    outlineScale: Float = 1.18f,
+    outlineScale: Float = 1.5f,
     fontWeight: FontWeight? = null,
     fontFamily: FontFamily? = null,
     modifier: Modifier = Modifier
