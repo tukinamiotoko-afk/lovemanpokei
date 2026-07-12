@@ -1492,6 +1492,12 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
                     viewModel.homeChatMessages.add(ChatMessage(role = "assistant", content = replyText))
                     viewModel.saveHomeChatHistory()
 
+                    // おしゃべり画面と同じ基準で好感度を変動させる
+                    when (emotion) {
+                        "love", "shy" -> viewModel.earnHeart()
+                        "sad"         -> viewModel.loseHeart()
+                    }
+
                     val userTurnCount = viewModel.homeChatMessages.count { it.role == "user" }
                     if (userTurnCount % 5 == 0) {
                         scope.launch {
