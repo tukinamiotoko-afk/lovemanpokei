@@ -1941,7 +1941,7 @@ fun HomeLoveLevelCard(modifier: Modifier = Modifier, lv: Int, progress: Float, h
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Bottom
                 ) {
-                    Text("Lv. $lv", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
+                    Text("Lv. $lv", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFC2185B), fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
                     Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(10.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
                 }
                 Canvas(
