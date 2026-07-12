@@ -1670,15 +1670,15 @@ fun HomeScreenContent(
                 HomeTopCircleButton(Icons.Default.Settings, size = 26.dp)
                 HomeTopCircleButton(
                     iconRes = R.drawable.aikon_shopping,
-                    containerColor = Color(0xFFFFE8F0),
                     onClick = onShopClick,
-                    size = 26.dp
+                    size = 26.dp,
+                    showBackground = false
                 )
                 HomeTopCircleButton(
                     iconRes = R.drawable.aikon_kigae,
-                    containerColor = Color(0xFFFFE8F0),
                     onClick = onWardrobeClick,
-                    size = 26.dp
+                    size = 26.dp,
+                    showBackground = false
                 )
                 HomeTopCircleButton(
                     icon = Icons.Default.BugReport,
@@ -1808,15 +1808,31 @@ fun HomeTopCircleButton(icon: androidx.compose.ui.graphics.vector.ImageVector, c
 }
 
 @Composable
-fun HomeTopCircleButton(iconRes: Int, containerColor: Color = Color.White, onClick: () -> Unit = {}, size: androidx.compose.ui.unit.Dp = 30.dp) {
-    Surface(shape = CircleShape, color = containerColor, modifier = Modifier
-        .size(size)
-        .clickable { onClick() }) {
-        Box(contentAlignment = Alignment.Center) {
+fun HomeTopCircleButton(iconRes: Int, containerColor: Color = Color.White, onClick: () -> Unit = {}, size: androidx.compose.ui.unit.Dp = 30.dp, showBackground: Boolean = true) {
+    if (showBackground) {
+        Surface(shape = CircleShape, color = containerColor, modifier = Modifier
+            .size(size)
+            .clickable { onClick() }) {
+            Box(contentAlignment = Alignment.Center) {
+                Image(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(size * 0.73f),
+                    contentScale = ContentScale.Fit
+                )
+            }
+        }
+    } else {
+        Box(
+            modifier = Modifier
+                .size(size)
+                .clickable { onClick() },
+            contentAlignment = Alignment.Center
+        ) {
             Image(
                 painter = painterResource(id = iconRes),
                 contentDescription = null,
-                modifier = Modifier.size(size * 0.73f),
+                modifier = Modifier.size(size),
                 contentScale = ContentScale.Fit
             )
         }
