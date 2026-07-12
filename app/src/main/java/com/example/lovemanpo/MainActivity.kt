@@ -57,6 +57,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.scale
@@ -2011,24 +2012,21 @@ fun HomeActionPointsCard(modifier: Modifier = Modifier, pts: Int) {
         val tightTextStyle = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
         Column(modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp), verticalArrangement = Arrangement.spacedBy((-2).dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(painter = painterResource(id = R.drawable.aikon_koudoupointo), contentDescription = null, modifier = Modifier.size(16.dp), contentScale = ContentScale.Fit)
+                Icon(Icons.Default.Place, null, tint = Color.Unspecified, modifier = Modifier.size(13.dp).gradientTint(listOf(Color(0xFF80CBC4), Color(0xFF00695C))))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("行動ポイント", fontSize = 12.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
             }
             Text("$pts / 5 pt", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1B5E20), fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 repeat(5) { i ->
-                    Canvas(modifier = Modifier.size(10.dp)) {
-                        if (i < pts) {
-                            drawCircle(
-                                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                    listOf(Color(0xFF80CBC4), Color(0xFF00695C))
-                                )
-                            )
-                        } else {
-                            drawCircle(color = Color.LightGray.copy(alpha = 0.4f))
-                        }
-                    }
+                    Image(
+                        painter = painterResource(id = R.drawable.aikon_koudoupointo),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(14.dp)
+                            .alpha(if (i < pts) 1f else 0.25f),
+                        contentScale = ContentScale.Fit
+                    )
                 }
             }
         }
