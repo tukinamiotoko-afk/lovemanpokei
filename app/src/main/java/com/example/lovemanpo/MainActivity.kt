@@ -2572,13 +2572,6 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
 
     val displayData = getAggregatedList(stepRecords, hourlyRecords, period, viewDate)
     val totalStepsInRange = displayData.sumOf { it.steps }
-    // 期間に応じて目標歩数を動的に計算（1日5000歩基準）
-    val stepGoal = when (period) {
-        DisplayPeriod.DAY -> 5000
-        DisplayPeriod.WEEK -> 35000
-        DisplayPeriod.MONTH -> viewDate.lengthOfMonth() * 5000
-        DisplayPeriod.YEAR -> if (java.time.Year.of(viewDate.year).isLeap) 1830000 else 1825000
-    }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -2772,136 +2765,27 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                     .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 0.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // 2. 上部：ひかり画像と（セリフ＋カード）を重ねるエリア
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight()
-                ) {
-                    // ひかり画像 (右下に接地)
-                    Image(
-                        painter = painterResource(id = R.drawable.kirokugamen_hikari),
-                        contentDescription = "ひかり",
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .height(220.dp)
-                            .offset(y = 10.dp),
-                        contentScale = ContentScale.Fit
+                // 2. 上部：歩数の数字のみ（女の子・セリフ・カード・ゲージは削除）
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painterResource(R.drawable.footprints),
+                        null,
+                        tint = pinkAccent,
+                        modifier = Modifier.size(16.dp)
                     )
-
-                    // 左側：セリフ画像と歩数カードの重ね合わせ
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(start = 12.dp, top = 0.dp)
-                    ) {
-                        // ① セリフ画像 (後ろ側)
-                        Image(
-                            painter = painterResource(id = R.drawable.hukidasi_kawaii),
-                            contentDescription = "セリフ",
-                            modifier = Modifier.width(170.dp),
-                            contentScale = ContentScale.FillWidth
-                        )
-
-                        // ② 歩数カード (前側に重ねる)
-                        Surface(
-                            color = cardBg,
-                            shape = RoundedCornerShape(12.dp),
-                            shadowElevation = 8.dp,
-                            modifier = Modifier
-                                .padding(top = 130.dp) // セリフとの重なり位置
-                                .width(170.dp)
-                            // heightを指定しないので、中身を詰めればカードも縮みます
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                // ★ ここで一括調整！ マイナス値を入れれば文字が詰まり、カードも小さくなります
-                                verticalArrangement = Arrangement.spacedBy((-4).dp)
-                            ) {
-                                // a. アイコンとラベル
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        painterResource(R.drawable.footprints),
-                                        null,
-                                        tint = pinkAccent,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        "${period.label}の歩数",
-                                        fontSize = 10.sp,
-                                        color = Color.Gray
-                                    )
-                                }
-
-                                // b. 歩数（メインの数字）
-                                Text(
-                                    text = String.format(Locale.US, "%,d", totalStepsInRange),
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = pinkAccent,
-                                    // ★ 歩数の横の位置を決めます
-                                    modifier = Modifier.offset(x = 5.dp)
-                                )
-
-
-                                // c. あと○歩
-                                Text(
-                                    text = "目標まであと ${
-                                        String.format(
-                                            Locale.US,
-                                            "%,d",
-                                            (stepGoal - totalStepsInRange).coerceAtLeast(0)
-                                        )
-                                    } 歩！",
-                                    fontSize = 8.sp,
-                                    color = Color.Gray
-                                )
-
-                                // --------------------------------------------------
-                                // ★ ここで「目標」と「ゲージ」の隙間を調整（数字を変える）
-                                Spacer(modifier = Modifier.height(0.dp))
-                                // --------------------------------------------------
-
-                                // --------------------------------------------------
-                                // ★ 【調整：ゲージエリア】
-                                // spacedBy(0.dp) の数字をマイナス（例: -4.dp）にすると、
-                                // ゲージと一番下の文字が重なるくらい詰まり、カードも短くなります。
-                                Column(
-                                    verticalArrangement = Arrangement.spacedBy(-6.dp)
-                                ) {
-                                    LinearProgressIndicator(
-                                        progress = {
-                                            (totalStepsInRange.toFloat() / stepGoal).coerceAtMost(
-                                                1f
-                                            )
-                                        },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(8.dp)
-                                            .clip(CircleShape),
-                                        color = pinkAccent,
-                                        trackColor = Color(0xFFFFE0E9)
-                                    )
-
-                                    Text(
-                                        text = "目標：${
-                                            String.format(
-                                                Locale.US,
-                                                "%,d",
-                                                stepGoal
-                                            )
-                                        }歩",
-                                        fontSize = 8.sp,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.End,
-                                        color = Color.Gray
-                                    )
-                                }
-                            }
-                        }
-                    }
-                } // Boxの終わり
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "${period.label}の歩数",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
+                Text(
+                    text = "${String.format(Locale.US, "%,d", totalStepsInRange)}歩",
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = pinkAccent
+                )
                 // 3. 推移グラフ
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -3053,7 +2937,7 @@ fun StepGraphPink(displayData: List<AggregatedData>, period: DisplayPeriod) {
 
     Box(modifier = Modifier
         .fillMaxWidth()
-        .height(120.dp)) { // ツールチップ表示用に高さを少し確保
+        .height(180.dp)) { // ツールチップ表示用に高さを少し確保
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
