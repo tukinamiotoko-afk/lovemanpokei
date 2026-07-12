@@ -2761,7 +2761,6 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .verticalScroll(rememberScrollState())
                     .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 0.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -2781,21 +2780,25 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                     )
                 }
                 Text(
-                    text = "${String.format(Locale.US, "%,d", totalStepsInRange)}歩",
+                    text = String.format(Locale.US, "%,d", totalStepsInRange),
                     fontSize = 64.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = pinkAccent,
                     textAlign = TextAlign.End,
                     modifier = Modifier.fillMaxWidth()
                 )
-                // 3. 推移グラフ
+                // 3. 推移グラフ（残りの縦スペースを自動的に使い切る）
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
                     color = cardBg,
                     shape = RoundedCornerShape(16.dp),
                     shadowElevation = 2.dp
                 ) {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                    Column(modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 10.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 Icons.Default.Favorite,
@@ -2812,7 +2815,13 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
-                        StepGraphPink(displayData = displayData, period = period)
+                        StepGraphPink(
+                            displayData = displayData,
+                            period = period,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                        )
                     }
                 }
                 // 統計詳細
@@ -2826,21 +2835,18 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(IntrinsicSize.Max),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.Bottom
                     ) {
                         StatCardNew(
-                            Modifier
-                                .weight(1f)
-                                .fillMaxHeight(),
+                            Modifier.weight(1f),
                             "消費カロリー",
                             String.format(Locale.US, "%.1f kcal", calories),
                             "おつかれさま！よく頑張ったね♪",
                             Icons.Default.Whatshot
                         )
                         StatCardNew(
-                            Modifier
-                                .weight(1f)
-                                .fillMaxHeight(),
+                            Modifier.weight(1f),
                             "歩いた距離",
                             String.format(Locale.US, "%.2f km", distance),
                             "目標まで頑張ろう！",
@@ -2851,22 +2857,19 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(IntrinsicSize.Max),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.Bottom
                     ) {
                         val timeStr = formatMillis(activeTimeMillis)
                         StatCardNew(
-                            Modifier
-                                .weight(1f)
-                                .fillMaxHeight(),
+                            Modifier.weight(1f),
                             "歩いた時間",
                             timeStr,
                             "すごい！毎日続けようね♪",
                             Icons.Default.Schedule
                         )
                         StatCardNew(
-                            Modifier
-                                .weight(1f)
-                                .fillMaxHeight(),
+                            Modifier.weight(1f),
                             "平均時速",
                             String.format(Locale.US, "%.1f km/h", speed),
                             "いいペースだよ！",
@@ -2903,23 +2906,23 @@ fun StatCardNew(modifier: Modifier, label: String, value: String, comment: Strin
         ) {
             Row(
                 modifier = Modifier
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
-                    .heightIn(min = 44.dp),
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .heightIn(min = 56.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     icon,
                     null,
                     tint = Color(0xFFFF6B9D).copy(alpha = 0.7f),
-                    modifier = Modifier.size(26.dp)
+                    modifier = Modifier.size(30.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(text = label, fontSize = 10.sp, color = Color(0xFF994466), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
-                    Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF7A1A3D), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
+                    Text(text = label, fontSize = 11.sp, color = Color(0xFF994466), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
+                    Text(text = value, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF7A1A3D), maxLines = 1, overflow = TextOverflow.Ellipsis, style = textStyle)
                 }
             }
         }
@@ -2927,7 +2930,7 @@ fun StatCardNew(modifier: Modifier, label: String, value: String, comment: Strin
 }
 
 @Composable
-fun StepGraphPink(displayData: List<AggregatedData>, period: DisplayPeriod) {
+fun StepGraphPink(displayData: List<AggregatedData>, period: DisplayPeriod, modifier: Modifier = Modifier.fillMaxWidth().height(180.dp)) {
     val pinkColor = Color(0xFFFF6B9D)
     if (displayData.isEmpty()) return
 
@@ -2938,9 +2941,7 @@ fun StepGraphPink(displayData: List<AggregatedData>, period: DisplayPeriod) {
     // ★ 触れている棒のインデックスを保持する状態
     var selectedIndex by remember { mutableStateOf<Int?>(null) }
 
-    Box(modifier = Modifier
-        .fillMaxWidth()
-        .height(180.dp)) { // ツールチップ表示用に高さを少し確保
+    Box(modifier = modifier) { // 呼び出し側が高さを決める（親のweightで残りスペースを自動計算）
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
