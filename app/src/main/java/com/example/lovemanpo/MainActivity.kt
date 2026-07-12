@@ -5412,21 +5412,27 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 Text("❤$heartCount/10", fontSize = 11.sp, color = Color.White)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("💬$actionPoints", fontSize = 11.sp, color = Color.White)
-                Spacer(modifier = Modifier.width(8.dp))
-                // 恋人モード：好感度9以上で解放。未解放時は鍵アイコンで表示
-                if (loveCount > 8) {
-                    Text("💕恋人", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                } else {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Lock, contentDescription = "恋人モード未解放", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(11.dp))
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text("恋人(Lv.9)", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
-                    }
-                }
                 Spacer(modifier = Modifier.weight(1f))
                 Text("📍$currentLocation", fontSize = 11.sp, color = Color.White.copy(alpha = 0.9f))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(String.format(java.util.Locale.US, "%,d", todaySteps) + "歩", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+            }
+
+            // 恋人モード：好感度9未満はロック表示（暗い背景に中央寄せ）
+            if (loveCount <= 8) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Black.copy(alpha = 0.75f))
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Lock, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("恋人モードはロックされています（好感度Lv.9で解放）", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
 
             // キャラクター画像は各メッセージ内に表示（↓LazyColumn内）
