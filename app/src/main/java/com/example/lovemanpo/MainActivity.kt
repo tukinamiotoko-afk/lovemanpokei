@@ -1925,38 +1925,6 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
     }
 }
 
-// 文字の周りに白い縁取りを付けたテキスト（フォント自体には縁取り機能がないため、
-// 一回り大きい白文字を背後に中央揃えで置き、その上に本来の大きさの色文字を重ねて表現する）
-@Composable
-fun OutlinedText(
-    text: String,
-    fontSize: androidx.compose.ui.unit.TextUnit,
-    color: Color,
-    outlineColor: Color = Color.White,
-    outlineScale: Float = 1.5f,
-    fontWeight: FontWeight? = null,
-    fontFamily: FontFamily? = null,
-    modifier: Modifier = Modifier
-) {
-    val outlineFontSize = androidx.compose.ui.unit.TextUnit(fontSize.value * outlineScale, fontSize.type)
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Text(
-            text,
-            fontSize = outlineFontSize,
-            fontWeight = fontWeight,
-            fontFamily = fontFamily,
-            color = outlineColor
-        )
-        Text(
-            text,
-            fontSize = fontSize,
-            fontWeight = fontWeight,
-            fontFamily = fontFamily,
-            color = color
-        )
-    }
-}
-
 @Composable
 fun HomeLoveLevelCard(modifier: Modifier = Modifier, lv: Int, progress: Float, hearts: Int) {
     val faceRes = when (lv) {
@@ -1988,7 +1956,7 @@ fun HomeLoveLevelCard(modifier: Modifier = Modifier, lv: Int, progress: Float, h
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(11.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
                     Spacer(modifier = Modifier.width(3.dp))
-                    OutlinedText("ラブレベル", fontSize = 10.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
+                    Text("ラブレベル", fontSize = 10.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -2031,7 +1999,7 @@ fun HomeActionPointsCard(modifier: Modifier = Modifier, pts: Int) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color.Unspecified, modifier = Modifier.size(13.dp).gradientTint(listOf(Color(0xFF80CBC4), Color(0xFF00695C))))
                 Spacer(modifier = Modifier.width(4.dp))
-                OutlinedText("行動ポイント", fontSize = 10.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
+                Text("行動ポイント", fontSize = 10.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
             }
             Text("$pts / 5 pt", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1B5E20), fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
