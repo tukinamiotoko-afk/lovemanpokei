@@ -2782,9 +2782,11 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                 }
                 Text(
                     text = "${String.format(Locale.US, "%,d", totalStepsInRange)}歩",
-                    fontSize = 32.sp,
+                    fontSize = 64.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = pinkAccent
+                    color = pinkAccent,
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.fillMaxWidth()
                 )
                 // 3. 推移グラフ
                 Surface(
@@ -2890,6 +2892,7 @@ fun StatCardNew(modifier: Modifier, label: String, value: String, comment: Strin
         shadowElevation = 2.dp
     ) {
         Box(
+            contentAlignment = Alignment.BottomStart,
             modifier = Modifier
                 .fillMaxSize()
                 .background(
