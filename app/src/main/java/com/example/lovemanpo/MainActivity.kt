@@ -1641,16 +1641,22 @@ fun HomeScreenContent(
             verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            HomeLoveLevelCard(
-                modifier = Modifier.weight(1f),
-                lv = loveCount,
-                progress = heartGaugeProgress,
-                hearts = heartCount
-            )
-            HomeActionPointsCard(
-                modifier = Modifier.weight(0.72f),
-                pts = actionPoints
-            )
+            // ラブレベル・行動ポイントの2枚だけ高さを揃える（ボタン列の高さに引きずられないよう内側のRowで完結させる）
+            Row(
+                modifier = Modifier.weight(1f).height(IntrinsicSize.Max),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                HomeLoveLevelCard(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    lv = loveCount,
+                    progress = heartGaugeProgress,
+                    hearts = heartCount
+                )
+                HomeActionPointsCard(
+                    modifier = Modifier.weight(0.72f).fillMaxHeight(),
+                    pts = actionPoints
+                )
+            }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 HomeTopCircleButton(Icons.Default.Notifications, size = 26.dp)
                 HomeTopCircleButton(Icons.Default.Settings, size = 26.dp)
@@ -1912,29 +1918,30 @@ fun HomeLoveLevelCard(modifier: Modifier = Modifier, lv: Int, progress: Float, h
             .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFFFFFF), Color(0xFFFFEEF5))))
             .border(1.dp, Color(0xFFFF6B9D).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
     ) {
-        Row(modifier = Modifier.padding(7.dp), verticalAlignment = Alignment.CenterVertically) {
+        val tightTextStyle = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+        Row(modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
             Image(
                 painter = painterResource(id = faceRes),
                 contentDescription = null,
                 modifier = Modifier
-                    .size(46.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
                     .background(Color(0xFFFFE0E9)),
                 contentScale = ContentScale.Crop
             )
             Spacer(modifier = Modifier.width(6.dp))
-            Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(12.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
+                    Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(11.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
                     Spacer(modifier = Modifier.width(3.dp))
-                    Text("ラブレベル", fontSize = 9.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily)
+                    Text("ラブレベル", fontSize = 8.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Bottom
                 ) {
-                    Text("Lv. $lv", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray, fontFamily = MplusRoundedFontFamily)
+                    Text("Lv. $lv", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, color = Color.DarkGray, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
                     Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(10.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
                 }
                 Canvas(
@@ -1965,14 +1972,15 @@ fun HomeActionPointsCard(modifier: Modifier = Modifier, pts: Int) {
             .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFFFFFF), Color(0xFFDFF6F4))))
             .border(1.dp, Color(0xFF4DB6AC).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
     ) {
-        Column(modifier = Modifier.padding(7.dp)) {
+        val tightTextStyle = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+        Column(modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Place, null, tint = Color.Unspecified, modifier = Modifier.size(14.dp).gradientTint(listOf(Color(0xFF80CBC4), Color(0xFF00695C))))
+                Icon(Icons.Default.Place, null, tint = Color.Unspecified, modifier = Modifier.size(13.dp).gradientTint(listOf(Color(0xFF80CBC4), Color(0xFF00695C))))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("行動ポイント", fontSize = 9.sp, color = Color(0xFF444444), fontFamily = MplusRoundedFontFamily)
+                Text("行動ポイント", fontSize = 8.sp, color = Color(0xFF444444), fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
             }
-            Text("$pts / 5 pt", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A), fontFamily = MplusRoundedFontFamily)
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(top = 2.dp)) {
+            Text("$pts / 5 pt", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A1A1A), fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 repeat(5) { i ->
                     Canvas(modifier = Modifier.size(10.dp)) {
                         if (i < pts) {
