@@ -1926,25 +1926,26 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 }
 
 // 文字の周りに白い縁取りを付けたテキスト（フォント自体には縁取り機能がないため、
-// 同じ文字を8方向にずらして塗りつぶし描画＋通常の塗りつぶしを重ねて表現する。
+// 同じ文字を円周上の16方向にずらして塗りつぶし描画＋通常の塗りつぶしを重ねて表現する。
+// 8方向(斜めが対角で遠くなり不均一)だとジャギジャギになるため、均等な円周配置にしている。
 // ストローク描画のPaintに頼ると小さいフォントサイズでは太さが見た目に反映されないため、この方式にしている）
 @Composable
 fun OutlinedText(
     text: String,
     fontSize: androidx.compose.ui.unit.TextUnit,
     color: Color,
-    outlineColor: Color = Color.Red, // 実験用: 縁取りが実際に描画されているか確認するため一時的に赤にしている
-    outlineWidth: androidx.compose.ui.unit.Dp = 2.dp,
+    outlineColor: Color = Color.White,
+    outlineWidth: androidx.compose.ui.unit.Dp = 1.3.dp,
     fontWeight: FontWeight? = null,
     fontFamily: FontFamily? = null,
     modifier: Modifier = Modifier
 ) {
+    val directionCount = 16
     val directions = remember {
-        listOf(
-            -1f to -1f, 0f to -1f, 1f to -1f,
-            -1f to 0f, 1f to 0f,
-            -1f to 1f, 0f to 1f, 1f to 1f
-        )
+        (0 until directionCount).map { i ->
+            val angle = Math.toRadians(360.0 / directionCount * i)
+            kotlin.math.cos(angle).toFloat() to kotlin.math.sin(angle).toFloat()
+        }
     }
     Box(modifier = modifier) {
         directions.forEach { (dx, dy) ->
