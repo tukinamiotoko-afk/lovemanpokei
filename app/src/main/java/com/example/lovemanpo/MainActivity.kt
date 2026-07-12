@@ -1924,11 +1924,13 @@ fun OutlinedText(
     fontSize: androidx.compose.ui.unit.TextUnit,
     color: Color,
     outlineColor: Color = Color.White,
-    outlineWidth: Float = 3f,
+    outlineWidth: androidx.compose.ui.unit.Dp = 3.dp,
     fontWeight: FontWeight? = null,
     fontFamily: FontFamily? = null,
     modifier: Modifier = Modifier
 ) {
+    val density = LocalDensity.current
+    val outlineWidthPx = with(density) { outlineWidth.toPx() }
     Box(modifier = modifier) {
         Text(
             text,
@@ -1936,7 +1938,7 @@ fun OutlinedText(
             fontWeight = fontWeight,
             fontFamily = fontFamily,
             color = outlineColor,
-            style = TextStyle(drawStyle = Stroke(width = outlineWidth))
+            style = TextStyle(drawStyle = Stroke(width = outlineWidthPx))
         )
         Text(
             text,
