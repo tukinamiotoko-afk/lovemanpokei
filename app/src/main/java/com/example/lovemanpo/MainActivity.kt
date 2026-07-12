@@ -1615,7 +1615,7 @@ fun HomeScreenContent(
             Column(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(start = 16.dp, top = 170.dp),
+                    .padding(start = 16.dp, top = 140.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 HomeStepCircleGauge(
@@ -1956,7 +1956,7 @@ fun HomeLoveLevelCard(modifier: Modifier = Modifier, lv: Int, progress: Float, h
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(11.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
                     Spacer(modifier = Modifier.width(3.dp))
-                    Text("ラブレベル", fontSize = 10.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
+                    Text("ラブレベル", fontSize = 12.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1999,7 +1999,7 @@ fun HomeActionPointsCard(modifier: Modifier = Modifier, pts: Int) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color.Unspecified, modifier = Modifier.size(13.dp).gradientTint(listOf(Color(0xFF80CBC4), Color(0xFF00695C))))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("行動ポイント", fontSize = 10.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
+                Text("行動ポイント", fontSize = 12.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
             }
             Text("$pts / 5 pt", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1B5E20), fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
