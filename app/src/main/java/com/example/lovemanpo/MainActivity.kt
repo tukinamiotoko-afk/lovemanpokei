@@ -1668,16 +1668,14 @@ fun HomeScreenContent(
                 HomeTopCircleButton(Icons.Default.Notifications, size = 26.dp)
                 HomeTopCircleButton(Icons.Default.Settings, size = 26.dp)
                 HomeTopCircleButton(
-                    icon = Icons.Default.Storefront,
+                    iconRes = R.drawable.aikon_shopping,
                     containerColor = Color(0xFFFFE8F0),
-                    iconColor = Color(0xFFFF6B9D),
                     onClick = onShopClick,
                     size = 26.dp
                 )
                 HomeTopCircleButton(
-                    icon = Icons.Default.Checkroom,
+                    iconRes = R.drawable.aikon_kigae,
                     containerColor = Color(0xFFFFE8F0),
-                    iconColor = Color(0xFFFF6B9D),
                     onClick = onWardrobeClick,
                     size = 26.dp
                 )
@@ -1805,6 +1803,22 @@ fun HomeTopCircleButton(icon: androidx.compose.ui.graphics.vector.ImageVector, c
         .size(size)
         .clickable { onClick() }) {
         Box(contentAlignment = Alignment.Center) { Icon(icon, null, tint = iconColor, modifier = Modifier.size(size * 0.73f)) }
+    }
+}
+
+@Composable
+fun HomeTopCircleButton(iconRes: Int, containerColor: Color = Color.White, onClick: () -> Unit = {}, size: androidx.compose.ui.unit.Dp = 30.dp) {
+    Surface(shape = CircleShape, color = containerColor, modifier = Modifier
+        .size(size)
+        .clickable { onClick() }) {
+        Box(contentAlignment = Alignment.Center) {
+            Image(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(size * 0.73f),
+                contentScale = ContentScale.Fit
+            )
+        }
     }
 }
 
@@ -1997,7 +2011,7 @@ fun HomeActionPointsCard(modifier: Modifier = Modifier, pts: Int) {
         val tightTextStyle = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
         Column(modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp), verticalArrangement = Arrangement.spacedBy((-2).dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Place, null, tint = Color.Unspecified, modifier = Modifier.size(13.dp).gradientTint(listOf(Color(0xFF80CBC4), Color(0xFF00695C))))
+                Image(painter = painterResource(id = R.drawable.aikon_koudoupointo), contentDescription = null, modifier = Modifier.size(16.dp), contentScale = ContentScale.Fit)
                 Spacer(modifier = Modifier.width(4.dp))
                 Text("行動ポイント", fontSize = 12.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
             }
