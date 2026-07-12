@@ -1933,8 +1933,8 @@ fun OutlinedText(
     text: String,
     fontSize: androidx.compose.ui.unit.TextUnit,
     color: Color,
-    outlineColor: Color = Color.White,
-    outlineWidth: androidx.compose.ui.unit.Dp = 1.2.dp,
+    outlineColor: Color = Color.Red, // 実験用: 縁取りが実際に描画されているか確認するため一時的に赤にしている
+    outlineWidth: androidx.compose.ui.unit.Dp = 2.dp,
     fontWeight: FontWeight? = null,
     fontFamily: FontFamily? = null,
     modifier: Modifier = Modifier
