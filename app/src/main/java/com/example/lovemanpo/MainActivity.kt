@@ -1615,8 +1615,8 @@ fun HomeScreenContent(
                     todaySteps,
                     stepGaugeProgress,
                     modifier = Modifier.graphicsLayer {
-                        scaleX = 0.75f
-                        scaleY = 0.75f
+                        scaleX = 0.8f
+                        scaleY = 0.8f
                         transformOrigin = TransformOrigin(0f, 0f)
                     }
                 )
