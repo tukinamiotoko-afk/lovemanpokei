@@ -64,6 +64,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -1822,6 +1823,8 @@ fun HomeStepCircleGauge(steps: Int, progress: Float, modifier: Modifier = Modifi
                     .padding(4.dp)
             ) {
                 val sw = 8.dp.toPx()
+                val gradientTop = Color(0xFF81D4FA)
+                val gradientBottom = Color(0xFF1565C0)
                 drawArc(
                     color = Color.LightGray.copy(alpha = 0.2f),
                     startAngle = 0f, sweepAngle = 360f, useCenter = false,
@@ -1829,7 +1832,7 @@ fun HomeStepCircleGauge(steps: Int, progress: Float, modifier: Modifier = Modifi
                 )
                 drawArc(
                     brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                        listOf(Color(0xFF81D4FA), Color(0xFF1565C0))
+                        listOf(gradientTop, gradientBottom)
                     ),
                     startAngle = -90f, sweepAngle = 360f * progress, useCenter = false,
                     style = Stroke(width = sw, cap = StrokeCap.Round)
@@ -1842,8 +1845,12 @@ fun HomeStepCircleGauge(steps: Int, progress: Float, modifier: Modifier = Modifi
                     val rad = Math.toRadians(angleDeg.toDouble())
                     val cos = kotlin.math.cos(rad).toFloat()
                     val sin = kotlin.math.sin(rad).toFloat()
+                    // 目安の線は、その位置に円弧のグラデーションがあったら何色になるかに合わせる
+                    val tickY = cy + radius * sin
+                    val t = (tickY / size.height).coerceIn(0f, 1f)
+                    val tickColor = lerp(gradientTop, gradientBottom, t)
                     drawLine(
-                        color = Color.White,
+                        color = tickColor,
                         start = Offset(cx + (radius - sw) * cos, cy + (radius - sw) * sin),
                         end = Offset(cx + radius * cos, cy + radius * sin),
                         strokeWidth = 2.5.dp.toPx()
@@ -1934,7 +1941,7 @@ fun HomeLoveLevelCard(modifier: Modifier = Modifier, lv: Int, progress: Float, h
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(11.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
                     Spacer(modifier = Modifier.width(3.dp))
-                    Text("ラブレベル", fontSize = 8.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
+                    Text("ラブレベル", fontSize = 10.sp, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1977,7 +1984,7 @@ fun HomeActionPointsCard(modifier: Modifier = Modifier, pts: Int) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color.Unspecified, modifier = Modifier.size(13.dp).gradientTint(listOf(Color(0xFF80CBC4), Color(0xFF00695C))))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("行動ポイント", fontSize = 8.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
+                Text("行動ポイント", fontSize = 10.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
             }
             Text("$pts / 5 pt", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1B5E20), fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
