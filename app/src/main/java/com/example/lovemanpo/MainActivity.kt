@@ -1846,6 +1846,8 @@ fun HomeStepCircleGauge(steps: Int, progress: Float, modifier: Modifier = Modifi
                 val radius = size.minDimension / 2f
                 val cx = size.width / 2f
                 val cy = size.height / 2f
+                val tickInner = radius - sw / 2f
+                val tickOuter = radius + sw / 2f
                 repeat(5) { i ->
                     val angleDeg = -90f + (i + 1) * 72f
                     val rad = Math.toRadians(angleDeg.toDouble())
@@ -1857,9 +1859,9 @@ fun HomeStepCircleGauge(steps: Int, progress: Float, modifier: Modifier = Modifi
                     val tickColor = lerp(gradientTop, gradientBottom, t)
                     drawLine(
                         color = tickColor,
-                        start = Offset(cx + (radius - sw) * cos, cy + (radius - sw) * sin),
-                        end = Offset(cx + radius * cos, cy + radius * sin),
-                        strokeWidth = 2.5.dp.toPx()
+                        start = Offset(cx + tickInner * cos, cy + tickInner * sin),
+                        end = Offset(cx + tickOuter * cos, cy + tickOuter * sin),
+                        strokeWidth = 1.dp.toPx()
                     )
                 }
             }
