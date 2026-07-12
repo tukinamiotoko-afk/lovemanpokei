@@ -1926,29 +1926,37 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 }
 
 // 文字の周りに白い縁取りを付けたテキスト（フォント自体には縁取り機能がないため、
-// 白いストローク描画＋通常の塗りつぶしを重ねて表現する）
+// 同じ文字を8方向にずらして塗りつぶし描画＋通常の塗りつぶしを重ねて表現する。
+// ストローク描画のPaintに頼ると小さいフォントサイズでは太さが見た目に反映されないため、この方式にしている）
 @Composable
 fun OutlinedText(
     text: String,
     fontSize: androidx.compose.ui.unit.TextUnit,
     color: Color,
     outlineColor: Color = Color.White,
-    outlineWidth: androidx.compose.ui.unit.Dp = 3.dp,
+    outlineWidth: androidx.compose.ui.unit.Dp = 1.2.dp,
     fontWeight: FontWeight? = null,
     fontFamily: FontFamily? = null,
     modifier: Modifier = Modifier
 ) {
-    val density = LocalDensity.current
-    val outlineWidthPx = with(density) { outlineWidth.toPx() }
-    Box(modifier = modifier) {
-        Text(
-            text,
-            fontSize = fontSize,
-            fontWeight = fontWeight,
-            fontFamily = fontFamily,
-            color = outlineColor,
-            style = TextStyle(drawStyle = Stroke(width = outlineWidthPx))
+    val directions = remember {
+        listOf(
+            -1f to -1f, 0f to -1f, 1f to -1f,
+            -1f to 0f, 1f to 0f,
+            -1f to 1f, 0f to 1f, 1f to 1f
         )
+    }
+    Box(modifier = modifier) {
+        directions.forEach { (dx, dy) ->
+            Text(
+                text,
+                fontSize = fontSize,
+                fontWeight = fontWeight,
+                fontFamily = fontFamily,
+                color = outlineColor,
+                modifier = Modifier.offset(x = outlineWidth * dx, y = outlineWidth * dy)
+            )
+        }
         Text(
             text,
             fontSize = fontSize,
