@@ -1848,6 +1848,12 @@ fun HomeStepCircleGauge(steps: Int, progress: Float, modifier: Modifier = Modifi
                 val cy = size.height / 2f
                 val tickInner = radius - sw / 2f
                 val tickOuter = radius + sw / 2f
+                val ringOutlineBrush = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(gradientTop, gradientBottom))
+                val ringOutlineWidth = 0.6.dp.toPx()
+                // 白いゲージ部分が背景と見分けにくいので、リングのつなぎ目（内側・外側の境界線）を
+                // グラデーションと同じ色でめっちゃ細く囲む
+                drawCircle(brush = ringOutlineBrush, radius = tickOuter, center = Offset(cx, cy), style = Stroke(width = ringOutlineWidth))
+                drawCircle(brush = ringOutlineBrush, radius = tickInner, center = Offset(cx, cy), style = Stroke(width = ringOutlineWidth))
                 repeat(5) { i ->
                     val angleDeg = -90f + (i + 1) * 72f
                     val rad = Math.toRadians(angleDeg.toDouble())
