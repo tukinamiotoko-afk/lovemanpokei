@@ -2157,8 +2157,8 @@ fun splitMessageIntoPages(text: String): List<String> {
 // includeFontPadding=falseで、Android既定の余分な行間パディングによる高さのズレも消しておく
 // （このズレがあると、固定した2行分の高さの箱から実際の描画がわずかにはみ出し下端が切れる）
 val bannerTextStyle = TextStyle(
-    fontSize = 12.sp,
-    lineHeight = 16.sp,
+    fontSize = 13.sp,
+    lineHeight = 17.sp,
     platformStyle = PlatformTextStyle(includeFontPadding = false)
 )
 
