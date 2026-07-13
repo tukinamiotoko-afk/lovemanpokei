@@ -1644,20 +1644,20 @@ fun HomeScreenContent(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 420.dp),
+                .padding(end = 16.dp, bottom = 480.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             HomeTopCircleButton(
                 iconRes = R.drawable.aikon_shopping,
                 onClick = onShopClick,
-                size = 44.dp,
+                size = 38.dp,
                 showBackground = false
             )
             HomeTopCircleButton(
                 iconRes = R.drawable.aikon_kigae,
                 onClick = onWardrobeClick,
-                size = 44.dp,
+                size = 38.dp,
                 showBackground = false
             )
         }
