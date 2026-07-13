@@ -260,6 +260,10 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getFloat("CURRENT_TEMPERATURE_C", Float.NaN)
         set(value) = prefs.edit { putFloat("CURRENT_TEMPERATURE_C", value) }
 
+    // その日にすでに表示したタッチセリフ（日付 → 表示済みテキストの集合）
+    fun getShownTouchDialogues(date: String): Set<String> = prefs.getStringSet("SHOWN_TOUCH_DIALOGUES_$date", emptySet()) ?: emptySet()
+    fun setShownTouchDialogues(date: String, shown: Set<String>) = prefs.edit { putStringSet("SHOWN_TOUCH_DIALOGUES_$date", shown) }
+
     // 日次日記（日付 → 要約テキスト）
     fun getDailyDiary(date: String): String = prefs.getString("DAILY_DIARY_$date", "") ?: ""
     fun setDailyDiary(date: String, text: String) = prefs.edit { putString("DAILY_DIARY_$date", text) }
@@ -534,6 +538,15 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
     val unlockedMemoryIds = mutableStateOf(repository.unlockedMemoryIds)
 
     fun saveCurrentDialogue(text: String) { repository.currentDialogue = text }
+
+    // 今日すでに表示したタッチセリフを取得し、新しく表示したセリフを記録する
+    fun getTodayShownTouchDialogues(): Set<String> = repository.getShownTouchDialogues(LocalDate.now().toString())
+    fun markTouchDialogueShown(text: String) {
+        val today = LocalDate.now().toString()
+        val shown = repository.getShownTouchDialogues(today).toMutableSet()
+        shown.add(text)
+        repository.setShownTouchDialogues(today, shown)
+    }
     fun saveWeatherCode(code: Int) { repository.currentWeatherCode = code }
     fun saveWeatherInfo(info: WeatherInfo) {
         repository.currentWeatherCode = info.weatherCode
@@ -1447,7 +1460,13 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         caloriesStr = caloriesStr,
         weatherInfo = weatherInfo,
         onCharacterClick = {
-            touchedDialogue = touchDialogues.randomOrNull()
+            val shownToday = viewModel.getTodayShownTouchDialogues()
+            val candidates = touchDialogues.filter { it.text !in shownToday }
+            // 今日出せるセリフを全部出し切ったら、リストの最初からまた出せるようにする
+            val pool = candidates.ifEmpty { touchDialogues }
+            val picked = pool.randomOrNull()
+            if (picked != null) viewModel.markTouchDialogueShown(picked.text)
+            touchedDialogue = picked
             weatherDialogueActive = false
         },
         isHomeChatLoading = isHomeChatLoading,
