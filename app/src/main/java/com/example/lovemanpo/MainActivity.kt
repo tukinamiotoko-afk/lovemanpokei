@@ -1644,7 +1644,7 @@ fun HomeScreenContent(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = characterBottomPadding),
+                .padding(end = 16.dp, bottom = 420.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
