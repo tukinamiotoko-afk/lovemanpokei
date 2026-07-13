@@ -2264,16 +2264,29 @@ fun HomeCommentBanner(message: String, onRefresh: (() -> Unit)? = null, onClick:
             }
         }
         if (onRefresh != null) {
-            Icon(
-                Icons.Default.Refresh,
-                contentDescription = "更新",
-                tint = Color(0xFFFF6B9D),
+            // ぐるぐるマークの中心がカードの角の頂点に来るように、
+            // 丸ボタンを自身のサイズの半分だけ右上へオフセットする
+            val refreshButtonSize = 26.dp
+            Surface(
+                shape = CircleShape,
+                color = Color.White,
+                shadowElevation = 6.dp,
+                border = BorderStroke(1.dp, Color(0xFFFFB7D0)),
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(6.dp)
-                    .size(16.dp)
+                    .offset(x = refreshButtonSize / 2, y = -(refreshButtonSize / 2))
+                    .size(refreshButtonSize)
                     .clickable { onRefresh() }
-            )
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "更新",
+                        tint = Color(0xFFFF6B9D),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
         }
     }
 }
