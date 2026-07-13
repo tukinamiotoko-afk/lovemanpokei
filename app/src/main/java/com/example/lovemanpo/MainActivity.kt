@@ -1671,7 +1671,7 @@ fun HomeScreenContent(
                 HomeTopCircleButton(
                     iconRes = R.drawable.aikon_shopping,
                     onClick = onShopClick,
-                    size = 26.dp,
+                    size = 29.dp,
                     showBackground = false
                 )
                 HomeTopCircleButton(
