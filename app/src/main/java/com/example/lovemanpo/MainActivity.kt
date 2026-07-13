@@ -1640,11 +1640,12 @@ fun HomeScreenContent(
                 .offset(x = (-20).dp)
         )
 
-        // 買い物・着替えボタンは上部のボタン列から切り離し、少し下の右側に大きめに配置する
+        // 買い物・着替えボタンは上部のボタン列から切り離し、その少し下の右側に配置する
         Column(
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 16.dp, bottom = 480.dp),
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(end = 16.dp, top = 134.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
