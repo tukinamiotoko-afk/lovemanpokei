@@ -6097,7 +6097,7 @@ fun WardrobeCostumeCard(costume: Costume, isEquipped: Boolean, onEquip: () -> Un
             .clickable(enabled = !isEquipped) { onEquip() }
             .padding(8.dp)
     ) {
-        Box(g
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(3f / 4f)
