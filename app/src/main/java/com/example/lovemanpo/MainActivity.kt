@@ -1456,7 +1456,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     var weatherDialogueActive by remember { mutableStateOf(false) }
 
     val weatherDialogue = weatherInfo?.let { homeWeatherDialogue(it.weatherCode) }
-    val stepAchievementDialogue = stepDialogue.takeIf { it.thresholdSteps > 0 }
+    // 歩数達成メッセージはセリフとしては表示しない（歩数データ自体はこれまで通り記録・利用する）
     val activeWeatherDialogue = if (weatherDialogueActive) weatherDialogue else null
 
     // その日最初の表示なら「寂しさ」セリフを1回だけ出す
@@ -1474,8 +1474,8 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         picked
     }
 
-    val displayMessage = (homeChatReply?.first ?: touchedDialogue?.text ?: stepAchievementDialogue?.text ?: activeWeatherDialogue?.text ?: openingLonelyDialogue ?: defaultDialogueEntry?.text ?: stepDialogue.text).replace("○○", playerName)
-    val baseDisplayExpression = homeChatReply?.second ?: touchedDialogue?.expr ?: stepAchievementDialogue?.expr ?: activeWeatherDialogue?.expr
+    val displayMessage = (homeChatReply?.first ?: touchedDialogue?.text ?: activeWeatherDialogue?.text ?: openingLonelyDialogue ?: defaultDialogueEntry?.text ?: stepDialogue.text).replace("○○", playerName)
+    val baseDisplayExpression = homeChatReply?.second ?: touchedDialogue?.expr ?: activeWeatherDialogue?.expr
         ?: (if (openingLonelyDialogue != null) R.drawable.hikari_think else null)
         ?: defaultDialogueEntry?.expr ?: stepDialogue.expr
     val equippedCostumeId by viewModel.equippedCostumeId
