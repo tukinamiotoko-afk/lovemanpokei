@@ -1640,6 +1640,28 @@ fun HomeScreenContent(
                 .offset(x = (-20).dp)
         )
 
+        // 買い物・着替えボタンは上部のボタン列から切り離し、少し下の右側に大きめに配置する
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = characterBottomPadding),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            HomeTopCircleButton(
+                iconRes = R.drawable.aikon_shopping,
+                onClick = onShopClick,
+                size = 44.dp,
+                showBackground = false
+            )
+            HomeTopCircleButton(
+                iconRes = R.drawable.aikon_kigae,
+                onClick = onWardrobeClick,
+                size = 44.dp,
+                showBackground = false
+            )
+        }
+
         // 上部カード行 + ボタン列。独立したオーバーレイとしてキャラの上に被さる
         Row(
             modifier = Modifier
@@ -1668,18 +1690,6 @@ fun HomeScreenContent(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 HomeTopCircleButton(Icons.Default.Notifications, size = 26.dp)
                 HomeTopCircleButton(Icons.Default.Settings, size = 26.dp)
-                HomeTopCircleButton(
-                    iconRes = R.drawable.aikon_shopping,
-                    onClick = onShopClick,
-                    size = 26.dp,
-                    showBackground = false
-                )
-                HomeTopCircleButton(
-                    iconRes = R.drawable.aikon_kigae,
-                    onClick = onWardrobeClick,
-                    size = 26.dp,
-                    showBackground = false
-                )
                 HomeTopCircleButton(
                     icon = Icons.Default.BugReport,
                     containerColor = Color.Red.copy(alpha = 0.1f),
