@@ -4552,11 +4552,34 @@ val homeDefaultDialoguesLv5 = listOf(
     TouchDialogue("ふぅ……○○さん。この前ちょっと落ち込むことがあったんです。でも散歩をしていたら気持ちが切り替わって……『また頑張ろう』って思えました。", R.drawable.hikari_think)
 )
 
-// Lv7以上はまだ専用のセリフが用意できていないため、当面Lv5-6のプールを使い回す
-fun homeDefaultDialogues(loveCount: Int): List<TouchDialogue> = when {
-    loveCount >= 5 -> homeDefaultDialoguesLv5
-    loveCount >= 3 -> homeDefaultDialoguesLv3
-    else           -> homeDefaultDialoguesLv1
+// 趣味・娯楽の話題はラブレベルに関係なく共通で出す
+val homeDefaultDialoguesUniversal = listOf(
+    TouchDialogue("ねぇ、○○さん。RPGって寄り道しながら遊ぶタイプですか？私は宝箱を全部開けたくなっちゃって、なかなか先へ進めないんです。", R.drawable.hikari_smile),
+    TouchDialogue("アクションゲームって、何回も挑戦してクリアできると嬉しいですよね。○○さんは難しいゲームも結構やるほうですか？", R.drawable.hikari_smile),
+    TouchDialogue("のんびり遊べる牧場ゲームって、時間を忘れちゃいませんか？私は気づいたら何時間も遊んじゃうタイプなんです。", R.drawable.hikari_smile),
+    TouchDialogue("○○さんはピアノだけの曲って聴いたりしますか？私は静かな夜に流すと、なんだか心が落ち着くんです。", R.drawable.hikari_smile),
+    TouchDialogue("最近、ジャズを流しながら本を読む時間が好きなんです。○○さんは作業中って音楽を流す派ですか？", R.drawable.hikari_smile),
+    TouchDialogue("心が温かくなる映画って、たまに無性に観たくなりませんか？○○さんは泣ける作品と笑える作品ならどっちが好きですか？", R.drawable.hikari_smile),
+    TouchDialogue("日常系のアニメって、ぼーっと観られるのがいいですよね。○○さんはそういう作品も好きですか？", R.drawable.hikari_smile),
+    TouchDialogue("漫画って一巻だけ読むつもりが、続きも気になっちゃいますよね。○○さんもそんなことありませんか？", R.drawable.hikari_smile),
+    TouchDialogue("ファンタジー小説って世界に入り込める感じが好きなんです。○○さんはミステリーとファンタジーならどっち派ですか？", R.drawable.hikari_smile),
+    TouchDialogue("最近、ジグソーパズルをやってみたいなって思ってるんです。○○さんは時間を忘れて夢中になれる趣味ってありますか？", R.drawable.hikari_smile),
+    TouchDialogue("旅行へ行くなら温泉街とのんびりした港町、どっちに惹かれますか？私はゆっくり歩ける場所が好きなんです。", R.drawable.hikari_smile),
+    TouchDialogue("ラーメンって、しょうゆ・みそ・塩・とんこつなら何が一番好きですか？私はその日の気分で変わっちゃうんですよね。", R.drawable.hikari_smile),
+    TouchDialogue("コーヒーを飲むならブラック派ですか？それともカフェラテ派ですか？私はカフェラテを飲むとほっとしちゃうんです。", R.drawable.hikari_smile),
+    TouchDialogue("水族館ってクラゲ・ペンギン・イルカなら、どのエリアが一番好きですか？私はクラゲの水槽をずっと眺めていられるんです。", R.drawable.hikari_smile),
+    TouchDialogue("動物園へ行くと、つい長く見ちゃう動物っていますよね。○○さんはどの動物の前で足が止まりますか？", R.drawable.hikari_smile)
+)
+
+// Lv9以上はまだ専用のセリフが用意できていないため、当面Lv5-6のプールを使い回す。
+// 趣味・娯楽の話題（homeDefaultDialoguesUniversal）はどのラブレベルでも共通で混ぜる。
+fun homeDefaultDialogues(loveCount: Int): List<TouchDialogue> {
+    val tierPool = when {
+        loveCount >= 5 -> homeDefaultDialoguesLv5
+        loveCount >= 3 -> homeDefaultDialoguesLv3
+        else           -> homeDefaultDialoguesLv1
+    }
+    return tierPool + homeDefaultDialoguesUniversal
 }
 
 // その日最初にホーム画面を開いた時だけ1回出す「寂しさ」セリフ。
