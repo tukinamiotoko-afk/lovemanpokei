@@ -1645,7 +1645,7 @@ fun HomeScreenContent(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
-                .padding(end = 16.dp, top = 134.dp),
+                .padding(end = 8.dp, top = 134.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
