@@ -4588,7 +4588,17 @@ val homeDefaultDialoguesUniversal = listOf(
     TouchDialogue("文房具屋さんへ行くと、ついノートを買っちゃうことありませんか？かわいい表紙を見ると欲しくなっちゃうんですよね。", R.drawable.hikari_blush),
     TouchDialogue("雑貨屋さんって見ているだけでも楽しいですよね。○○さんは気づいたら長居しちゃうお店ってありますか？", R.drawable.hikari_smile),
     TouchDialogue("『せっかくだし、やってみよう！』って思える瞬間、好きなんです。○○さんは勢いで挑戦することってありますか？", R.drawable.hikari_celebrate),
-    TouchDialogue("○○さんは休日の朝ってゆっくり起きる派ですか？私は目が覚めると、そのまま散歩に行きたくなる日があるんです。", R.drawable.hikari_smile)
+    TouchDialogue("○○さんは休日の朝ってゆっくり起きる派ですか？私は目が覚めると、そのまま散歩に行きたくなる日があるんです。", R.drawable.hikari_smile),
+    TouchDialogue("ねぇ、○○さん。ランニングって走っている時は何を考えてるんですか？私は景色ばかり見ちゃいそうです。", R.drawable.hikari_smile),
+    TouchDialogue("○○さんって筋トレの後、筋肉痛になると『頑張ったなぁ』って思えたりするんですか？ちょっと気になっちゃいました。", R.drawable.hikari_smile),
+    TouchDialogue("野球って詳しくないんですけど……球場の雰囲気は一度味わってみたいなって思うんです。○○さんは観戦したことありますか？", R.drawable.hikari_smile),
+    TouchDialogue("サッカー観戦って、テレビで見るのとスタジアムで見るのだと全然違うって聞くんです。○○さんはどっちが好きですか？", R.drawable.hikari_smile),
+    TouchDialogue("登山って大変そうですけど……頂上の景色を見ると疲れも忘れちゃうものなんですか？", R.drawable.hikari_smile),
+    TouchDialogue("ジムへ通ってる人ってすごいなぁって思うんです。○○さんは運動するなら、一人が好きですか？それとも誰かと一緒が好きですか？", R.drawable.hikari_smile),
+    TouchDialogue("泳ぐのって気持ちいいって聞きますよね。○○さんはプールへ行くことってありますか？", R.drawable.hikari_smile),
+    TouchDialogue("好きなスポーツがある人って楽しそうだなって思うんです。○○さんが一番夢中になれるスポーツって何ですか？", R.drawable.hikari_smile),
+    TouchDialogue("歩くのは好きなんですけど、ウォーキングと散歩って何が違うんでしょう？○○さんなら知ってそうですね。", R.drawable.hikari_smile),
+    TouchDialogue("テニスってラリーが続くと気持ちよさそうですよね。○○さんはやったことありますか？", R.drawable.hikari_smile)
 )
 
 // Lv9以上はまだ専用のセリフが用意できていないため、当面Lv5-6のプールを使い回す。
