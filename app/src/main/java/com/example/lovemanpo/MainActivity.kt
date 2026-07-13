@@ -4539,8 +4539,22 @@ val homeDefaultDialoguesLv3 = listOf(
     TouchDialogue("今日は文具屋さんでかわいいメモ帳を見つけたんです。思わず『○○さんにメッセージを書くなら何を書こうかな』って考えちゃいました。", R.drawable.hikari_blush)
 )
 
-// Lv5以上はまだ専用のセリフが用意できていないため、当面Lv3-4のプールを使い回す
+val homeDefaultDialoguesLv5 = listOf(
+    TouchDialogue("ねぇ、○○さん。オムライスって好きですか？この前作ってみたら、卵がきれいに包めて……ちょっと嬉しかったんです。", R.drawable.hikari_blush),
+    TouchDialogue("聞いてください、○○さん！先日、水族館へ行ってきたんです。クラゲを眺めていたら……気づいたら一時間も過ぎていました。", R.drawable.hikari_celebrate),
+    TouchDialogue("お気に入りのお店って、何度も行きたくなりませんか？最近見つけたパン屋さんがまさにそうで……つい寄り道しちゃうんです。", R.drawable.hikari_smile),
+    TouchDialogue("あっ、○○さん。プラネタリウムって行ったことありますか？この前久しぶりに行ったら……思っていた以上に癒やされちゃいました。", R.drawable.hikari_smile),
+    TouchDialogue("そうそう、○○さん。この間ハンバーグを作ったんです。思ったよりふっくら焼けて……もう一回作りたくなっちゃいました。", R.drawable.hikari_celebrate),
+    TouchDialogue("あのですね、○○さん。今度リュックを買おうと思ってるんです。でも、なかなか決められなくて……。○○さんならどっちを選びますか？", R.drawable.hikari_smile),
+    TouchDialogue("本屋さんへ行くと、予定より長居しちゃうことってありませんか？先日も気になる小説を見つけて……気づいたら一時間くらいいたんです。", R.drawable.hikari_blush),
+    TouchDialogue("実は、○○さん。この前チーズケーキを食べたんです。コーヒーとの相性がぴったりで……すごく幸せな気分になれました。", R.drawable.hikari_blush),
+    TouchDialogue("最近、思わず写真を撮りたくなる景色って見ましたか？私はこの間の夕焼けがあまりにもきれいで……何枚も撮っちゃいました。", R.drawable.hikari_smile),
+    TouchDialogue("ふぅ……○○さん。この前ちょっと落ち込むことがあったんです。でも散歩をしていたら気持ちが切り替わって……『また頑張ろう』って思えました。", R.drawable.hikari_think)
+)
+
+// Lv7以上はまだ専用のセリフが用意できていないため、当面Lv5-6のプールを使い回す
 fun homeDefaultDialogues(loveCount: Int): List<TouchDialogue> = when {
+    loveCount >= 5 -> homeDefaultDialoguesLv5
     loveCount >= 3 -> homeDefaultDialoguesLv3
     else           -> homeDefaultDialoguesLv1
 }
