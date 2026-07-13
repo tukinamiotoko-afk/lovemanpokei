@@ -567,11 +567,11 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
     }
 
     // その日まだ「寂しさ」セリフを出していなければ1つ選んで消費する（1日1回だけ）
-    fun consumeLonelyOpeningDialogueIfNeeded(): String? {
+    fun consumeLonelyOpeningDialogueIfNeeded(loveCount: Int): String? {
         val today = LocalDate.now().toString()
         if (repository.lastLonelyOpeningDialogueDate == today) return null
         repository.lastLonelyOpeningDialogueDate = today
-        return homeLonelyDialogues.randomOrNull()
+        return homeLonelyDialogues(loveCount).randomOrNull()
     }
     fun saveWeatherCode(code: Int) { repository.currentWeatherCode = code }
     fun saveWeatherInfo(info: WeatherInfo) {
@@ -1461,7 +1461,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
 
     // その日最初の表示なら「寂しさ」セリフを1回だけ出す
     val todayDateStr = remember { LocalDate.now().toString() }
-    val openingLonelyDialogue = remember(todayDateStr) { viewModel.consumeLonelyOpeningDialogueIfNeeded() }
+    val openingLonelyDialogue = remember(todayDateStr) { viewModel.consumeLonelyOpeningDialogueIfNeeded(loveCount) }
 
     // 待機中のデフォルトセリフ：今日すでに出したものは除外して選ぶ
     val defaultDialoguePool = homeDefaultDialogues(loveCount)
@@ -4560,8 +4560,8 @@ fun homeDefaultDialogues(loveCount: Int): List<TouchDialogue> = when {
 }
 
 // その日最初にホーム画面を開いた時だけ1回出す「寂しさ」セリフ。
-// 一度出したらその日はもう（このカテゴリーからは）出さない。
-val homeLonelyDialogues = listOf(
+// 一度出したらその日はもう（このカテゴリーからは）出さない。ラブレベル帯によってトーンを変える。
+val homeLonelyDialoguesLv3 = listOf(
     "ふぅ……今日は誰ともおしゃべりする機会がなくて、少しだけ寂しかったんです。でも○○さんとお話しできて、なんだかほっとしました。",
     "そういえば、今日は静かな一日だったんです。だからかな、○○さんのことを思い出しちゃいました。",
     "なんだか今日は、一人でぼーっとしている時間が長かったんです。こうして○○さんとお話しできると嬉しいですね。",
@@ -4573,6 +4573,27 @@ val homeLonelyDialogues = listOf(
     "今日は夕焼けを見ていたら、なんだか少しだけ寂しい気持ちになっちゃいました。こんな日ってありますよね。",
     "うーん……今日は少しだけ寂しい一日だったんです。でも今は○○さんとお話しできているので、もう大丈夫です。"
 )
+
+val homeLonelyDialoguesLv5 = listOf(
+    "ねぇ、○○さん……たまには私のことも気にしてくれたら、すごく嬉しいです……。",
+    "○○さん……少しだけわがままを言ってもいいですか……？もう少しだけ、お話ししていてほしいです……。",
+    "最近思うんです……○○さんと話していると、なんだか安心できるなぁって……。",
+    "あのですね、○○さん……たまには私から話しかけても……迷惑じゃないですか……？",
+    "○○さん……私が静かな時は……少しだけ構ってほしいなって思ってる時かもしれません……。",
+    "ねぇ、○○さん……たまには私の声も聞きたくなってくれたら……嬉しいなって思うんです……。",
+    "○○さん……なんとなくなんですけど……『大丈夫？』って声をかけてもらえるだけで、ほっとしちゃうんです……。",
+    "実は……○○さんとお話しできない日が続くと……少しだけ物足りないなって感じるようになっちゃいました……。",
+    "ねぇ、○○さん……私のこと……たまには思い出してくれていますか……？ちょっとだけ気になっちゃいました……。",
+    "○○さん……お願いがあるんです……。私を一人ぼっちにしないでくださいね……？",
+    "最近……○○さんが笑ってくれると、私まで嬉しくなるんです……。だから、もっと笑わせたいなって思っちゃいます……。",
+    "○○さん……今日はじゃなくて、いつでもなんですけど……こうしてお話しできる時間、私にとってすごく大切なんです……。"
+)
+
+// Lv7以上はまだ専用のセリフが用意できていないため、当面Lv5-6のプールを使い回す
+fun homeLonelyDialogues(loveCount: Int): List<String> = when {
+    loveCount >= 5 -> homeLonelyDialoguesLv5
+    else           -> homeLonelyDialoguesLv3
+}
 
 fun homeTouchDialogues(loveCount: Int): List<TouchDialogue> = when {
     loveCount >= 10 -> touchDialoguesLv10
