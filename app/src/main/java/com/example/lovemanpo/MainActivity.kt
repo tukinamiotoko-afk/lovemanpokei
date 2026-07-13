@@ -4568,7 +4568,27 @@ val homeDefaultDialoguesUniversal = listOf(
     TouchDialogue("ラーメンって、しょうゆ・みそ・塩・とんこつなら何が一番好きですか？私はその日の気分で変わっちゃうんですよね。", R.drawable.hikari_smile),
     TouchDialogue("コーヒーを飲むならブラック派ですか？それともカフェラテ派ですか？私はカフェラテを飲むとほっとしちゃうんです。", R.drawable.hikari_smile),
     TouchDialogue("水族館ってクラゲ・ペンギン・イルカなら、どのエリアが一番好きですか？私はクラゲの水槽をずっと眺めていられるんです。", R.drawable.hikari_smile),
-    TouchDialogue("動物園へ行くと、つい長く見ちゃう動物っていますよね。○○さんはどの動物の前で足が止まりますか？", R.drawable.hikari_smile)
+    TouchDialogue("動物園へ行くと、つい長く見ちゃう動物っていますよね。○○さんはどの動物の前で足が止まりますか？", R.drawable.hikari_smile),
+    TouchDialogue("ねぇ、○○さん。ゲームってキャラクターをじっくり育てるのが好きですか？私はレベル上げを始めると止まらなくなっちゃうんです。", R.drawable.hikari_smile),
+    TouchDialogue("○○さんは協力ゲームって好きですか？誰かと息がぴったり合うと、なんだか嬉しくなっちゃいますよね。", R.drawable.hikari_smile),
+    TouchDialogue("オープンワールドのゲームって、目的を忘れて景色を眺めちゃうことありませんか？私は寄り道ばかりしちゃうタイプなんです。", R.drawable.hikari_smile),
+    TouchDialogue("○○さんは雨の日に聴きたくなる曲ってありますか？私はしっとりしたアコースティックギターの音が落ち着くんです。", R.drawable.hikari_smile),
+    TouchDialogue("イヤホンをつけた瞬間、『今日はこの曲！』ってなる日ってありませんか？そんな日は気分まで変わる気がするんです。", R.drawable.hikari_smile),
+    TouchDialogue("映画館って上映が始まる前の静かな時間も好きなんです。○○さんはポップコーン、買う派ですか？", R.drawable.hikari_smile),
+    TouchDialogue("アニメってオープニングを飛ばさずに観る派ですか？好きな曲だと、毎回最後まで聴いちゃいますよね。", R.drawable.hikari_smile),
+    TouchDialogue("漫画って『あと一話だけ』のつもりが止まらなくなることありませんか？私はよく夜更かししちゃうんです。", R.drawable.hikari_think),
+    TouchDialogue("ミステリー小説って、犯人を予想しながら読むのも楽しいですよね。○○さんも推理したくなるタイプですか？", R.drawable.hikari_smile),
+    TouchDialogue("散歩していると、つい路地裏へ入ってみたくなることありませんか？思いがけない景色に出会えると嬉しくなるんです。", R.drawable.hikari_smile),
+    TouchDialogue("カフェへ行くと、毎回同じものを頼む派ですか？それとも新しいメニューに挑戦する派ですか？", R.drawable.hikari_smile),
+    TouchDialogue("旅行へ行くなら、食べ歩きを楽しむ旅と景色を楽しむ旅ならどっちが好きですか？私は両方捨てがたいです……。", R.drawable.hikari_smile),
+    TouchDialogue("写真を撮る時って、景色が多いですか？それとも食べ物が多いですか？私は気づくと空ばかり撮ってるんです。", R.drawable.hikari_smile),
+    TouchDialogue("○○さんはオムライスにケチャップで絵を描いたことってありますか？私は毎回何を描こうか迷っちゃうんです。", R.drawable.hikari_blush),
+    TouchDialogue("パンケーキって、シンプル派ですか？それともフルーツたっぷり派ですか？見ているだけで幸せになりますよね。", R.drawable.hikari_smile),
+    TouchDialogue("秋になると焼き芋の香りにつられちゃうことってありませんか？あの香りは反則だと思うんです……。", R.drawable.hikari_smile),
+    TouchDialogue("文房具屋さんへ行くと、ついノートを買っちゃうことありませんか？かわいい表紙を見ると欲しくなっちゃうんですよね。", R.drawable.hikari_blush),
+    TouchDialogue("雑貨屋さんって見ているだけでも楽しいですよね。○○さんは気づいたら長居しちゃうお店ってありますか？", R.drawable.hikari_smile),
+    TouchDialogue("『せっかくだし、やってみよう！』って思える瞬間、好きなんです。○○さんは勢いで挑戦することってありますか？", R.drawable.hikari_celebrate),
+    TouchDialogue("○○さんは休日の朝ってゆっくり起きる派ですか？私は目が覚めると、そのまま散歩に行きたくなる日があるんです。", R.drawable.hikari_smile)
 )
 
 // Lv9以上はまだ専用のセリフが用意できていないため、当面Lv5-6のプールを使い回す。
