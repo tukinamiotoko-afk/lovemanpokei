@@ -264,6 +264,15 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
     fun getShownTouchDialogues(date: String): Set<String> = prefs.getStringSet("SHOWN_TOUCH_DIALOGUES_$date", emptySet()) ?: emptySet()
     fun setShownTouchDialogues(date: String, shown: Set<String>) = prefs.edit { putStringSet("SHOWN_TOUCH_DIALOGUES_$date", shown) }
 
+    // その日にすでに表示したデフォルト（待機中の話しかけ）セリフ（日付 → 表示済みテキストの集合）
+    fun getShownDefaultDialogues(date: String): Set<String> = prefs.getStringSet("SHOWN_DEFAULT_DIALOGUES_$date", emptySet()) ?: emptySet()
+    fun setShownDefaultDialogues(date: String, shown: Set<String>) = prefs.edit { putStringSet("SHOWN_DEFAULT_DIALOGUES_$date", shown) }
+
+    // その日最初の「寂しさ」セリフをすでに消費したかどうかの日付（1日1回だけ出す制御用）
+    var lastLonelyOpeningDialogueDate: String
+        get() = prefs.getString("LAST_LONELY_OPENING_DIALOGUE_DATE", "") ?: ""
+        set(value) = prefs.edit { putString("LAST_LONELY_OPENING_DIALOGUE_DATE", value) }
+
     // 日次日記（日付 → 要約テキスト）
     fun getDailyDiary(date: String): String = prefs.getString("DAILY_DIARY_$date", "") ?: ""
     fun setDailyDiary(date: String, text: String) = prefs.edit { putString("DAILY_DIARY_$date", text) }
@@ -546,6 +555,23 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
         val shown = repository.getShownTouchDialogues(today).toMutableSet()
         shown.add(text)
         repository.setShownTouchDialogues(today, shown)
+    }
+
+    // 今日すでに表示した「待機中の話しかけ」セリフを取得し、新しく表示したセリフを記録する
+    fun getTodayShownDefaultDialogues(): Set<String> = repository.getShownDefaultDialogues(LocalDate.now().toString())
+    fun markDefaultDialogueShown(text: String) {
+        val today = LocalDate.now().toString()
+        val shown = repository.getShownDefaultDialogues(today).toMutableSet()
+        shown.add(text)
+        repository.setShownDefaultDialogues(today, shown)
+    }
+
+    // その日まだ「寂しさ」セリフを出していなければ1つ選んで消費する（1日1回だけ）
+    fun consumeLonelyOpeningDialogueIfNeeded(): String? {
+        val today = LocalDate.now().toString()
+        if (repository.lastLonelyOpeningDialogueDate == today) return null
+        repository.lastLonelyOpeningDialogueDate = today
+        return homeLonelyDialogues.randomOrNull()
     }
     fun saveWeatherCode(code: Int) { repository.currentWeatherCode = code }
     fun saveWeatherInfo(info: WeatherInfo) {
@@ -1432,8 +1458,26 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     val weatherDialogue = weatherInfo?.let { homeWeatherDialogue(it.weatherCode) }
     val stepAchievementDialogue = stepDialogue.takeIf { it.thresholdSteps > 0 }
     val activeWeatherDialogue = if (weatherDialogueActive) weatherDialogue else null
-    val displayMessage = (homeChatReply?.first ?: touchedDialogue?.text ?: stepAchievementDialogue?.text ?: activeWeatherDialogue?.text ?: stepDialogue.text).replace("○○", playerName)
-    val baseDisplayExpression = homeChatReply?.second ?: touchedDialogue?.expr ?: stepAchievementDialogue?.expr ?: activeWeatherDialogue?.expr ?: stepDialogue.expr
+
+    // その日最初の表示なら「寂しさ」セリフを1回だけ出す
+    val todayDateStr = remember { LocalDate.now().toString() }
+    val openingLonelyDialogue = remember(todayDateStr) { viewModel.consumeLonelyOpeningDialogueIfNeeded() }
+
+    // 待機中のデフォルトセリフ：今日すでに出したものは除外して選ぶ
+    val defaultDialoguePool = homeDefaultDialogues(loveCount)
+    val defaultDialogueEntry = remember(defaultDialoguePool) {
+        val shownToday = viewModel.getTodayShownDefaultDialogues()
+        val candidates = defaultDialoguePool.filter { it.text !in shownToday }
+        val pool = candidates.ifEmpty { defaultDialoguePool }
+        val picked = pool.randomOrNull()
+        if (picked != null) viewModel.markDefaultDialogueShown(picked.text)
+        picked
+    }
+
+    val displayMessage = (homeChatReply?.first ?: touchedDialogue?.text ?: stepAchievementDialogue?.text ?: activeWeatherDialogue?.text ?: openingLonelyDialogue ?: defaultDialogueEntry?.text ?: stepDialogue.text).replace("○○", playerName)
+    val baseDisplayExpression = homeChatReply?.second ?: touchedDialogue?.expr ?: stepAchievementDialogue?.expr ?: activeWeatherDialogue?.expr
+        ?: (if (openingLonelyDialogue != null) R.drawable.hikari_think else null)
+        ?: defaultDialogueEntry?.expr ?: stepDialogue.expr
     val equippedCostumeId by viewModel.equippedCostumeId
     val displayExpression = costumedExpressionRes(baseDisplayExpression, equippedCostumeId)
 
@@ -4437,6 +4481,84 @@ fun homeStepDialogue(todaySteps: Int, loveCount: Int): StepDialogue {
     }
     return list.lastOrNull { todaySteps >= it.thresholdSteps } ?: list.first()
 }
+
+// 待機中（歩数の節目に達していない時）に表示するバリエーション豊かな話しかけセリフ。
+// 「今日出したものは今日はもう出さない」の管理対象になる（getTodayShownDefaultDialogues）。
+val homeDefaultDialoguesLv1 = listOf(
+    TouchDialogue("ふぁぁ……今日はちょっと眠たいです。あったかい紅茶でも飲んで、ゆっくりしたい気分なんです。", R.drawable.hikari_think),
+    TouchDialogue("そういえば、○○さん。友達と好きなタイプの話になったんです。○○さんはどんな女性に惹かれることが多いんですか？", R.drawable.hikari_blush),
+    TouchDialogue("あのですね、○○さん。私の第一印象ってどんな感じでしたか？少し気になっちゃいました。", R.drawable.hikari_blush),
+    TouchDialogue("ふと思ったんですけど、○○さん。私ってしっかりしてるほうに見えますか？それとも少し抜けてるほうですか？", R.drawable.hikari_smile),
+    TouchDialogue("今日はかわいいマグカップを見つけたんです！見ているだけでも楽しくなっちゃいました。", R.drawable.hikari_celebrate),
+    TouchDialogue("私、こういう日は甘いものが食べたくなるんです。○○さんは最近、つい食べたくなるものってありますか？", R.drawable.hikari_smile),
+    TouchDialogue("○○さん、最近ちゃんと休めていますか？無理だけはしないでくださいね。", R.drawable.hikari_smile),
+    TouchDialogue("最近ですね、夜に少しだけお散歩するのが好きなんです。静かな時間って落ち着きますよね。", R.drawable.hikari_smile),
+    TouchDialogue("あっ、今日かわいい鳥を見つけたんです！思わず足を止めて見ちゃいました。", R.drawable.hikari_celebrate),
+    TouchDialogue("そういえば、最近はゆったりした音楽を聴くことが増えたんです。○○さんはどんな音楽が好きなんですか？", R.drawable.hikari_smile),
+    TouchDialogue("あれれ……買うものをちゃんと覚えていたはずなのに、一番大事なものだけ忘れちゃいました。", R.drawable.hikari_think),
+    TouchDialogue("ねぇ、○○さん。お休みの日って何をして過ごすことが多いんですか？私はお散歩したくなることが多いんです。", R.drawable.hikari_smile),
+    TouchDialogue("いつか、いろんな景色を見に行ってみたいんです。○○さんにも、お気に入りの場所ってありますか？", R.drawable.hikari_smile),
+    TouchDialogue("ねぇ、○○さん。私にはかわいい雰囲気と大人っぽい雰囲気、どっちが似合うと思いますか？", R.drawable.hikari_blush),
+    TouchDialogue("実は今日、友達と『幸せって何だろう』って話をしていたんです。○○さんなら何て答えますか？", R.drawable.hikari_smile),
+    TouchDialogue("実は、私って文房具売り場が大好きなんです。気づいたら、つい長居しちゃうんですよ。", R.drawable.hikari_blush),
+    TouchDialogue("聞いてください、○○さん！今日は焼きたてのパンの香りにつられて、お店に入っちゃいました。", R.drawable.hikari_celebrate),
+    TouchDialogue("ふと思ったんですけど、○○さんは一人で過ごす時間と、誰かと過ごす時間ならどっちが好きですか？", R.drawable.hikari_smile),
+    TouchDialogue("なんとなくですけど、○○さんって読書が好きそうな気がするんです。当たっていますか？", R.drawable.hikari_smile),
+    TouchDialogue("相談してもいいですか、○○さん。今度マグカップを買おうと思うんですけど、シンプルなデザインとかわいいデザインならどっちがおすすめですか？", R.drawable.hikari_smile),
+    TouchDialogue("そういえば、最近はピアノの曲を流しながら過ごすことが増えたんです。○○さんはどんな音楽をよく聴くんですか？", R.drawable.hikari_smile),
+    TouchDialogue("実は最近、ミステリー小説にハマってるんです。続きが気になって、つい夜更かししちゃいました。", R.drawable.hikari_blush),
+    TouchDialogue("今日はかわいい雑貨屋さんを見つけたんです！見ているだけでも楽しくて、時間を忘れちゃいました。", R.drawable.hikari_celebrate),
+    TouchDialogue("ふと思ったんですけど、○○さんから見て、私って話しかけやすそうですか？", R.drawable.hikari_blush),
+    TouchDialogue("なんとなくですけど、○○さんって甘いものより、しょっぱいものが好きそうな気がするんです。どうでしょう？", R.drawable.hikari_smile),
+    TouchDialogue("相談してもいいですか？今度映画を観ようと思うんですけど、笑える作品と感動する作品ならどっちがおすすめですか？", R.drawable.hikari_smile),
+    TouchDialogue("そういえば、子どもの頃にシャボン玉で遊んだことを思い出したんです。○○さんはどんな遊びが好きでしたか？", R.drawable.hikari_smile),
+    TouchDialogue("実は、紅茶の香りを楽しみながらのんびり過ごす時間が好きなんです。○○さんは好きな飲み物ってありますか？", R.drawable.hikari_smile),
+    TouchDialogue("聞いてください……。今日は買い物に行ったのに、一番買いたかったハンドクリームだけ忘れて帰ってきちゃいました。", R.drawable.hikari_think)
+)
+
+val homeDefaultDialoguesLv3 = listOf(
+    TouchDialogue("そういえば、最近カフェでのんびり本を読むのに憧れてるんです。○○さんは一人でゆっくり過ごす時間って好きですか？", R.drawable.hikari_smile),
+    TouchDialogue("ふぁぁ……今日は甘いものが食べたい気分です。○○さんは疲れた日って、何が食べたくなりますか？", R.drawable.hikari_think),
+    TouchDialogue("実は私、かわいい文房具を見るとつい買っちゃうんです。○○さんにも、つい集めちゃうものってありますか？", R.drawable.hikari_blush),
+    TouchDialogue("ふと思ったんですけど、一日自由に過ごせるなら何をしたいですか？私は景色のきれいな場所を歩いてみたいです。", R.drawable.hikari_smile),
+    TouchDialogue("うーん……部屋に飾るなら、お花と観葉植物ならどっちがいいと思いますか？まだ決められなくて迷ってるんです。", R.drawable.hikari_smile),
+    TouchDialogue("ねぇ、○○さん。私って初めて会った頃と比べて、少しは話しやすくなりましたか？", R.drawable.hikari_blush),
+    TouchDialogue("なんとなくですけど、○○さんって約束はきちんと守るタイプな気がするんです。当たってますか？", R.drawable.hikari_smile),
+    TouchDialogue("最近、心が温かくなる映画を観たい気分なんです。○○さんなら、笑える作品と感動する作品、どっちを選びますか？", R.drawable.hikari_smile),
+    TouchDialogue("今日はゆったりした曲を聴きながら過ごしていたんです。音楽って、その日の気分で選ぶことってありませんか？", R.drawable.hikari_smile),
+    TouchDialogue("聞いてください！今日は部屋を片づけていたら、なくしたと思っていたアクセサリーが見つかったんです。ちょっと得した気分でした！", R.drawable.hikari_celebrate),
+    TouchDialogue("聞いてください、○○さん！今日はかわいい猫が近寄ってきてくれたんです。○○さんにも見てもらいたかったなぁって思っちゃいました。", R.drawable.hikari_celebrate),
+    TouchDialogue("そういえば、○○さん。今日は新しいカフェを見つけたんです。落ち着いた雰囲気で、『○○さんも好きそうだな』って思いながら歩いてました。", R.drawable.hikari_smile),
+    TouchDialogue("ふふっ……最近、旅行雑誌を見るのが楽しみなんです。気づいたら『○○さんならどこへ行きたいんだろう』って考えちゃってました。", R.drawable.hikari_blush),
+    TouchDialogue("えへへ、今日は季節限定のお菓子を見つけたんです。食べながら『○○さんはこういうの好きかな？』って気になっちゃいました。", R.drawable.hikari_blush),
+    TouchDialogue("ふと思ったんですけど、○○さんって嬉しいことがあると誰かに話したくなるタイプですか？私はすぐ聞いてほしくなっちゃうんです。", R.drawable.hikari_smile),
+    TouchDialogue("実は私、予定を立てる時間も結構好きなんです。当日を想像してるだけでわくわくしてくるんですよ。", R.drawable.hikari_celebrate),
+    TouchDialogue("あのですね、○○さん。プレゼントを選ぶなら実用的なものと、思い出に残るものならどっちが嬉しいと思いますか？", R.drawable.hikari_smile),
+    TouchDialogue("なんとなくですけど、○○さんって景色がきれいな場所を見つけたら、少し立ち止まるタイプな気がするんです。", R.drawable.hikari_smile),
+    TouchDialogue("ねぇ、○○さん。最近ふと思うんです。私、前より○○さんと話すと緊張しなくなってきた気がします。", R.drawable.hikari_blush),
+    TouchDialogue("今日は文具屋さんでかわいいメモ帳を見つけたんです。思わず『○○さんにメッセージを書くなら何を書こうかな』って考えちゃいました。", R.drawable.hikari_blush)
+)
+
+// Lv5以上はまだ専用のセリフが用意できていないため、当面Lv3-4のプールを使い回す
+fun homeDefaultDialogues(loveCount: Int): List<TouchDialogue> = when {
+    loveCount >= 3 -> homeDefaultDialoguesLv3
+    else           -> homeDefaultDialoguesLv1
+}
+
+// その日最初にホーム画面を開いた時だけ1回出す「寂しさ」セリフ。
+// 一度出したらその日はもう（このカテゴリーからは）出さない。
+val homeLonelyDialogues = listOf(
+    "ふぅ……今日は誰ともおしゃべりする機会がなくて、少しだけ寂しかったんです。でも○○さんとお話しできて、なんだかほっとしました。",
+    "そういえば、今日は静かな一日だったんです。だからかな、○○さんのことを思い出しちゃいました。",
+    "なんだか今日は、一人でぼーっとしている時間が長かったんです。こうして○○さんとお話しできると嬉しいですね。",
+    "えへへ……実は今日は『○○さんは何をしてるのかな』って、ふと考えちゃったんです。",
+    "聞いてください、○○さん。今日は少しだけ元気が出なかったんです。でも、お話ししていたら元気が湧いてきました！",
+    "ふぁぁ……今日は家でゆっくりしていたんですけど、少し静かすぎて寂しく感じちゃいました。",
+    "実は今日、ちょっとだけ心細い気分だったんです。○○さんとお話しできるタイミングでよかったです。",
+    "ねぇ、○○さん。今日は誰かとおしゃべりしたい気分だったんです。ちょうど会えて嬉しいです。",
+    "今日は夕焼けを見ていたら、なんだか少しだけ寂しい気持ちになっちゃいました。こんな日ってありますよね。",
+    "うーん……今日は少しだけ寂しい一日だったんです。でも今は○○さんとお話しできているので、もう大丈夫です。"
+)
 
 fun homeTouchDialogues(loveCount: Int): List<TouchDialogue> = when {
     loveCount >= 10 -> touchDialoguesLv10
