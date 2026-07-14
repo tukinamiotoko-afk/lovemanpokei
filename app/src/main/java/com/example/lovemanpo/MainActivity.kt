@@ -4601,10 +4601,25 @@ val homeDefaultDialoguesUniversal = listOf(
     TouchDialogue("テニスってラリーが続くと気持ちよさそうですよね。○○さんはやったことありますか？", R.drawable.hikari_smile)
 )
 
-// Lv9以上はまだ専用のセリフが用意できていないため、当面Lv5-6のプールを使い回す。
+val homeDefaultDialoguesLv9 = listOf(
+    TouchDialogue("ねぇ、○○さん……今日はぎゅーってしてほしいな。少し充電させて……？", R.drawable.hikari_blush),
+    TouchDialogue("○○さん……今日は手、つないで歩こ？こうして並んで歩く時間、大好きなんです。", R.drawable.hikari_blush),
+    TouchDialogue("今日はね……○○さんの隣で、のんびりしてたい気分なんです。何もしなくても幸せなんですよ。", R.drawable.hikari_smile),
+    TouchDialogue("ねぇ、頭……なでてほしいな。○○さんにしてもらうと、不思議なくらい安心するんです。", R.drawable.hikari_blush),
+    TouchDialogue("○○さん。今日は腕、組んでもいいですか？……えへへ、恋人なんだからたまにはいいですよね。", R.drawable.hikari_blush),
+    TouchDialogue("ふぅ……今日はちょっと疲れちゃった……。○○さん、少しだけ甘えさせて？", R.drawable.hikari_think),
+    TouchDialogue("ねぇ、○○さん。たまには私からぎゅーしに行っても……びっくりしないでくださいね？", R.drawable.hikari_blush),
+    TouchDialogue("○○さんの手って、やっぱり落ち着くなぁ……。気づくと、つなぎたくなっちゃうんです。", R.drawable.hikari_blush),
+    TouchDialogue("今日は……このまま隣でゆっくりしてたいな。○○さんと一緒だと、それだけで幸せなんです。", R.drawable.hikari_smile),
+    TouchDialogue("今日は少しだけ、わがまま言ってもいい……？もう少しだけ、私のそばにいてほしいな。", R.drawable.hikari_blush),
+    TouchDialogue("ねぇ、○○さん。今度おそろいのマグカップ、使ってみない？きっと毎日のコーヒーがもっとおいしくなるよ。", R.drawable.hikari_celebrate),
+    TouchDialogue("○○さん……これから先も、嬉しいことがあったら一番に話したいし、落ち込んだ時は一番に頼りたいな。", R.drawable.hikari_smile)
+)
+
 // 趣味・娯楽の話題（homeDefaultDialoguesUniversal）はどのラブレベルでも共通で混ぜる。
 fun homeDefaultDialogues(loveCount: Int): List<TouchDialogue> {
     val tierPool = when {
+        loveCount >= 9 -> homeDefaultDialoguesLv9
         loveCount >= 5 -> homeDefaultDialoguesLv5
         loveCount >= 3 -> homeDefaultDialoguesLv3
         else           -> homeDefaultDialoguesLv1
