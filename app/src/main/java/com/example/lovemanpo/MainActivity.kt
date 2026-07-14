@@ -1592,7 +1592,8 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         onMemoriesClick = { navController.navigate("memories") },
         onDebugClick = { navController.navigate("debug") },
         onShopClick = { navController.navigate("shop") },
-        onWardrobeClick = { navController.navigate("wardrobe") }
+        onWardrobeClick = { navController.navigate("wardrobe") },
+        onSettingsClick = { navController.navigate("settings") }
     )
 
     if (pendingLevelUp > 0) {
@@ -1635,7 +1636,8 @@ fun HomeScreenContent(
     onMemoriesClick: () -> Unit = {},
     onDebugClick: () -> Unit,
     onShopClick: () -> Unit = {},
-    onWardrobeClick: () -> Unit = {}
+    onWardrobeClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {}
 ) {
     var showWeatherSheet by remember { mutableStateOf(false) }
 
@@ -1760,7 +1762,7 @@ fun HomeScreenContent(
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 HomeTopCircleButton(Icons.Default.Notifications, size = 26.dp)
-                HomeTopCircleButton(Icons.Default.Settings, size = 26.dp)
+                HomeTopCircleButton(Icons.Default.Settings, onClick = onSettingsClick, size = 26.dp)
                 HomeTopCircleButton(
                     icon = Icons.Default.BugReport,
                     containerColor = Color.Red.copy(alpha = 0.1f),
@@ -2823,24 +2825,6 @@ fun RecordsScreen(navController: NavController, viewModel: StepViewModel) {
                         }
                     }
 
-                    // 設定ボタン (白い円形)
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White,
-                        shadowElevation = 2.dp,
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clickable { navController.navigate("settings") }
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.Settings,
-                                contentDescription = "設定",
-                                tint = pinkAccent,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
