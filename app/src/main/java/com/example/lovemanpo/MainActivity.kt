@@ -2543,7 +2543,7 @@ fun HomeCustomBottomNav(
                     .shadow(4.dp, CircleShape)) {
                     Icon(Icons.Default.Chat, null, tint = Color.White, modifier = Modifier.padding(14.dp))
                 }
-                Text("おしゃべり", modifier = Modifier
+                Text("恋人モード", modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .offset(y = 22.dp), fontSize = 10.sp, color = Color(0xFFE87C9A), fontWeight = FontWeight.Bold)
             }
@@ -5553,12 +5553,12 @@ suspend fun callGeminiApi(
         .getString("text")
 }
 
-// ---- おしゃべり選択画面 ----
+// ---- 恋人モード選択画面 ----
 @Composable
 fun ChatMenuScreen(navController: NavController, viewModel: StepViewModel) {
     val actionPoints by viewModel.currentActionPoints
     Scaffold(
-        topBar = { TopAppBarWithBack(title = "おしゃべり (${actionPoints}pt)", onBack = { navController.popBackStack() }) }
+        topBar = { TopAppBarWithBack(title = "恋人モード (${actionPoints}pt)", onBack = { navController.popBackStack() }) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -5657,10 +5657,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 parsed.locationName?.let { currentLocation = it }
                 messages.add(ChatMessage("assistant", parsed.text, parsed.exprRes, parsed.exprName, parsed.actionText, parsed.basyoId))
                 parsed.basyoId?.let { viewModel.unlockMemory(it) }
-                when (parsed.loveChange) {
-                    1  -> viewModel.earnHeart()
-                    -1 -> viewModel.loseHeart()
-                }
+                // 恋人モード（旧おしゃべり）ではラブレベルを変動させない（ラブレベルはホーム画面でのみ上がる）
                 viewModel.saveFreeChatHistory()
                 val userMsgCount = messages.count { it.role == "user" }
                 if (userMsgCount % 5 == 0 && userMsgCount >= 5) {
@@ -6146,7 +6143,7 @@ fun MemoryCard(item: MemoryItem, isAvailable: Boolean, isUnlocked: Boolean) {
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                "おしゃべりで解放",
+                                "恋人モードで解放",
                                 fontSize = 9.sp,
                                 color = Color(0xFF666666),
                                 textAlign = TextAlign.Center
