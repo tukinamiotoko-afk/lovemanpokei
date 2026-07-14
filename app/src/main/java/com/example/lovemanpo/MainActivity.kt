@@ -1534,9 +1534,16 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
                     } else ""
                     val memoryNote = if (memory.isNotBlank())
                         "\n【会話の記憶】\n$memory\n記憶に触れる場合は自分の言葉で自然に。1会話で言及は1回まで。" else ""
+                    val loverModeNote = if (loveCount >= 9) """
+
+【恋人モード（好感度9-10）の口調】
+敬語をベースにしつつ、恋人らしい甘え・わがままを混ぜてよい（「〜してほしいな」「〜してくれる？」「〜だめですよ？」等の柔らかい語尾もOK）。
+「……」を積極的に使う。フィラー・感動詞も自然に混ぜる。
+手をつなぐ・ぎゅっとする・頭をなでてもらう等のスキンシップ要素を自然に匂わせてよい。
+「寂しい」「もっと一緒にいたい」という気持ちを素直に出してよい。""" else ""
                     val prompt = """あなたは「ひかり」（22歳）。${playerName}さんと散歩中の話し相手。
 返答の先頭に[EMOTION:タグ名]を出力する。タグ: happy / love / shy / sad / worry / normal
-30〜70文字で自然に返す。句読点で区切りやすい文にする。敬語。AIっぽい表現禁止。「${playerName}さん」と「さん」付けで呼ぶ。「今一緒に歩いている」視点で話す。「……」を積極的に使う。文の途中だけでなく、文頭を「……」から始めても良い。照れ・ためらい・余韻・言葉に詰まる場面・考えている場面で使う。
+30〜70文字で自然に返す。句読点で区切りやすい文にする。敬語。AIっぽい表現禁止。「${playerName}さん」と「さん」付けで呼ぶ。「今一緒に歩いている」視点で話す。「……」を積極的に使う。文の途中だけでなく、文頭を「……」から始めても良い。照れ・ためらい・余韻・言葉に詰まる場面・考えている場面で使う。$loverModeNote
 今日の歩数：${todaySteps}歩。$openingLineNote$memoryNote"""
                     val history = viewModel.homeChatMessages.takeLast(10)
                     // thinking系モデルは内部思考トークンもmaxOutputTokensに含まれることがあるため、
