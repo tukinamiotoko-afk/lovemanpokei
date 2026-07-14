@@ -4623,15 +4623,11 @@ val homeDefaultDialoguesLv9 = listOf(
     TouchDialogue("○○さん……これから先も、嬉しいことがあったら一番に話したいし、落ち込んだ時は一番に頼りたいな。", R.drawable.hikari_smile)
 )
 
-// 趣味・娯楽の話題（homeDefaultDialoguesUniversal）はどのラブレベルでも共通で混ぜる。
+// 恋人的な表現（Lv9-10専用プール）以外は好感度に関係なく共通で出す。
+// 恋人向けの内容は好感度9以上で追加される。
 fun homeDefaultDialogues(loveCount: Int): List<TouchDialogue> {
-    val tierPool = when {
-        loveCount >= 9 -> homeDefaultDialoguesLv9
-        loveCount >= 5 -> homeDefaultDialoguesLv5
-        loveCount >= 3 -> homeDefaultDialoguesLv3
-        else           -> homeDefaultDialoguesLv1
-    }
-    return tierPool + homeDefaultDialoguesUniversal
+    val commonPool = homeDefaultDialoguesLv1 + homeDefaultDialoguesLv3 + homeDefaultDialoguesLv5 + homeDefaultDialoguesUniversal
+    return if (loveCount >= 9) commonPool + homeDefaultDialoguesLv9 else commonPool
 }
 
 // その日最初にホーム画面を開いた時だけ1回出す「寂しさ」セリフ。
@@ -4679,11 +4675,11 @@ val homeLonelyDialoguesLv9 = listOf(
     "今日はね……○○さんにいっぱい甘える日って決めたんです。だから……覚悟してくださいね？"
 )
 
-// Lv7-8はまだ専用のセリフが用意できていないため、当面Lv5-6のプールを使い回す
-fun homeLonelyDialogues(loveCount: Int): List<String> = when {
-    loveCount >= 9 -> homeLonelyDialoguesLv9
-    loveCount >= 5 -> homeLonelyDialoguesLv5
-    else           -> homeLonelyDialoguesLv3
+// 恋人的な表現（Lv9-10専用プール）以外は好感度に関係なく共通で出す。
+// 恋人向けの内容は好感度9以上で追加される。
+fun homeLonelyDialogues(loveCount: Int): List<String> {
+    val commonPool = homeLonelyDialoguesLv3 + homeLonelyDialoguesLv5
+    return if (loveCount >= 9) commonPool + homeLonelyDialoguesLv9 else commonPool
 }
 
 fun homeTouchDialogues(loveCount: Int): List<TouchDialogue> = when {
