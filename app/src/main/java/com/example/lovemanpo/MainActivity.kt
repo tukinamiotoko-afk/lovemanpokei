@@ -6280,19 +6280,20 @@ fun ShopScreen(navController: NavController, viewModel: StepViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("ショップ", color = pinkAccent, fontWeight = FontWeight.Bold) },
+                title = { Text("ショップ", color = Color.White, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = pinkAccent)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = Color.White)
                     }
                 },
                 actions = {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
-                        Icon(Icons.Default.Bolt, contentDescription = null, tint = pinkAccent, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Bolt, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(2.dp))
-                        Text("$actionPoints", fontWeight = FontWeight.Bold, color = pinkAccent)
+                        Text("$actionPoints", fontWeight = FontWeight.Bold, color = Color.White)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF5B9BE0))
             )
         }
     ) { padding ->
