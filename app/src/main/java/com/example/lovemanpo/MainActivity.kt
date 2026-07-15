@@ -4362,7 +4362,8 @@ val costumeCatalog = listOf(
     Costume("boisyoutu",  "ボーイッシュ",  8,  R.drawable.hikari_boisyoutu_smile, R.drawable.hikari_boisyoutu_blush, R.drawable.hikari_boisyoutu_celebrate, R.drawable.hikari_boisyoutu_think),
     Costume("punks",      "パンクス",      15, R.drawable.hikari_punks_smile, R.drawable.hikari_punks_blush, R.drawable.hikari_punks_celebrate, R.drawable.hikari_punks_think),
     Costume("mizugi",     "水着",         12, R.drawable.hikari_mizugi_smile, R.drawable.hikari_mizugi_blush, R.drawable.hikari_mizugi_celebrate, R.drawable.hikari_mizugi_think),
-    Costume("santa",      "サンタ",       15, R.drawable.hikari_santa_smile, R.drawable.hikari_santa_blush, R.drawable.hikari_santa_cerebrate, R.drawable.hikari_santa_think)
+    Costume("santa",      "サンタ",       15, R.drawable.hikari_santa_smile, R.drawable.hikari_santa_blush, R.drawable.hikari_santa_cerebrate, R.drawable.hikari_santa_think),
+    Costume("epuron",     "エプロン",      10, R.drawable.hikari_epuron_smile, R.drawable.hikari_epuron_blush, R.drawable.hikari_epuron_celebrate, R.drawable.hikari_epuron_think)
 )
 
 // ホーム画面のベース表情drawableを、現在装備中の衣装の対応する表情に置き換える
