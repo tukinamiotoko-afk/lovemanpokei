@@ -6296,6 +6296,25 @@ fun ShopScreen(navController: NavController, viewModel: StepViewModel) {
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawRect(brush = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFBBDEFB), Color(0xFF5B9BE0))))
+                // 模様：斜め格子状の薄い水玉
+                val dotColor = Color.White.copy(alpha = 0.18f)
+                val spacing = 36.dp.toPx()
+                val dotRadius = 4.dp.toPx()
+                var row = 0
+                var y = 0f
+                while (y < size.height) {
+                    val xOffset = if (row % 2 == 0) 0f else spacing / 2
+                    var x = xOffset
+                    while (x < size.width) {
+                        drawCircle(color = dotColor, radius = dotRadius, center = Offset(x, y))
+                        x += spacing
+                    }
+                    y += spacing
+                    row++
+                }
+            }
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier
@@ -6362,23 +6381,34 @@ fun ShopCostumeCard(costume: Costume, isOwned: Boolean, canAfford: Boolean, onBu
         Spacer(modifier = Modifier.height(6.dp))
         Text(costume.name, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF333333))
         Spacer(modifier = Modifier.height(6.dp))
-        Button(
-            onClick = onBuy,
-            enabled = !isOwned && canAfford,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (isOwned) Color(0xFFCCCCCC) else Color(0xFFFF6B9D)
-            ),
-            modifier = Modifier.fillMaxWidth().height(36.dp),
-            contentPadding = PaddingValues(0.dp)
-        ) {
-            Text(
-                when {
-                    isOwned -> "所持済み"
-                    !canAfford -> "${costume.price}pt（不足）"
-                    else -> "${costume.price}pt で購入"
-                },
-                fontSize = 12.sp
-            )
+        if (isOwned) {
+            // 所持済みは「購入できない(不足)」ボタンと混同しないよう、はっきり違う色で表示する
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = Color(0xFF4CAF50),
+                modifier = Modifier.fillMaxWidth().height(36.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("所持済み", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        } else {
+            Button(
+                onClick = onBuy,
+                enabled = canAfford,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF6B9D)),
+                modifier = Modifier.fillMaxWidth().height(36.dp),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Text(
+                    if (canAfford) "${costume.price}pt で購入" else "${costume.price}pt（不足）",
+                    fontSize = 12.sp
+                )
+            }
         }
     }
 }
