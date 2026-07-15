@@ -5997,12 +5997,13 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             }
         } // Column
 
-        // 恋人モード：好感度9未満は画面全体を暗くしてロック表示する
+        // 恋人モード：好感度9未満は画面全体を暗くしてロック表示し、下の操作を一切できなくする
         if (loveCount <= 8) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.75f)),
+                    .background(Color.Black.copy(alpha = 0.75f))
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -6011,6 +6012,13 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                     Text("恋人モードはロックされています", fontSize = 16.sp, color = Color.White, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("好感度Lv.9で解放されます", fontSize = 13.sp, color = Color.White.copy(alpha = 0.85f))
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Button(
+                        onClick = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                    ) {
+                        Text("ホームに戻る", color = Color(0xFFE87C9A), fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
