@@ -1454,6 +1454,13 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     var homeChatReply by remember { mutableStateOf<Pair<String, Int>?>(null) }
     var isHomeChatLoading by remember { mutableStateOf(false) }
     var weatherDialogueActive by remember { mutableStateOf(false) }
+    var homeToastMessage by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(homeToastMessage) {
+        if (homeToastMessage != null) {
+            delay(1800)
+            homeToastMessage = null
+        }
+    }
 
     val weatherDialogue = weatherInfo?.let { homeWeatherDialogue(it.weatherCode) }
     // 歩数達成メッセージはセリフとしては表示しない（歩数データ自体はこれまで通り記録・利用する）
@@ -1531,7 +1538,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         onWeatherTap = { weatherDialogueActive = true },
         onHomeChatSend = homeChatSend@{ text ->
             if (!viewModel.spendPointForChat()) {
-                homeChatReply = Pair("行動ポイントが足りないみたい…2000歩でもう1ポイントもらえるよ！", R.drawable.hikari_think)
+                homeToastMessage = "行動ポイントが足りません（2000歩で1ポイント）"
                 return@homeChatSend
             }
             weatherDialogueActive = false
@@ -1609,7 +1616,8 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         onDebugClick = { navController.navigate("debug") },
         onShopClick = { navController.navigate("shop") },
         onWardrobeClick = { navController.navigate("wardrobe") },
-        onSettingsClick = { navController.navigate("settings") }
+        onSettingsClick = { navController.navigate("settings") },
+        toastMessage = homeToastMessage
     )
 
     if (pendingLevelUp > 0) {
@@ -1653,7 +1661,8 @@ fun HomeScreenContent(
     onDebugClick: () -> Unit,
     onShopClick: () -> Unit = {},
     onWardrobeClick: () -> Unit = {},
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    toastMessage: String? = null
 ) {
     var showWeatherSheet by remember { mutableStateOf(false) }
 
@@ -1894,6 +1903,19 @@ fun HomeScreenContent(
 
         if (showWeatherSheet && weatherInfo != null && weatherInfo.hourly.isNotEmpty()) {
             HourlyWeatherSheet(weatherInfo = weatherInfo, onDismiss = { showWeatherSheet = false })
+        }
+
+        // アプリ側のシステムメッセージ（行動ポイント不足など）。キャラのセリフとは区別して表示する
+        toastMessage?.let { msg ->
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFF333333),
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 32.dp)
+            ) {
+                Text(msg, color = Color.White, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
+            }
         }
     }
 } // ← ここで HomeScreenContent が終わる
