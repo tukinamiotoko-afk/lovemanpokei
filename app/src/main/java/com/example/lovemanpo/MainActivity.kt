@@ -6420,7 +6420,6 @@ fun ShopCostumeCard(costume: Costume, isOwned: Boolean, canAfford: Boolean, onBu
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CostumeChangeScreen(navController: NavController, viewModel: StepViewModel) {
-    val pinkAccent = Color(0xFFFF6B9D)
     val ownedIds by viewModel.ownedCostumeIds
     val equippedId by viewModel.equippedCostumeId
     val ownedCostumes = remember(ownedIds) { costumeCatalog.filter { it.id in ownedIds } }
@@ -6428,30 +6427,51 @@ fun CostumeChangeScreen(navController: NavController, viewModel: StepViewModel) 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("衣装変更", color = pinkAccent, fontWeight = FontWeight.Bold) },
+                title = { Text("衣装変更", color = Color.White, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = pinkAccent)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = Color.White)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF5B9BE0))
             )
         }
     ) { padding ->
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(ownedCostumes) { costume ->
-                WardrobeCostumeCard(
-                    costume = costume,
-                    isEquipped = costume.id == equippedId,
-                    onEquip = { viewModel.equipCostume(costume.id) }
-                )
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawRect(brush = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFBBDEFB), Color(0xFF5B9BE0))))
+                // 模様：斜め格子状の薄い水玉
+                val dotColor = Color.White.copy(alpha = 0.18f)
+                val spacing = 36.dp.toPx()
+                val dotRadius = 4.dp.toPx()
+                var row = 0
+                var y = 0f
+                while (y < size.height) {
+                    val xOffset = if (row % 2 == 0) 0f else spacing / 2
+                    var x = xOffset
+                    while (x < size.width) {
+                        drawCircle(color = dotColor, radius = dotRadius, center = Offset(x, y))
+                        x += spacing
+                    }
+                    y += spacing
+                    row++
+                }
+            }
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(ownedCostumes) { costume ->
+                    WardrobeCostumeCard(
+                        costume = costume,
+                        isEquipped = costume.id == equippedId,
+                        onEquip = { viewModel.equipCostume(costume.id) }
+                    )
+                }
             }
         }
     }
