@@ -5763,6 +5763,7 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
     }
 
     Scaffold { padding ->
+        Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFFFF5F7))
@@ -5802,23 +5803,6 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 Text("📍$currentLocation", fontSize = 11.sp, color = Color.White.copy(alpha = 0.9f))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(String.format(java.util.Locale.US, "%,d", todaySteps) + "歩", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
-            }
-
-            // 恋人モード：好感度9未満はロック表示（暗い背景に中央寄せ）
-            if (loveCount <= 8) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.Black.copy(alpha = 0.75f))
-                        .padding(vertical = 10.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Lock, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("恋人モードはロックされています（好感度Lv.9で解放）", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                    }
-                }
             }
 
             // キャラクター画像は各メッセージ内に表示（↓LazyColumn内）
@@ -5986,6 +5970,25 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                 }
             }
         } // Column
+
+        // 恋人モード：好感度9未満は画面全体を暗くしてロック表示する
+        if (loveCount <= 8) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.75f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.Lock, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("恋人モードはロックされています", fontSize = 16.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("好感度Lv.9で解放されます", fontSize = 13.sp, color = Color.White.copy(alpha = 0.85f))
+                }
+            }
+        }
+        } // Box
     } // Scaffold
 
     if (showTopicSheet) {
