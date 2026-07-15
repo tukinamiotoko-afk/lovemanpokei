@@ -1547,6 +1547,11 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
                     } else ""
                     val memoryNote = if (memory.isNotBlank())
                         "\n【会話の記憶】\n$memory\n記憶に触れる場合は自分の言葉で自然に。1会話で言及は1回まで。" else ""
+                    val yesterday = java.time.LocalDate.now().minusDays(1).toString()
+                    val yestMood = viewModel.repository.getDiaryMood(yesterday)
+                    val yestHint = viewModel.repository.getUserDiary(yesterday).take(50)
+                    val diaryNote = if (yestMood.isNotBlank() && yestHint.isNotBlank())
+                        "\n【昨日の日記】気分：$yestMood　内容：「$yestHint」\n自然な流れで一度だけ触れてもいい。しつこく聞かない。" else ""
                     val loverModeNote = if (loveCount >= 9) """
 
 【恋人モード（好感度9-10）の口調】
@@ -1557,7 +1562,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
                     val prompt = """あなたは「ひかり」（22歳）。${playerName}さんと散歩中の話し相手。
 返答の先頭に[EMOTION:タグ名]を出力する。タグ: happy / love / shy / sad / worry / normal
 30〜70文字で自然に返す。句読点で区切りやすい文にする。敬語。AIっぽい表現禁止。「${playerName}さん」と「さん」付けで呼ぶ。「今一緒に歩いている」視点で話す。「……」を積極的に使う。文の途中だけでなく、文頭を「……」から始めても良い。照れ・ためらい・余韻・言葉に詰まる場面・考えている場面で使う。$loverModeNote
-今日の歩数：${todaySteps}歩。$openingLineNote$memoryNote"""
+今日の歩数：${todaySteps}歩。$openingLineNote$memoryNote$diaryNote"""
                     val history = viewModel.homeChatMessages.takeLast(10)
                     // thinking系モデルは内部思考トークンもmaxOutputTokensに含まれることがあるため、
                     // 本文が思考トークンに食われて途中で切れないよう余裕を持たせる
