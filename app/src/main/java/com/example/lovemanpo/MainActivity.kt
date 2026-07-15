@@ -1536,15 +1536,13 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             }
             weatherDialogueActive = false
             isHomeChatLoading = true
-            // 会話開始前に表示されていた運営セリフ。最初のターンだけ背景情報として渡す
-            val isFirstTurn = viewModel.homeChatMessages.isEmpty()
+            // 送信直前に表示されていたセリフ（デフォルトセリフ等）。毎回背景情報として渡す
             val openingLine = displayMessage
             scope.launch {
                 try {
                     val memory = viewModel.buildMemoryContext()
-                    val openingLineNote = if (isFirstTurn) {
+                    val openingLineNote =
                         "\n（参考）あなたが直前に表示していたセリフ：「${openingLine}」。ユーザーの発言がこれに関連していれば自然に踏まえてください。無関係な話題であれば、このセリフには触れずユーザーの発言だけに応答してください。"
-                    } else ""
                     val memoryNote = if (memory.isNotBlank())
                         "\n【会話の記憶】\n$memory\n記憶に触れる場合は自分の言葉で自然に。1会話で言及は1回まで。" else ""
                     val yesterday = java.time.LocalDate.now().minusDays(1).toString()
