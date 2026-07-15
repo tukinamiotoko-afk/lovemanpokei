@@ -1463,16 +1463,18 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     val todayDateStr = remember { LocalDate.now().toString() }
     val openingLonelyDialogue = remember(todayDateStr) { viewModel.consumeLonelyOpeningDialogueIfNeeded(loveCount) }
 
-    // 待機中のデフォルトセリフ：今日すでに出したものは除外して選ぶ
+    // 待機中のデフォルトセリフ：今日すでに出したものは除外して選ぶ。
+    // くるくるボタンを押すたびに selectDefaultDialogue() を呼んで選び直せるようにする。
     val defaultDialoguePool = homeDefaultDialogues(loveCount)
-    val defaultDialogueEntry = remember(defaultDialoguePool) {
+    fun pickDefaultDialogue(): TouchDialogue? {
         val shownToday = viewModel.getTodayShownDefaultDialogues()
         val candidates = defaultDialoguePool.filter { it.text !in shownToday }
         val pool = candidates.ifEmpty { defaultDialoguePool }
         val picked = pool.randomOrNull()
         if (picked != null) viewModel.markDefaultDialogueShown(picked.text)
-        picked
+        return picked
     }
+    var defaultDialogueEntry by remember(defaultDialoguePool) { mutableStateOf(pickDefaultDialogue()) }
 
     val displayMessage = (homeChatReply?.first ?: touchedDialogue?.text ?: activeWeatherDialogue?.text ?: openingLonelyDialogue ?: defaultDialogueEntry?.text ?: stepDialogue.text).replace("○○", playerName)
     val baseDisplayExpression = homeChatReply?.second ?: touchedDialogue?.expr ?: activeWeatherDialogue?.expr
@@ -1514,7 +1516,12 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             weatherDialogueActive = false
         },
         isHomeChatLoading = isHomeChatLoading,
-        onRefreshDialogue = { homeChatReply = null },
+        onRefreshDialogue = {
+            homeChatReply = null
+            touchedDialogue = null
+            weatherDialogueActive = false
+            defaultDialogueEntry = pickDefaultDialogue()
+        },
         onWeatherTap = { weatherDialogueActive = true },
         onHomeChatSend = homeChatSend@{ text ->
             if (!viewModel.spendPointForChat()) {
