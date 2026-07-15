@@ -1506,13 +1506,19 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         caloriesStr = caloriesStr,
         weatherInfo = weatherInfo,
         onCharacterClick = {
-            val shownToday = viewModel.getTodayShownTouchDialogues()
-            val candidates = touchDialogues.filter { it.text !in shownToday }
-            // 今日出せるセリフを全部出し切ったら、リストの最初からまた出せるようにする
-            val pool = candidates.ifEmpty { touchDialogues }
-            val picked = pool.randomOrNull()
-            if (picked != null) viewModel.markTouchDialogueShown(picked.text)
-            touchedDialogue = picked
+            if (touchedDialogue != null) {
+                // まだ前のリアクションが表示中＝連続でタップ（複数回触った）
+                val available = homeAvailableMultiTouchDialogues(loveCount)
+                available.randomOrNull()?.let { touchedDialogue = TouchDialogue(it.text, it.expr) }
+            } else {
+                val shownToday = viewModel.getTodayShownTouchDialogues()
+                val candidates = touchDialogues.filter { it.text !in shownToday }
+                // 今日出せるセリフを全部出し切ったら、リストの最初からまた出せるようにする
+                val pool = candidates.ifEmpty { touchDialogues }
+                val picked = pool.randomOrNull()
+                if (picked != null) viewModel.markTouchDialogueShown(picked.text)
+                touchedDialogue = picked
+            }
             weatherDialogueActive = false
         },
         isHomeChatLoading = isHomeChatLoading,
@@ -4718,6 +4724,25 @@ fun homeTouchDialogues(loveCount: Int): List<TouchDialogue> = when {
     loveCount >= 7  -> touchDialoguesLv7
     else            -> touchDialoguesLv5
 }
+
+// 連続でタップ（複数回触った）時のセリフ。刺激度に応じて必要好感度を絶対値で設定してある
+data class LevelGatedDialogue(val requiredLoveLevel: Int, val text: String, val expr: Int)
+
+val homeMultiTouchDialogues = listOf(
+    LevelGatedDialogue(1, "あははっ、くすぐったいです♪", R.drawable.hikari_celebrate),
+    LevelGatedDialogue(1, "もうもう、そんなに触らないで♪", R.drawable.hikari_blush),
+    LevelGatedDialogue(3, "ふふっ、甘えんぼさんですね♪", R.drawable.hikari_blush),
+    LevelGatedDialogue(3, "えへへ……嬉しいけど照れます♪", R.drawable.hikari_blush),
+    LevelGatedDialogue(3, "今日はいっぱい触ってくれる日なんですね♪", R.drawable.hikari_smile),
+    LevelGatedDialogue(5, "そんなに構ってくれるんだね♪", R.drawable.hikari_blush),
+    LevelGatedDialogue(5, "私も負けないくらい構っちゃいますからね♪", R.drawable.hikari_blush),
+    LevelGatedDialogue(7, "○○さん、本当に私のこと好きですね？♪", R.drawable.hikari_blush),
+    LevelGatedDialogue(9, "もう、ぎゅーってしちゃいますよ？♪", R.drawable.hikari_blush),
+    LevelGatedDialogue(9, "もう……かわいいなぁ、○○さん♪", R.drawable.hikari_blush)
+)
+
+fun homeAvailableMultiTouchDialogues(loveCount: Int): List<LevelGatedDialogue> =
+    homeMultiTouchDialogues.filter { loveCount >= it.requiredLoveLevel }
 fun calcTalkStage(loveCount: Int): Int = when {
     loveCount >= 9 -> 5; loveCount >= 7 -> 4; loveCount >= 5 -> 3; loveCount >= 3 -> 2; else -> 1
 }
