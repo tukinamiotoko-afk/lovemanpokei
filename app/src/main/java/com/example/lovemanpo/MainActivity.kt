@@ -4590,7 +4590,22 @@ val homeDefaultDialoguesUniversal = listOf(
     TouchDialogue("泳ぐのって気持ちいいって聞きますよね。○○さんはプールへ行くことってありますか？", R.drawable.hikari_smile),
     TouchDialogue("好きなスポーツがある人って楽しそうだなって思うんです。○○さんが一番夢中になれるスポーツって何ですか？", R.drawable.hikari_smile),
     TouchDialogue("歩くのは好きなんですけど、ウォーキングと散歩って何が違うんでしょう？○○さんなら知ってそうですね♪", R.drawable.hikari_smile),
-    TouchDialogue("テニスってラリーが続くと気持ちよさそうですよね。○○さんはやったことありますか？", R.drawable.hikari_smile)
+    TouchDialogue("テニスってラリーが続くと気持ちよさそうですよね。○○さんはやったことありますか？", R.drawable.hikari_smile),
+    TouchDialogue("ねぇ、○○さん。最近、何か面白いことありました？聞かせてほしいな♪", R.drawable.hikari_smile),
+    TouchDialogue("今日はどんな一日だったんですか？○○さんのお話、聞きたいです♪", R.drawable.hikari_smile),
+    TouchDialogue("最近ハマってることってありますか？よかったら教えてください♪", R.drawable.hikari_smile),
+    TouchDialogue("今日、一番嬉しかったことって何でした？私も一緒に嬉しくなりたいです♪", R.drawable.hikari_celebrate),
+    TouchDialogue("最近、美味しいもの食べました？おすすめがあったら教えてほしいです♪", R.drawable.hikari_smile),
+    TouchDialogue("○○さんは最近、何をしている時が一番楽しいですか？", R.drawable.hikari_smile),
+    TouchDialogue("今日は何か笑っちゃう出来事、ありました？", R.drawable.hikari_smile),
+    TouchDialogue("最近、新しく始めたことってありますか？ちょっと気になります♪", R.drawable.hikari_smile),
+    TouchDialogue("今日はどんな音楽を聴いていました？○○さんのおすすめ、聞いてみたいです♪", R.drawable.hikari_smile),
+    TouchDialogue("最近見つけたお気に入りってありますか？小さなことでも聞いてみたいです♪", R.drawable.hikari_smile),
+    TouchDialogue("そういえば、最近ゲームは遊んでますか？どんなゲームが好きなのか、もっと知りたいです♪", R.drawable.hikari_smile),
+    TouchDialogue("○○さんの子どもの頃のお話、いつか聞いてみたいなって思ってるんです♪", R.drawable.hikari_blush),
+    TouchDialogue("今日は疲れましたか？無理してなかったらいいんですけど……♪", R.drawable.hikari_think),
+    TouchDialogue("最近、「これ楽しかった！」って思ったこと、聞かせてください♪", R.drawable.hikari_smile),
+    TouchDialogue("今度、一緒にやってみたいことってありますか？○○さんの考えも聞いてみたいです♪", R.drawable.hikari_smile)
 )
 
 val homeDefaultDialoguesLv9 = listOf(
