@@ -1693,6 +1693,9 @@ fun HomeScreenContent(
                         scaleX = characterScale
                         scaleY = characterScale
                         transformOrigin = TransformOrigin(0.5f, 1f)
+                    }
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                        onCharacterClick()
                     },
                 contentScale = ContentScale.Fit
             )
