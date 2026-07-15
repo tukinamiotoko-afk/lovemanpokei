@@ -2207,7 +2207,8 @@ fun HintSdHikari(modifier: Modifier = Modifier) {
 fun splitMessageIntoPages(text: String): List<String> {
     val maxChars = 28
     if (text.length <= maxChars) return listOf(text)
-    val punctuation = setOf('。', '、', '！', '？', '!', '?', '…', '，')
+    // 「？」の直後で改ページすると、質問と回答が不自然に分断されるため対象に含めない
+    val punctuation = setOf('。', '、', '！', '…', '，')
     val result = mutableListOf<String>()
     var start = 0
     while (start < text.length) {
@@ -2238,7 +2239,8 @@ fun splitByTextMeasure(text: String, measurer: TextMeasurer, style: TextStyle, w
     // 計測誤差の安全マージン（端末フォントレンダリング差でのはみ出し防止）
     val safeWidthPx = (widthPx - 4).coerceAtLeast(1)
     val constraints = Constraints(maxWidth = safeWidthPx)
-    val punctuation = setOf('。', '、', '！', '？', '!', '?', '…', '，')
+    // 「？」の直後で改ページすると、質問と回答が不自然に分断されるため対象に含めない
+    val punctuation = setOf('。', '、', '！', '…', '，')
     val pages = mutableListOf<String>()
     var remaining = text.trim()
     while (remaining.isNotEmpty()) {
