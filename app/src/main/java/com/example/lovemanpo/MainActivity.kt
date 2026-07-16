@@ -990,60 +990,56 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
         val navController = rememberNavController()
         val viewModel: StepViewModel = viewModel(factory = viewModelFactory)
 
-        // アプリ全体で流すBGM。選択中のトラックが変わったら曲を切り替え、
-        // アプリがバックグラウンドに行ったら一時停止・戻ってきたら再開する。
-        // MediaPlayer.create()はファイルの読み込み・準備を伴い重いので、
-        // 起動直後の画面描画と競合しないようバックグラウンドスレッドかつ
-        // 初回コンポジションが落ち着いてから読み込む。
-        val selectedBgmId by viewModel.selectedBgmId
-        val bgmVolume by viewModel.bgmVolume
-        var currentBgmPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
-        val lifecycleOwner = LocalLifecycleOwner.current
-        val bgmScope = rememberCoroutineScope()
-        DisposableEffect(selectedBgmId) {
-            var mediaPlayer: MediaPlayer? = null
-            var disposed = false
-            val job = bgmScope.launch {
-                delay(500) // 起動直後の画面描画が落ち着くまで少し待つ
-                val track = bgmTracks.find { it.id == selectedBgmId }
-                val prepared = track?.let {
-                    withContext(Dispatchers.IO) {
-                        try {
-                            MediaPlayer.create(context, it.resId)?.apply { isLooping = true; setVolume(bgmVolume, bgmVolume) }
-                        } catch (e: Exception) {
-                            null
-                        }
-                    }
-                }
-                if (!disposed) {
-                    mediaPlayer = prepared
-                    currentBgmPlayer = prepared
-                    try { prepared?.start() } catch (e: Exception) {}
-                } else {
-                    try { prepared?.release() } catch (e: Exception) {}
-                }
-            }
-            val observer = LifecycleEventObserver { _, event ->
-                try {
-                    when (event) {
-                        Lifecycle.Event.ON_RESUME -> mediaPlayer?.let { if (!it.isPlaying) it.start() }
-                        Lifecycle.Event.ON_PAUSE -> mediaPlayer?.let { if (it.isPlaying) it.pause() }
-                        else -> {}
-                    }
-                } catch (e: Exception) {}
-            }
-            lifecycleOwner.lifecycle.addObserver(observer)
-            onDispose {
-                disposed = true
-                job.cancel()
-                lifecycleOwner.lifecycle.removeObserver(observer)
-                try { mediaPlayer?.release() } catch (e: Exception) {}
-                if (currentBgmPlayer === mediaPlayer) currentBgmPlayer = null
-            }
-        }
-        LaunchedEffect(bgmVolume) {
-            try { currentBgmPlayer?.setVolume(bgmVolume, bgmVolume) } catch (e: Exception) {}
-        }
+        // BGM再生は原因切り分けのため一時的に無効化中（クラッシュ調査）
+        // val selectedBgmId by viewModel.selectedBgmId
+        // val bgmVolume by viewModel.bgmVolume
+        // var currentBgmPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+        // val lifecycleOwner = LocalLifecycleOwner.current
+        // val bgmScope = rememberCoroutineScope()
+        // DisposableEffect(selectedBgmId) {
+        //     var mediaPlayer: MediaPlayer? = null
+        //     var disposed = false
+        //     val job = bgmScope.launch {
+        //         delay(500)
+        //         val track = bgmTracks.find { it.id == selectedBgmId }
+        //         val prepared = track?.let {
+        //             withContext(Dispatchers.IO) {
+        //                 try {
+        //                     MediaPlayer.create(context, it.resId)?.apply { isLooping = true; setVolume(bgmVolume, bgmVolume) }
+        //                 } catch (e: Exception) {
+        //                     null
+        //                 }
+        //             }
+        //         }
+        //         if (!disposed) {
+        //             mediaPlayer = prepared
+        //             currentBgmPlayer = prepared
+        //             try { prepared?.start() } catch (e: Exception) {}
+        //         } else {
+        //             try { prepared?.release() } catch (e: Exception) {}
+        //         }
+        //     }
+        //     val observer = LifecycleEventObserver { _, event ->
+        //         try {
+        //             when (event) {
+        //                 Lifecycle.Event.ON_RESUME -> mediaPlayer?.let { if (!it.isPlaying) it.start() }
+        //                 Lifecycle.Event.ON_PAUSE -> mediaPlayer?.let { if (it.isPlaying) it.pause() }
+        //                 else -> {}
+        //             }
+        //         } catch (e: Exception) {}
+        //     }
+        //     lifecycleOwner.lifecycle.addObserver(observer)
+        //     onDispose {
+        //         disposed = true
+        //         job.cancel()
+        //         lifecycleOwner.lifecycle.removeObserver(observer)
+        //         try { mediaPlayer?.release() } catch (e: Exception) {}
+        //         if (currentBgmPlayer === mediaPlayer) currentBgmPlayer = null
+        //     }
+        // }
+        // LaunchedEffect(bgmVolume) {
+        //     try { currentBgmPlayer?.setVolume(bgmVolume, bgmVolume) } catch (e: Exception) {}
+        // }
 
         var navTrigger by remember { mutableStateOf(0) }
         val routeHistory = remember { mutableListOf<String>() }
