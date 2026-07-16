@@ -392,6 +392,10 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
         bgmVolume.floatValue = volume
         repository.bgmVolume = volume
     }
+
+    // ホーム画面の待機中セリフ。画面を離れてまた戻ってきただけでは変わらないよう、
+    // ViewModel（ナビゲーションをまたいで生き続ける）側に保持する
+    var currentDefaultDialogue = mutableStateOf<TouchDialogue?>(null)
     val pendingLevelUpLevel = mutableIntStateOf(0)
     val pendingOdekakeInvite = mutableStateOf<String?>(null)
     val selectedPeriod = mutableStateOf(DisplayPeriod.DAY)
@@ -1543,7 +1547,8 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     val openingLonelyDialogue = remember(todayDateStr) { viewModel.consumeLonelyOpeningDialogueIfNeeded(loveCount) }
 
     // 待機中のデフォルトセリフ：今日すでに出したものは除外して選ぶ。
-    // くるくるボタンを押すたびに selectDefaultDialogue() を呼んで選び直せるようにする。
+    // ViewModel側に選択結果を保持するので、画面を離れてまた戻ってきただけでは変わらない。
+    // くるくるボタンを押した時だけ選び直す。
     val defaultDialoguePool = homeDefaultDialogues(loveCount)
     fun pickDefaultDialogue(): TouchDialogue? {
         val shownToday = viewModel.getTodayShownDefaultDialogues()
@@ -1553,7 +1558,12 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         if (picked != null) viewModel.markDefaultDialogueShown(picked.text)
         return picked
     }
-    var defaultDialogueEntry by remember(defaultDialoguePool) { mutableStateOf(pickDefaultDialogue()) }
+    LaunchedEffect(Unit) {
+        if (viewModel.currentDefaultDialogue.value == null) {
+            viewModel.currentDefaultDialogue.value = pickDefaultDialogue()
+        }
+    }
+    val defaultDialogueEntry = viewModel.currentDefaultDialogue.value
 
     val displayMessage = (homeChatReply?.first ?: touchedDialogue?.text ?: activeWeatherDialogue?.text ?: openingLonelyDialogue ?: defaultDialogueEntry?.text ?: stepDialogue.text).replace("○○", playerName)
     val baseDisplayExpression = homeChatReply?.second ?: touchedDialogue?.expr ?: activeWeatherDialogue?.expr
@@ -1605,7 +1615,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             homeChatReply = null
             touchedDialogue = null
             weatherDialogueActive = false
-            defaultDialogueEntry = pickDefaultDialogue()
+            viewModel.currentDefaultDialogue.value = pickDefaultDialogue()
         },
         onWeatherTap = { weatherDialogueActive = true },
         onHomeChatSend = homeChatSend@{ text ->
