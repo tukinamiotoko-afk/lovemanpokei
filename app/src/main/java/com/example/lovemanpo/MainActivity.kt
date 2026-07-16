@@ -991,22 +991,38 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
         val viewModel: StepViewModel = viewModel(factory = viewModelFactory)
 
         // アプリ全体で流すBGM。選択中のトラックが変わったら曲を切り替え、
-        // アプリがバックグラウンドに行ったら一時停止・戻ってきたら再開する
+        // アプリがバックグラウンドに行ったら一時停止・戻ってきたら再開する。
+        // MediaPlayer.create()はファイルの読み込み・準備を伴い重いので、
+        // 起動直後の画面描画と競合しないようバックグラウンドスレッドかつ
+        // 初回コンポジションが落ち着いてから読み込む。
         val selectedBgmId by viewModel.selectedBgmId
         val bgmVolume by viewModel.bgmVolume
         var currentBgmPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
         val lifecycleOwner = LocalLifecycleOwner.current
+        val bgmScope = rememberCoroutineScope()
         DisposableEffect(selectedBgmId) {
-            val track = bgmTracks.find { it.id == selectedBgmId }
-            // 音声ファイルの再生に失敗しても、アプリ本体は絶対に落ちないようにする
-            val mediaPlayer = track?.let {
-                try {
-                    MediaPlayer.create(context, it.resId)?.apply { isLooping = true; setVolume(bgmVolume, bgmVolume) }
-                } catch (e: Exception) {
-                    null
+            var mediaPlayer: MediaPlayer? = null
+            var disposed = false
+            val job = bgmScope.launch {
+                delay(500) // 起動直後の画面描画が落ち着くまで少し待つ
+                val track = bgmTracks.find { it.id == selectedBgmId }
+                val prepared = track?.let {
+                    withContext(Dispatchers.IO) {
+                        try {
+                            MediaPlayer.create(context, it.resId)?.apply { isLooping = true; setVolume(bgmVolume, bgmVolume) }
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                }
+                if (!disposed) {
+                    mediaPlayer = prepared
+                    currentBgmPlayer = prepared
+                    try { prepared?.start() } catch (e: Exception) {}
+                } else {
+                    try { prepared?.release() } catch (e: Exception) {}
                 }
             }
-            currentBgmPlayer = mediaPlayer
             val observer = LifecycleEventObserver { _, event ->
                 try {
                     when (event) {
@@ -1017,8 +1033,9 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 } catch (e: Exception) {}
             }
             lifecycleOwner.lifecycle.addObserver(observer)
-            try { mediaPlayer?.start() } catch (e: Exception) {}
             onDispose {
+                disposed = true
+                job.cancel()
                 lifecycleOwner.lifecycle.removeObserver(observer)
                 try { mediaPlayer?.release() } catch (e: Exception) {}
                 if (currentBgmPlayer === mediaPlayer) currentBgmPlayer = null
