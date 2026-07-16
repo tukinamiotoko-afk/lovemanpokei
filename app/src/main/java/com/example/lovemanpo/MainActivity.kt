@@ -1454,6 +1454,13 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     var homeChatReply by remember { mutableStateOf<Pair<String, Int>?>(null) }
     var isHomeChatLoading by remember { mutableStateOf(false) }
     var weatherDialogueActive by remember { mutableStateOf(false) }
+    var homeToastMessage by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(homeToastMessage) {
+        if (homeToastMessage != null) {
+            delay(1800)
+            homeToastMessage = null
+        }
+    }
 
     val weatherDialogue = weatherInfo?.let { homeWeatherDialogue(it.weatherCode) }
     // 歩数達成メッセージはセリフとしては表示しない（歩数データ自体はこれまで通り記録・利用する）
@@ -1531,7 +1538,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         onWeatherTap = { weatherDialogueActive = true },
         onHomeChatSend = homeChatSend@{ text ->
             if (!viewModel.spendPointForChat()) {
-                homeChatReply = Pair("行動ポイントが足りないみたい…2000歩でもう1ポイントもらえるよ！", R.drawable.hikari_think)
+                homeToastMessage = "行動ポイントが足りません（2000歩で1ポイント）"
                 return@homeChatSend
             }
             weatherDialogueActive = false
@@ -1609,7 +1616,8 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         onDebugClick = { navController.navigate("debug") },
         onShopClick = { navController.navigate("shop") },
         onWardrobeClick = { navController.navigate("wardrobe") },
-        onSettingsClick = { navController.navigate("settings") }
+        onSettingsClick = { navController.navigate("settings") },
+        toastMessage = homeToastMessage
     )
 
     if (pendingLevelUp > 0) {
@@ -1653,7 +1661,8 @@ fun HomeScreenContent(
     onDebugClick: () -> Unit,
     onShopClick: () -> Unit = {},
     onWardrobeClick: () -> Unit = {},
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    toastMessage: String? = null
 ) {
     var showWeatherSheet by remember { mutableStateOf(false) }
 
@@ -1894,6 +1903,19 @@ fun HomeScreenContent(
 
         if (showWeatherSheet && weatherInfo != null && weatherInfo.hourly.isNotEmpty()) {
             HourlyWeatherSheet(weatherInfo = weatherInfo, onDismiss = { showWeatherSheet = false })
+        }
+
+        // アプリ側のシステムメッセージ（行動ポイント不足など）。キャラのセリフとは区別して表示する
+        toastMessage?.let { msg ->
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFF333333),
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 32.dp)
+            ) {
+                Text(msg, color = Color.White, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
+            }
         }
     }
 } // ← ここで HomeScreenContent が終わる
@@ -4362,7 +4384,8 @@ val costumeCatalog = listOf(
     Costume("boisyoutu",  "ボーイッシュ",  8,  R.drawable.hikari_boisyoutu_smile, R.drawable.hikari_boisyoutu_blush, R.drawable.hikari_boisyoutu_celebrate, R.drawable.hikari_boisyoutu_think),
     Costume("punks",      "パンクス",      15, R.drawable.hikari_punks_smile, R.drawable.hikari_punks_blush, R.drawable.hikari_punks_celebrate, R.drawable.hikari_punks_think),
     Costume("mizugi",     "水着",         12, R.drawable.hikari_mizugi_smile, R.drawable.hikari_mizugi_blush, R.drawable.hikari_mizugi_celebrate, R.drawable.hikari_mizugi_think),
-    Costume("santa",      "サンタ",       15, R.drawable.hikari_santa_smile, R.drawable.hikari_santa_blush, R.drawable.hikari_santa_cerebrate, R.drawable.hikari_santa_think)
+    Costume("santa",      "サンタ",       15, R.drawable.hikari_santa_smile, R.drawable.hikari_santa_blush, R.drawable.hikari_santa_cerebrate, R.drawable.hikari_santa_think),
+    Costume("epuron",     "エプロン",      10, R.drawable.hikari_epuron_smile, R.drawable.hikari_epuron_blush, R.drawable.hikari_epuron_celebrate, R.drawable.hikari_epuron_think)
 )
 
 // ホーム画面のベース表情drawableを、現在装備中の衣装の対応する表情に置き換える
@@ -5974,12 +5997,13 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
             }
         } // Column
 
-        // 恋人モード：好感度9未満は画面全体を暗くしてロック表示する
+        // 恋人モード：好感度9未満は画面全体を暗くしてロック表示し、下の操作を一切できなくする
         if (loveCount <= 8) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.75f)),
+                    .background(Color.Black.copy(alpha = 0.75f))
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -5988,6 +6012,13 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
                     Text("恋人モードはロックされています", fontSize = 16.sp, color = Color.White, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("好感度Lv.9で解放されます", fontSize = 13.sp, color = Color.White.copy(alpha = 0.85f))
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Button(
+                        onClick = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                    ) {
+                        Text("ホームに戻る", color = Color(0xFFE87C9A), fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
@@ -6279,19 +6310,20 @@ fun ShopScreen(navController: NavController, viewModel: StepViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("ショップ", color = pinkAccent, fontWeight = FontWeight.Bold) },
+                title = { Text("ショップ", color = Color.White, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = pinkAccent)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = Color.White)
                     }
                 },
                 actions = {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
-                        Icon(Icons.Default.Bolt, contentDescription = null, tint = pinkAccent, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Bolt, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(2.dp))
-                        Text("$actionPoints", fontWeight = FontWeight.Bold, color = pinkAccent)
+                        Text("$actionPoints", fontWeight = FontWeight.Bold, color = Color.White)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF5B9BE0))
             )
         }
     ) { padding ->
@@ -6418,7 +6450,6 @@ fun ShopCostumeCard(costume: Costume, isOwned: Boolean, canAfford: Boolean, onBu
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CostumeChangeScreen(navController: NavController, viewModel: StepViewModel) {
-    val pinkAccent = Color(0xFFFF6B9D)
     val ownedIds by viewModel.ownedCostumeIds
     val equippedId by viewModel.equippedCostumeId
     val ownedCostumes = remember(ownedIds) { costumeCatalog.filter { it.id in ownedIds } }
@@ -6426,30 +6457,51 @@ fun CostumeChangeScreen(navController: NavController, viewModel: StepViewModel) 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("衣装変更", color = pinkAccent, fontWeight = FontWeight.Bold) },
+                title = { Text("衣装変更", color = Color.White, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = pinkAccent)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = Color.White)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF5B9BE0))
             )
         }
     ) { padding ->
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(ownedCostumes) { costume ->
-                WardrobeCostumeCard(
-                    costume = costume,
-                    isEquipped = costume.id == equippedId,
-                    onEquip = { viewModel.equipCostume(costume.id) }
-                )
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawRect(brush = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFBBDEFB), Color(0xFF5B9BE0))))
+                // 模様：斜め格子状の薄い水玉
+                val dotColor = Color.White.copy(alpha = 0.18f)
+                val spacing = 36.dp.toPx()
+                val dotRadius = 4.dp.toPx()
+                var row = 0
+                var y = 0f
+                while (y < size.height) {
+                    val xOffset = if (row % 2 == 0) 0f else spacing / 2
+                    var x = xOffset
+                    while (x < size.width) {
+                        drawCircle(color = dotColor, radius = dotRadius, center = Offset(x, y))
+                        x += spacing
+                    }
+                    y += spacing
+                    row++
+                }
+            }
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(ownedCostumes) { costume ->
+                    WardrobeCostumeCard(
+                        costume = costume,
+                        isEquipped = costume.id == equippedId,
+                        onEquip = { viewModel.equipCostume(costume.id) }
+                    )
+                }
             }
         }
     }
