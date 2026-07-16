@@ -990,56 +990,57 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
         val navController = rememberNavController()
         val viewModel: StepViewModel = viewModel(factory = viewModelFactory)
 
-        // BGM再生は原因切り分けのため一時的に無効化中（クラッシュ調査）
-        // val selectedBgmId by viewModel.selectedBgmId
-        // val bgmVolume by viewModel.bgmVolume
-        // var currentBgmPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
-        // val lifecycleOwner = LocalLifecycleOwner.current
-        // val bgmScope = rememberCoroutineScope()
-        // DisposableEffect(selectedBgmId) {
-        //     var mediaPlayer: MediaPlayer? = null
-        //     var disposed = false
-        //     val job = bgmScope.launch {
-        //         delay(500)
-        //         val track = bgmTracks.find { it.id == selectedBgmId }
-        //         val prepared = track?.let {
-        //             withContext(Dispatchers.IO) {
-        //                 try {
-        //                     MediaPlayer.create(context, it.resId)?.apply { isLooping = true; setVolume(bgmVolume, bgmVolume) }
-        //                 } catch (e: Exception) {
-        //                     null
-        //                 }
-        //             }
-        //         }
-        //         if (!disposed) {
-        //             mediaPlayer = prepared
-        //             currentBgmPlayer = prepared
-        //             try { prepared?.start() } catch (e: Exception) {}
-        //         } else {
-        //             try { prepared?.release() } catch (e: Exception) {}
-        //         }
-        //     }
-        //     val observer = LifecycleEventObserver { _, event ->
-        //         try {
-        //             when (event) {
-        //                 Lifecycle.Event.ON_RESUME -> mediaPlayer?.let { if (!it.isPlaying) it.start() }
-        //                 Lifecycle.Event.ON_PAUSE -> mediaPlayer?.let { if (it.isPlaying) it.pause() }
-        //                 else -> {}
-        //             }
-        //         } catch (e: Exception) {}
-        //     }
-        //     lifecycleOwner.lifecycle.addObserver(observer)
-        //     onDispose {
-        //         disposed = true
-        //         job.cancel()
-        //         lifecycleOwner.lifecycle.removeObserver(observer)
-        //         try { mediaPlayer?.release() } catch (e: Exception) {}
-        //         if (currentBgmPlayer === mediaPlayer) currentBgmPlayer = null
-        //     }
-        // }
-        // LaunchedEffect(bgmVolume) {
-        //     try { currentBgmPlayer?.setVolume(bgmVolume, bgmVolume) } catch (e: Exception) {}
-        // }
+        // アプリ全体で流すBGM。選択中のトラックが変わったら曲を切り替え、
+        // アプリがバックグラウンドに行ったら一時停止・戻ってきたら再開する。
+        val selectedBgmId by viewModel.selectedBgmId
+        val bgmVolume by viewModel.bgmVolume
+        var currentBgmPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+        val lifecycleOwner = LocalLifecycleOwner.current
+        val bgmScope = rememberCoroutineScope()
+        DisposableEffect(selectedBgmId) {
+            var mediaPlayer: MediaPlayer? = null
+            var disposed = false
+            val job = bgmScope.launch {
+                delay(500)
+                val track = bgmTracks.find { it.id == selectedBgmId }
+                val prepared = track?.let {
+                    withContext(Dispatchers.IO) {
+                        try {
+                            MediaPlayer.create(context, it.resId)?.apply { isLooping = true; setVolume(bgmVolume, bgmVolume) }
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                }
+                if (!disposed) {
+                    mediaPlayer = prepared
+                    currentBgmPlayer = prepared
+                    try { prepared?.start() } catch (e: Exception) {}
+                } else {
+                    try { prepared?.release() } catch (e: Exception) {}
+                }
+            }
+            val observer = LifecycleEventObserver { _, event ->
+                try {
+                    when (event) {
+                        Lifecycle.Event.ON_RESUME -> mediaPlayer?.let { if (!it.isPlaying) it.start() }
+                        Lifecycle.Event.ON_PAUSE -> mediaPlayer?.let { if (it.isPlaying) it.pause() }
+                        else -> {}
+                    }
+                } catch (e: Exception) {}
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose {
+                disposed = true
+                job.cancel()
+                lifecycleOwner.lifecycle.removeObserver(observer)
+                try { mediaPlayer?.release() } catch (e: Exception) {}
+                if (currentBgmPlayer === mediaPlayer) currentBgmPlayer = null
+            }
+        }
+        LaunchedEffect(bgmVolume) {
+            try { currentBgmPlayer?.setVolume(bgmVolume, bgmVolume) } catch (e: Exception) {}
+        }
 
         var navTrigger by remember { mutableStateOf(0) }
         val routeHistory = remember { mutableListOf<String>() }
@@ -1748,13 +1749,28 @@ fun HomeScreenContent(
     val effectiveVisualCardHeightPx = if (visualCardHeightPx > 0f) visualCardHeightPx else fallbackVisualCardHeightPx
     val characterGroundPadding = 12.dp + with(density) { effectiveVisualCardHeightPx.toDp() }
 
+    // painterResource()が端末によっては起動直後にリソースID解決へ失敗することがあるため、
+    // 背景画像だけはBitmapFactoryで直接デコードして読み込む（より原始的で確実な経路）
+    val bgContext = LocalContext.current
+    val bgBitmap = remember(bgRes) {
+        try {
+            BitmapFactory.decodeResource(bgContext.resources, bgRes)?.asImageBitmap()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        Image(
-            painter = painterResource(id = bgRes),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
+        if (bgBitmap != null) {
+            Image(
+                bitmap = bgBitmap,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFFF5F7)))
+        }
 
         // キャラ表示エリア：ステータスバー直下からほぼ画面全体を使う。
         // 上部カード・吹き出しカードは共に独立したオーバーレイなので、キャラはその裏にも回り込める。
