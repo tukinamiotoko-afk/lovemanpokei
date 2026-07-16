@@ -998,25 +998,34 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
         val lifecycleOwner = LocalLifecycleOwner.current
         DisposableEffect(selectedBgmId) {
             val track = bgmTracks.find { it.id == selectedBgmId }
-            val mediaPlayer = track?.let { MediaPlayer.create(context, it.resId)?.apply { isLooping = true; setVolume(bgmVolume, bgmVolume) } }
-            currentBgmPlayer = mediaPlayer
-            val observer = LifecycleEventObserver { _, event ->
-                when (event) {
-                    Lifecycle.Event.ON_RESUME -> mediaPlayer?.let { if (!it.isPlaying) it.start() }
-                    Lifecycle.Event.ON_PAUSE -> mediaPlayer?.let { if (it.isPlaying) it.pause() }
-                    else -> {}
+            // 音声ファイルの再生に失敗しても、アプリ本体は絶対に落ちないようにする
+            val mediaPlayer = track?.let {
+                try {
+                    MediaPlayer.create(context, it.resId)?.apply { isLooping = true; setVolume(bgmVolume, bgmVolume) }
+                } catch (e: Exception) {
+                    null
                 }
             }
+            currentBgmPlayer = mediaPlayer
+            val observer = LifecycleEventObserver { _, event ->
+                try {
+                    when (event) {
+                        Lifecycle.Event.ON_RESUME -> mediaPlayer?.let { if (!it.isPlaying) it.start() }
+                        Lifecycle.Event.ON_PAUSE -> mediaPlayer?.let { if (it.isPlaying) it.pause() }
+                        else -> {}
+                    }
+                } catch (e: Exception) {}
+            }
             lifecycleOwner.lifecycle.addObserver(observer)
-            mediaPlayer?.start()
+            try { mediaPlayer?.start() } catch (e: Exception) {}
             onDispose {
                 lifecycleOwner.lifecycle.removeObserver(observer)
-                mediaPlayer?.release()
+                try { mediaPlayer?.release() } catch (e: Exception) {}
                 if (currentBgmPlayer === mediaPlayer) currentBgmPlayer = null
             }
         }
         LaunchedEffect(bgmVolume) {
-            currentBgmPlayer?.setVolume(bgmVolume, bgmVolume)
+            try { currentBgmPlayer?.setVolume(bgmVolume, bgmVolume) } catch (e: Exception) {}
         }
 
         var navTrigger by remember { mutableStateOf(0) }
