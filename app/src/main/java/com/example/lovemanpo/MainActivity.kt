@@ -1163,6 +1163,12 @@ fun isBatteryOptimizationIgnored(context: Context): Boolean {
     return pm.isIgnoringBatteryOptimizations(context.packageName)
 }
 
+// 端末の「バッテリーセーバー（省電力モード）」が今オンになっているかどうか
+fun isPowerSaveModeOn(context: Context): Boolean {
+    val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+    return pm.isPowerSaveMode
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StabilitySetupScreen(navController: NavController, viewModel: StepViewModel) {
@@ -1481,6 +1487,39 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         } else {
             locationPermLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
         }
+    }
+
+    // バッテリーセーバーがオンの時は、毎回（ホーム画面に来るたび）説明を出して促す
+    var showBatterySaverPrompt by remember { mutableStateOf(isPowerSaveModeOn(context)) }
+    val batterySaverLifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(batterySaverLifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && isPowerSaveModeOn(context)) {
+                showBatterySaverPrompt = true
+            }
+        }
+        batterySaverLifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { batterySaverLifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    if (showBatterySaverPrompt) {
+        AlertDialog(
+            onDismissRequest = { showBatterySaverPrompt = false },
+            title = { Text("バッテリーセーバーがオンです", fontWeight = FontWeight.Bold) },
+            text = {
+                Text("バッテリーセーバー（省電力モード）がオンになっていると、歩数のカウントが止まったり、記録が遅れたりすることがあります。正確に記録するために、バッテリーセーバーをオフにすることをおすすめします。")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showBatterySaverPrompt = false
+                    try {
+                        context.startActivity(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS))
+                    } catch (e: Exception) {}
+                }) { Text("設定を開く") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBatterySaverPrompt = false }) { Text("閉じる") }
+            }
+        )
     }
 
     // 今日の活動データを取得して計算
