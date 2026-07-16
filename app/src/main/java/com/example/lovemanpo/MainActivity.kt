@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
@@ -260,6 +261,15 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getFloat("CURRENT_TEMPERATURE_C", Float.NaN)
         set(value) = prefs.edit { putFloat("CURRENT_TEMPERATURE_C", value) }
 
+    // 選択中のBGM（空文字＝オフ、デフォルトは「羊の鼓動」）
+    var selectedBgmId: String
+        get() = prefs.getString("SELECTED_BGM_ID", "hitujinokodou") ?: "hitujinokodou"
+        set(value) = prefs.edit { putString("SELECTED_BGM_ID", value) }
+
+    var bgmVolume: Float
+        get() = prefs.getFloat("BGM_VOLUME", 0.6f)
+        set(value) = prefs.edit { putFloat("BGM_VOLUME", value) }
+
     // その日にすでに表示したタッチセリフ（日付 → 表示済みテキストの集合）
     fun getShownTouchDialogues(date: String): Set<String> = prefs.getStringSet("SHOWN_TOUCH_DIALOGUES_$date", emptySet()) ?: emptySet()
     fun setShownTouchDialogues(date: String, shown: Set<String>) = prefs.edit { putStringSet("SHOWN_TOUCH_DIALOGUES_$date", shown) }
@@ -372,6 +382,16 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
     val playerName = mutableStateOf(repository.playerName)
     val loveCount = mutableIntStateOf(repository.loveCount)
     val heartCount = mutableIntStateOf(repository.heartCount)
+    val selectedBgmId = mutableStateOf(repository.selectedBgmId)
+    fun setSelectedBgm(id: String) {
+        selectedBgmId.value = id
+        repository.selectedBgmId = id
+    }
+    val bgmVolume = mutableFloatStateOf(repository.bgmVolume)
+    fun setBgmVolume(volume: Float) {
+        bgmVolume.floatValue = volume
+        repository.bgmVolume = volume
+    }
     val pendingLevelUpLevel = mutableIntStateOf(0)
     val pendingOdekakeInvite = mutableStateOf<String?>(null)
     val selectedPeriod = mutableStateOf(DisplayPeriod.DAY)
@@ -969,6 +989,35 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
     if (hasPermissions) {
         val navController = rememberNavController()
         val viewModel: StepViewModel = viewModel(factory = viewModelFactory)
+
+        // アプリ全体で流すBGM。選択中のトラックが変わったら曲を切り替え、
+        // アプリがバックグラウンドに行ったら一時停止・戻ってきたら再開する
+        val selectedBgmId by viewModel.selectedBgmId
+        val bgmVolume by viewModel.bgmVolume
+        var currentBgmPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(selectedBgmId) {
+            val track = bgmTracks.find { it.id == selectedBgmId }
+            val mediaPlayer = track?.let { MediaPlayer.create(context, it.resId)?.apply { isLooping = true; setVolume(bgmVolume, bgmVolume) } }
+            currentBgmPlayer = mediaPlayer
+            val observer = LifecycleEventObserver { _, event ->
+                when (event) {
+                    Lifecycle.Event.ON_RESUME -> mediaPlayer?.let { if (!it.isPlaying) it.start() }
+                    Lifecycle.Event.ON_PAUSE -> mediaPlayer?.let { if (it.isPlaying) it.pause() }
+                    else -> {}
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            mediaPlayer?.start()
+            onDispose {
+                lifecycleOwner.lifecycle.removeObserver(observer)
+                mediaPlayer?.release()
+                if (currentBgmPlayer === mediaPlayer) currentBgmPlayer = null
+            }
+        }
+        LaunchedEffect(bgmVolume) {
+            currentBgmPlayer?.setVolume(bgmVolume, bgmVolume)
+        }
 
         var navTrigger by remember { mutableStateOf(0) }
         val routeHistory = remember { mutableListOf<String>() }
@@ -4102,6 +4151,35 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                 Text("女性", modifier = Modifier.clickable { tempGender = "女性" })
             }
             Spacer(modifier = Modifier.height(8.dp))
+            Text("BGM", fontWeight = FontWeight.Bold, color = pinkAccent, modifier = Modifier.fillMaxWidth())
+            val selectedBgmId by viewModel.selectedBgmId
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().clickable { viewModel.setSelectedBgm("") }
+                ) {
+                    RadioButton(selected = selectedBgmId.isEmpty(), onClick = { viewModel.setSelectedBgm("") })
+                    Text("オフ")
+                }
+                bgmTracks.forEach { track ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().clickable { viewModel.setSelectedBgm(track.id) }
+                    ) {
+                        RadioButton(selected = selectedBgmId == track.id, onClick = { viewModel.setSelectedBgm(track.id) })
+                        Text(track.name)
+                    }
+                }
+            }
+            val bgmVolume by viewModel.bgmVolume
+            Text("音量", fontWeight = FontWeight.Bold, color = pinkAccent, modifier = Modifier.fillMaxWidth())
+            Slider(
+                value = bgmVolume,
+                onValueChange = { viewModel.setBgmVolume(it) },
+                valueRange = 0f..1f,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -4386,6 +4464,14 @@ val costumeCatalog = listOf(
     Costume("mizugi",     "水着",         12, R.drawable.hikari_mizugi_smile, R.drawable.hikari_mizugi_blush, R.drawable.hikari_mizugi_celebrate, R.drawable.hikari_mizugi_think),
     Costume("santa",      "サンタ",       15, R.drawable.hikari_santa_smile, R.drawable.hikari_santa_blush, R.drawable.hikari_santa_cerebrate, R.drawable.hikari_santa_think),
     Costume("epuron",     "エプロン",      10, R.drawable.hikari_epuron_smile, R.drawable.hikari_epuron_blush, R.drawable.hikari_epuron_celebrate, R.drawable.hikari_epuron_think)
+)
+
+data class BgmTrack(val id: String, val name: String, val resId: Int)
+
+val bgmTracks = listOf(
+    BgmTrack("hitujinokodou", "羊の鼓動", R.raw.hitujinokodou),
+    BgmTrack("koibitoninattahi", "恋人になった日", R.raw.koibitoninattahi),
+    BgmTrack("ohisamanosentakusi", "おひさまの洗濯師", R.raw.ohisamanosentakusi)
 )
 
 // ホーム画面のベース表情drawableを、現在装備中の衣装の対応する表情に置き換える
