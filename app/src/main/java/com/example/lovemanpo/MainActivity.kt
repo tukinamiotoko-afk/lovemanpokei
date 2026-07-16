@@ -2541,7 +2541,8 @@ fun HomeWeatherBanner(weatherInfo: WeatherInfo?) {
         ) {
             Text(emoji, fontSize = 22.sp)
             Spacer(modifier = Modifier.width(10.dp))
-            Text(text = "$desc · $temp°C", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF1565C0))
+            val locationPrefix = weatherInfo.locationName?.let { "$it · " } ?: ""
+            Text(text = "$locationPrefix$desc · $temp°C", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF1565C0))
             Spacer(modifier = Modifier.width(4.dp))
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color(0xFF1565C0), modifier = Modifier.size(16.dp))
         }
@@ -2570,7 +2571,8 @@ fun HourlyWeatherSheet(weatherInfo: WeatherInfo, onDismiss: () -> Unit) {
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 32.dp)) {
-            Text("1時間ごとの天気", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF1565C0), modifier = Modifier.padding(bottom = 12.dp))
+            val sheetTitle = weatherInfo.locationName?.let { "1時間ごとの天気（$it）" } ?: "1時間ごとの天気"
+            Text(sheetTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF1565C0), modifier = Modifier.padding(bottom = 12.dp))
             LazyRow(state = listState, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(weatherInfo.hourly) { entry ->
                     val isNow = entry.hour == currentHour
@@ -4473,7 +4475,7 @@ data class AggregatedData(val label: String, val steps: Int, val activeTimeMilli
 // ---- 天気 ----
 
 data class HourlyWeatherEntry(val hour: Int, val tempC: Double, val weatherCode: Int, val precipitationMm: Double = 0.0)
-data class WeatherInfo(val tempC: Double, val weatherCode: Int, val hourly: List<HourlyWeatherEntry> = emptyList())
+data class WeatherInfo(val tempC: Double, val weatherCode: Int, val hourly: List<HourlyWeatherEntry> = emptyList(), val locationName: String? = null)
 
 fun wmoToDescription(code: Int): String = when (code) {
     0 -> "晴れ"; 1 -> "ほぼ晴れ"; 2 -> "一部くもり"; 3 -> "くもり"
@@ -4528,6 +4530,17 @@ suspend fun fetchWeather(lat: Double, lon: Double): WeatherInfo? =
         } catch (e: Exception) { null }
     }
 
+@Suppress("DEPRECATION")
+fun reverseGeocodeLocationName(context: android.content.Context, lat: Double, lon: Double): String? =
+    try {
+        val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
+        val addresses = geocoder.getFromLocation(lat, lon, 1)
+        val address = addresses?.firstOrNull()
+        address?.locality ?: address?.subAdminArea ?: address?.adminArea
+    } catch (e: Exception) {
+        null
+    }
+
 @SuppressLint("MissingPermission")
 suspend fun fetchWeatherFromLocation(context: android.content.Context): WeatherInfo? =
     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -4536,7 +4549,11 @@ suspend fun fetchWeatherFromLocation(context: android.content.Context): WeatherI
             val loc = lm.getProviders(true)
                 .mapNotNull { lm.getLastKnownLocation(it) }
                 .maxByOrNull { it.time }
-            loc?.let { fetchWeather(it.latitude, it.longitude) }
+            loc?.let {
+                val weather = fetchWeather(it.latitude, it.longitude)
+                val locationName = reverseGeocodeLocationName(context, it.latitude, it.longitude)
+                weather?.copy(locationName = locationName)
+            }
         } catch (_: Exception) { null }
     }
 
