@@ -392,6 +392,10 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
         bgmVolume.floatValue = volume
         repository.bgmVolume = volume
     }
+
+    // ホーム画面の待機中セリフ。画面を離れてまた戻ってきただけでは変わらないよう、
+    // ViewModel（ナビゲーションをまたいで生き続ける）側に保持する
+    var currentDefaultDialogue = mutableStateOf<TouchDialogue?>(null)
     val pendingLevelUpLevel = mutableIntStateOf(0)
     val pendingOdekakeInvite = mutableStateOf<String?>(null)
     val selectedPeriod = mutableStateOf(DisplayPeriod.DAY)
@@ -1159,6 +1163,12 @@ fun isBatteryOptimizationIgnored(context: Context): Boolean {
     return pm.isIgnoringBatteryOptimizations(context.packageName)
 }
 
+// 端末の「バッテリーセーバー（省電力モード）」が今オンになっているかどうか
+fun isPowerSaveModeOn(context: Context): Boolean {
+    val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+    return pm.isPowerSaveMode
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StabilitySetupScreen(navController: NavController, viewModel: StepViewModel) {
@@ -1479,6 +1489,39 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         }
     }
 
+    // バッテリーセーバーがオンの時は、毎回（ホーム画面に来るたび）説明を出して促す
+    var showBatterySaverPrompt by remember { mutableStateOf(isPowerSaveModeOn(context)) }
+    val batterySaverLifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(batterySaverLifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && isPowerSaveModeOn(context)) {
+                showBatterySaverPrompt = true
+            }
+        }
+        batterySaverLifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { batterySaverLifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    if (showBatterySaverPrompt) {
+        AlertDialog(
+            onDismissRequest = { showBatterySaverPrompt = false },
+            title = { Text("バッテリーセーバーがオンです", fontWeight = FontWeight.Bold) },
+            text = {
+                Text("バッテリーセーバー（省電力モード）がオンになっていると、歩数のカウントが止まったり、記録が遅れたりすることがあります。正確に記録するために、バッテリーセーバーをオフにすることをおすすめします。")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showBatterySaverPrompt = false
+                    try {
+                        context.startActivity(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS))
+                    } catch (e: Exception) {}
+                }) { Text("設定を開く") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBatterySaverPrompt = false }) { Text("閉じる") }
+            }
+        )
+    }
+
     // 今日の活動データを取得して計算
     val allRecords by viewModel.allStepRecords
     val todayRecord = remember(allRecords) {
@@ -1543,7 +1586,8 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     val openingLonelyDialogue = remember(todayDateStr) { viewModel.consumeLonelyOpeningDialogueIfNeeded(loveCount) }
 
     // 待機中のデフォルトセリフ：今日すでに出したものは除外して選ぶ。
-    // くるくるボタンを押すたびに selectDefaultDialogue() を呼んで選び直せるようにする。
+    // ViewModel側に選択結果を保持するので、画面を離れてまた戻ってきただけでは変わらない。
+    // くるくるボタンを押した時だけ選び直す。
     val defaultDialoguePool = homeDefaultDialogues(loveCount)
     fun pickDefaultDialogue(): TouchDialogue? {
         val shownToday = viewModel.getTodayShownDefaultDialogues()
@@ -1553,7 +1597,12 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         if (picked != null) viewModel.markDefaultDialogueShown(picked.text)
         return picked
     }
-    var defaultDialogueEntry by remember(defaultDialoguePool) { mutableStateOf(pickDefaultDialogue()) }
+    LaunchedEffect(Unit) {
+        if (viewModel.currentDefaultDialogue.value == null) {
+            viewModel.currentDefaultDialogue.value = pickDefaultDialogue()
+        }
+    }
+    val defaultDialogueEntry = viewModel.currentDefaultDialogue.value
 
     val displayMessage = (homeChatReply?.first ?: touchedDialogue?.text ?: activeWeatherDialogue?.text ?: openingLonelyDialogue ?: defaultDialogueEntry?.text ?: stepDialogue.text).replace("○○", playerName)
     val baseDisplayExpression = homeChatReply?.second ?: touchedDialogue?.expr ?: activeWeatherDialogue?.expr
@@ -1609,7 +1658,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             homeChatReply = null
             touchedDialogue = null
             weatherDialogueActive = false
-            defaultDialogueEntry = pickDefaultDialogue()
+            viewModel.currentDefaultDialogue.value = pickDefaultDialogue()
         },
             onWeatherTap = { weatherDialogueActive = true },
             onHomeChatSend = homeChatSend@{ text ->
@@ -2532,7 +2581,8 @@ fun HomeWeatherBanner(weatherInfo: WeatherInfo?) {
         ) {
             Text(emoji, fontSize = 22.sp)
             Spacer(modifier = Modifier.width(10.dp))
-            Text(text = "$desc · $temp°C", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF1565C0))
+            val locationPrefix = weatherInfo.locationName?.let { "$it · " } ?: ""
+            Text(text = "$locationPrefix$desc · $temp°C", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF1565C0))
             Spacer(modifier = Modifier.width(4.dp))
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color(0xFF1565C0), modifier = Modifier.size(16.dp))
         }
@@ -2561,7 +2611,8 @@ fun HourlyWeatherSheet(weatherInfo: WeatherInfo, onDismiss: () -> Unit) {
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     ) {
         Column(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 32.dp)) {
-            Text("1時間ごとの天気", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF1565C0), modifier = Modifier.padding(bottom = 12.dp))
+            val sheetTitle = weatherInfo.locationName?.let { "1時間ごとの天気（$it）" } ?: "1時間ごとの天気"
+            Text(sheetTitle, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF1565C0), modifier = Modifier.padding(bottom = 12.dp))
             LazyRow(state = listState, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(weatherInfo.hourly) { entry ->
                     val isNow = entry.hour == currentHour
@@ -4206,184 +4257,207 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
     var tempBodyNotes by remember { mutableStateOf(viewModel.bodyNotes) }
     val isPremium by remember { derivedStateOf { viewModel.isPremium } }
     val pinkAccent = Color(0xFFFF6B9D)
+    val tabTitles = listOf("プロフィール", "サウンド", "プレミアム")
+    var selectedTab by remember { mutableStateOf(0) }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("プロフィール設定", color = pinkAccent, fontWeight = FontWeight.Bold) },
-                navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = pinkAccent) } }
-            )
+            Column {
+                TopAppBar(
+                    title = { Text("プロフィール設定", color = pinkAccent, fontWeight = FontWeight.Bold) },
+                    navigationIcon = { IconButton(onClick = { navController.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = pinkAccent) } }
+                )
+                TabRow(selectedTabIndex = selectedTab, contentColor = pinkAccent) {
+                    tabTitles.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = { Text(title) }
+                        )
+                    }
+                }
+            }
         }
     ) { padding ->
         Column(modifier = Modifier
             .fillMaxSize()
             .padding(padding)
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            OutlinedTextField(value = tempName, onValueChange = { tempName = it }, label = { Text("名前") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = tempHeight, onValueChange = { tempHeight = it }, label = { Text("身長 (cm)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(value = tempWeight, onValueChange = { tempWeight = it }, label = { Text("体重 (kg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Text("性別：", fontWeight = FontWeight.Bold, color = pinkAccent)
-                RadioButton(selected = tempGender == "男性", onClick = { tempGender = "男性" })
-                Text("男性", modifier = Modifier.clickable { tempGender = "男性" })
-                Spacer(modifier = Modifier.width(16.dp))
-                RadioButton(selected = tempGender == "女性", onClick = { tempGender = "女性" })
-                Text("女性", modifier = Modifier.clickable { tempGender = "女性" })
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text("BGM", fontWeight = FontWeight.Bold, color = pinkAccent, modifier = Modifier.fillMaxWidth())
-            val selectedBgmId by viewModel.selectedBgmId
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().clickable { viewModel.setSelectedBgm("") }
-                ) {
-                    RadioButton(selected = selectedBgmId.isEmpty(), onClick = { viewModel.setSelectedBgm("") })
-                    Text("オフ")
-                }
-                bgmTracks.forEach { track ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { viewModel.setSelectedBgm(track.id) }
-                    ) {
-                        RadioButton(selected = selectedBgmId == track.id, onClick = { viewModel.setSelectedBgm(track.id) })
-                        Text(track.name)
-                    }
-                }
-            }
-            val bgmVolume by viewModel.bgmVolume
-            Text("音量", fontWeight = FontWeight.Bold, color = pinkAccent, modifier = Modifier.fillMaxWidth())
-            Slider(
-                value = bgmVolume,
-                onValueChange = { viewModel.setBgmVolume(it) },
-                valueRange = 0f..1f,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = if (isPremium) Color(0xFFFFF0F5) else Color(0xFFF5F5F5),
-                border = BorderStroke(1.dp, if (isPremium) pinkAccent else Color(0xFFCCCCCC))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("ひかりへの追加設定", fontWeight = FontWeight.Bold, color = if (isPremium) pinkAccent else Color(0xFF999999), fontSize = 14.sp)
-                        if (!isPremium) {
-                            Surface(shape = RoundedCornerShape(4.dp), color = Color(0xFFFFB300)) {
-                                Text("プレミアム", fontSize = 10.sp, color = Color.White, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-                            }
+        ) {
+            Column(modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                when (selectedTab) {
+                    0 -> {
+                        OutlinedTextField(value = tempName, onValueChange = { tempName = it }, label = { Text("名前") }, modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = tempHeight, onValueChange = { tempHeight = it }, label = { Text("身長 (cm)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+                        OutlinedTextField(value = tempWeight, onValueChange = { tempWeight = it }, label = { Text("体重 (kg)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth())
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                            Text("性別：", fontWeight = FontWeight.Bold, color = pinkAccent)
+                            RadioButton(selected = tempGender == "男性", onClick = { tempGender = "男性" })
+                            Text("男性", modifier = Modifier.clickable { tempGender = "男性" })
+                            Spacer(modifier = Modifier.width(16.dp))
+                            RadioButton(selected = tempGender == "女性", onClick = { tempGender = "女性" })
+                            Text("女性", modifier = Modifier.clickable { tempGender = "女性" })
                         }
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    if (isPremium) {
-                        Text(
-                            "ひかりの設定を追加できます（最大5個・1項目30文字）\n例：「ねこが大好き」「料理が得意」「天然な一面がある」",
-                            fontSize = 12.sp, color = Color(0xFF888888), lineHeight = 18.sp
-                        )
                         Spacer(modifier = Modifier.height(8.dp))
-                        customItems.forEachIndexed { index, item ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Surface(
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = Color(0xFFFFE4EF)
-                                ) {
-                                    Text(item, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, color = Color(0xFF7B3F5E))
-                                }
-                                IconButton(onClick = { customItems = customItems.toMutableList().also { it.removeAt(index) } }, modifier = Modifier.size(32.dp)) {
-                                    Icon(Icons.Default.Close, contentDescription = "削除", tint = Color(0xFFBB8888), modifier = Modifier.size(16.dp))
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                        }
-                        if (customItems.size < 5) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                OutlinedTextField(
-                                    value = newItemText,
-                                    onValueChange = { if (it.length <= 30) newItemText = it },
-                                    modifier = Modifier.weight(1f),
-                                    placeholder = { Text("新しい設定を入力...", color = Color(0xFFBBBBBB), fontSize = 13.sp) },
-                                    maxLines = 1,
-                                    shape = RoundedCornerShape(8.dp),
-                                    supportingText = { Text("${newItemText.length} / 30", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp, color = if (newItemText.length >= 30) Color.Red else Color(0xFF999999)) }
-                                )
-                                IconButton(
-                                    onClick = {
-                                        val t = newItemText.trim()
-                                        if (t.isNotBlank()) { customItems = customItems + t; newItemText = "" }
-                                    },
-                                    enabled = newItemText.isNotBlank()
-                                ) {
-                                    Icon(Icons.Default.Add, contentDescription = "追加", tint = pinkAccent)
-                                }
-                            }
-                        } else {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("最大5個まで追加できます", fontSize = 11.sp, color = Color(0xFFBB8888))
-                        }
-                    } else {
-                        Text("ひかりの性格や話し方をカスタマイズできます。\nプレミアムプランで利用可能です。", fontSize = 12.sp, color = Color(0xFF999999), lineHeight = 18.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(
-                            onClick = { /* TODO: 課金処理 */ },
+                        Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300))
-                        ) { Text("プレミアムを購入する", color = Color.White) }
+                            shape = RoundedCornerShape(16.dp),
+                            color = Color(0xFFF0F8FF),
+                            border = BorderStroke(1.dp, Color(0xFF88BBDD).copy(alpha = 0.5f))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text("ひかりが覚えておくこと", fontWeight = FontWeight.Bold, color = Color(0xFF447799), fontSize = 14.sp)
+                                Text("具体的に書くほど会話が自然になります", fontSize = 11.sp, color = Color(0xFF888888))
+                                OutlinedTextField(
+                                    value = tempLifestyle, onValueChange = { if (it.length <= 50) tempLifestyle = it },
+                                    label = { Text("仕事・生活スタイル") },
+                                    placeholder = { Text("例：夜間の警備員　デスクワーク中心", color = Color(0xFFBBBBBB), fontSize = 12.sp) },
+                                    modifier = Modifier.fillMaxWidth(), maxLines = 2,
+                                    supportingText = { Text("${tempLifestyle.length}/50", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp) }
+                                )
+                                OutlinedTextField(
+                                    value = tempFavoriteDrink, onValueChange = { if (it.length <= 30) tempFavoriteDrink = it },
+                                    label = { Text("好きな飲み物") },
+                                    placeholder = { Text("例：コーヒー　麦茶", color = Color(0xFFBBBBBB), fontSize = 12.sp) },
+                                    modifier = Modifier.fillMaxWidth(), maxLines = 1,
+                                    supportingText = { Text("${tempFavoriteDrink.length}/30", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp) }
+                                )
+                                OutlinedTextField(
+                                    value = tempWeakness, onValueChange = { if (it.length <= 50) tempWeakness = it },
+                                    label = { Text("苦手・弱点（時間帯など）") },
+                                    placeholder = { Text("例：朝が弱い　夜更かし気味", color = Color(0xFFBBBBBB), fontSize = 12.sp) },
+                                    modifier = Modifier.fillMaxWidth(), maxLines = 2,
+                                    supportingText = { Text("${tempWeakness.length}/50", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp) }
+                                )
+                                OutlinedTextField(
+                                    value = tempBodyNotes, onValueChange = { if (it.length <= 80) tempBodyNotes = it },
+                                    label = { Text("体の注意事項（怪我・持病など）") },
+                                    placeholder = { Text("例：左膝が痛い　腰が弱い", color = Color(0xFFBBBBBB), fontSize = 12.sp) },
+                                    modifier = Modifier.fillMaxWidth(), maxLines = 2,
+                                    supportingText = { Text("${tempBodyNotes.length}/80", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp) }
+                                )
+                            }
+                        }
+                    }
+                    1 -> {
+                        Text("BGM", fontWeight = FontWeight.Bold, color = pinkAccent, modifier = Modifier.fillMaxWidth())
+                        val selectedBgmId by viewModel.selectedBgmId
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().clickable { viewModel.setSelectedBgm("") }
+                            ) {
+                                RadioButton(selected = selectedBgmId.isEmpty(), onClick = { viewModel.setSelectedBgm("") })
+                                Text("オフ")
+                            }
+                            bgmTracks.forEach { track ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth().clickable { viewModel.setSelectedBgm(track.id) }
+                                ) {
+                                    RadioButton(selected = selectedBgmId == track.id, onClick = { viewModel.setSelectedBgm(track.id) })
+                                    Text(track.name)
+                                }
+                            }
+                        }
+                        val bgmVolume by viewModel.bgmVolume
+                        Text("音量", fontWeight = FontWeight.Bold, color = pinkAccent, modifier = Modifier.fillMaxWidth())
+                        Slider(
+                            value = bgmVolume,
+                            onValueChange = { viewModel.setBgmVolume(it) },
+                            valueRange = 0f..1f,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    2 -> {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isPremium) Color(0xFFFFF0F5) else Color(0xFFF5F5F5),
+                            border = BorderStroke(1.dp, if (isPremium) pinkAccent else Color(0xFFCCCCCC))
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("ひかりへの追加設定", fontWeight = FontWeight.Bold, color = if (isPremium) pinkAccent else Color(0xFF999999), fontSize = 14.sp)
+                                    if (!isPremium) {
+                                        Surface(shape = RoundedCornerShape(4.dp), color = Color(0xFFFFB300)) {
+                                            Text("プレミアム", fontSize = 10.sp, color = Color.White, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                        }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                if (isPremium) {
+                                    Text(
+                                        "ひかりの設定を追加できます（最大5個・1項目30文字）\n例：「ねこが大好き」「料理が得意」「天然な一面がある」",
+                                        fontSize = 12.sp, color = Color(0xFF888888), lineHeight = 18.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    customItems.forEachIndexed { index, item ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Surface(
+                                                modifier = Modifier.weight(1f),
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = Color(0xFFFFE4EF)
+                                            ) {
+                                                Text(item, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, color = Color(0xFF7B3F5E))
+                                            }
+                                            IconButton(onClick = { customItems = customItems.toMutableList().also { it.removeAt(index) } }, modifier = Modifier.size(32.dp)) {
+                                                Icon(Icons.Default.Close, contentDescription = "削除", tint = Color(0xFFBB8888), modifier = Modifier.size(16.dp))
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                    }
+                                    if (customItems.size < 5) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            OutlinedTextField(
+                                                value = newItemText,
+                                                onValueChange = { if (it.length <= 30) newItemText = it },
+                                                modifier = Modifier.weight(1f),
+                                                placeholder = { Text("新しい設定を入力...", color = Color(0xFFBBBBBB), fontSize = 13.sp) },
+                                                maxLines = 1,
+                                                shape = RoundedCornerShape(8.dp),
+                                                supportingText = { Text("${newItemText.length} / 30", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp, color = if (newItemText.length >= 30) Color.Red else Color(0xFF999999)) }
+                                            )
+                                            IconButton(
+                                                onClick = {
+                                                    val t = newItemText.trim()
+                                                    if (t.isNotBlank()) { customItems = customItems + t; newItemText = "" }
+                                                },
+                                                enabled = newItemText.isNotBlank()
+                                            ) {
+                                                Icon(Icons.Default.Add, contentDescription = "追加", tint = pinkAccent)
+                                            }
+                                        }
+                                    } else {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text("最大5個まで追加できます", fontSize = 11.sp, color = Color(0xFFBB8888))
+                                    }
+                                } else {
+                                    Text("ひかりの性格や話し方をカスタマイズできます。\nプレミアムプランで利用可能です。", fontSize = 12.sp, color = Color(0xFF999999), lineHeight = 18.sp)
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Button(
+                                        onClick = { /* TODO: 課金処理 */ },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300))
+                                    ) { Text("プレミアムを購入する", color = Color.White) }
+                                }
+                            }
+                        }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = Color(0xFFF0F8FF),
-                border = BorderStroke(1.dp, Color(0xFF88BBDD).copy(alpha = 0.5f))
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("ひかりが覚えておくこと", fontWeight = FontWeight.Bold, color = Color(0xFF447799), fontSize = 14.sp)
-                    Text("具体的に書くほど会話が自然になります", fontSize = 11.sp, color = Color(0xFF888888))
-                    OutlinedTextField(
-                        value = tempLifestyle, onValueChange = { if (it.length <= 50) tempLifestyle = it },
-                        label = { Text("仕事・生活スタイル") },
-                        placeholder = { Text("例：夜間の警備員　デスクワーク中心", color = Color(0xFFBBBBBB), fontSize = 12.sp) },
-                        modifier = Modifier.fillMaxWidth(), maxLines = 2,
-                        supportingText = { Text("${tempLifestyle.length}/50", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp) }
-                    )
-                    OutlinedTextField(
-                        value = tempFavoriteDrink, onValueChange = { if (it.length <= 30) tempFavoriteDrink = it },
-                        label = { Text("好きな飲み物") },
-                        placeholder = { Text("例：コーヒー　麦茶", color = Color(0xFFBBBBBB), fontSize = 12.sp) },
-                        modifier = Modifier.fillMaxWidth(), maxLines = 1,
-                        supportingText = { Text("${tempFavoriteDrink.length}/30", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp) }
-                    )
-                    OutlinedTextField(
-                        value = tempWeakness, onValueChange = { if (it.length <= 50) tempWeakness = it },
-                        label = { Text("苦手・弱点（時間帯など）") },
-                        placeholder = { Text("例：朝が弱い　夜更かし気味", color = Color(0xFFBBBBBB), fontSize = 12.sp) },
-                        modifier = Modifier.fillMaxWidth(), maxLines = 2,
-                        supportingText = { Text("${tempWeakness.length}/50", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp) }
-                    )
-                    OutlinedTextField(
-                        value = tempBodyNotes, onValueChange = { if (it.length <= 80) tempBodyNotes = it },
-                        label = { Text("体の注意事項（怪我・持病など）") },
-                        placeholder = { Text("例：左膝が痛い　腰が弱い", color = Color(0xFFBBBBBB), fontSize = 12.sp) },
-                        modifier = Modifier.fillMaxWidth(), maxLines = 2,
-                        supportingText = { Text("${tempBodyNotes.length}/80", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp) }
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = {
                 val h = tempHeight.toFloatOrNull() ?: 170f
                 val w = tempWeight.toFloatOrNull() ?: 60f
@@ -4393,7 +4467,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                 if (isPremium) viewModel.saveCustomCharacterItems(customItems)
                 viewModel.saveLifestyleProfile(tempLifestyle, tempFavoriteDrink, tempWeakness, tempBodyNotes)
                 navController.popBackStack()
-            }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = pinkAccent)) { Text("保存して戻る") }
+            }, modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp), colors = ButtonDefaults.buttonColors(containerColor = pinkAccent)) { Text("保存して戻る") }
         }
     }
 }
@@ -4444,7 +4518,7 @@ data class AggregatedData(val label: String, val steps: Int, val activeTimeMilli
 // ---- 天気 ----
 
 data class HourlyWeatherEntry(val hour: Int, val tempC: Double, val weatherCode: Int, val precipitationMm: Double = 0.0)
-data class WeatherInfo(val tempC: Double, val weatherCode: Int, val hourly: List<HourlyWeatherEntry> = emptyList())
+data class WeatherInfo(val tempC: Double, val weatherCode: Int, val hourly: List<HourlyWeatherEntry> = emptyList(), val locationName: String? = null)
 
 fun wmoToDescription(code: Int): String = when (code) {
     0 -> "晴れ"; 1 -> "ほぼ晴れ"; 2 -> "一部くもり"; 3 -> "くもり"
@@ -4499,6 +4573,17 @@ suspend fun fetchWeather(lat: Double, lon: Double): WeatherInfo? =
         } catch (e: Exception) { null }
     }
 
+@Suppress("DEPRECATION")
+fun reverseGeocodeLocationName(context: android.content.Context, lat: Double, lon: Double): String? =
+    try {
+        val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
+        val addresses = geocoder.getFromLocation(lat, lon, 1)
+        val address = addresses?.firstOrNull()
+        address?.locality ?: address?.subAdminArea ?: address?.adminArea
+    } catch (e: Exception) {
+        null
+    }
+
 @SuppressLint("MissingPermission")
 suspend fun fetchWeatherFromLocation(context: android.content.Context): WeatherInfo? =
     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -4507,7 +4592,11 @@ suspend fun fetchWeatherFromLocation(context: android.content.Context): WeatherI
             val loc = lm.getProviders(true)
                 .mapNotNull { lm.getLastKnownLocation(it) }
                 .maxByOrNull { it.time }
-            loc?.let { fetchWeather(it.latitude, it.longitude) }
+            loc?.let {
+                val weather = fetchWeather(it.latitude, it.longitude)
+                val locationName = reverseGeocodeLocationName(context, it.latitude, it.longitude)
+                weather?.copy(locationName = locationName)
+            }
         } catch (_: Exception) { null }
     }
 
