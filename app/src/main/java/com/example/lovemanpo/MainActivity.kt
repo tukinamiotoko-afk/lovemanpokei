@@ -1570,21 +1570,26 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     }
 
     HomeScreenContent(
-        todaySteps = todaySteps,
-        actionPoints = actionPoints,
-        stepGaugeProgress = stepGaugeProgress,
-        loveCount = loveCount,
-        heartCount = heartCount,
-        heartGaugeProgress = heartGaugeProgress,
-        playerName = playerName,
-        bgRes = bgRes,
-        dialogueMessage = displayMessage,
-        expressionRes = displayExpression,
-        activeTimeStr = activeTimeStr,
-        distanceStr = distanceStr,
-        caloriesStr = caloriesStr,
-        weatherInfo = weatherInfo,
-        onCharacterClick = {
+        uiState = HomeScreenUiState(
+            todaySteps = todaySteps,
+            actionPoints = actionPoints,
+            stepGaugeProgress = stepGaugeProgress,
+            loveCount = loveCount,
+            heartCount = heartCount,
+            heartGaugeProgress = heartGaugeProgress,
+            playerName = playerName,
+            bgRes = bgRes,
+            dialogueMessage = displayMessage,
+            expressionRes = displayExpression,
+            activeTimeStr = activeTimeStr,
+            distanceStr = distanceStr,
+            caloriesStr = caloriesStr,
+            weatherInfo = weatherInfo,
+            isHomeChatLoading = isHomeChatLoading,
+            toastMessage = homeToastMessage
+        ),
+        actions = HomeScreenActions(
+            onCharacterClick = {
             if (touchedDialogue != null) {
                 // まだ前のリアクションが表示中＝連続でタップ（複数回触った）
                 val available = homeAvailableMultiTouchDialogues(loveCount)
@@ -1600,15 +1605,14 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             }
             weatherDialogueActive = false
         },
-        isHomeChatLoading = isHomeChatLoading,
-        onRefreshDialogue = {
+            onRefreshDialogue = {
             homeChatReply = null
             touchedDialogue = null
             weatherDialogueActive = false
             defaultDialogueEntry = pickDefaultDialogue()
         },
-        onWeatherTap = { weatherDialogueActive = true },
-        onHomeChatSend = homeChatSend@{ text ->
+            onWeatherTap = { weatherDialogueActive = true },
+            onHomeChatSend = homeChatSend@{ text ->
             if (!viewModel.spendPointForChat()) {
                 homeToastMessage = "行動ポイントが足りません（2000歩で1ポイント）"
                 return@homeChatSend
@@ -1681,15 +1685,15 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
                 }
             }
         },
-        onFreeChatClick = { navController.navigate("freechat") },
-        onDiaryClick = { navController.navigate("diary") },
-        onRecordsClick = { navController.navigate("records") },
-        onMemoriesClick = { navController.navigate("memories") },
-        onDebugClick = { navController.navigate("debug") },
-        onShopClick = { navController.navigate("shop") },
-        onWardrobeClick = { navController.navigate("wardrobe") },
-        onSettingsClick = { navController.navigate("settings") },
-        toastMessage = homeToastMessage
+            onFreeChatClick = { navController.navigate("freechat") },
+            onDiaryClick = { navController.navigate("diary") },
+            onRecordsClick = { navController.navigate("records") },
+            onMemoriesClick = { navController.navigate("memories") },
+            onDebugClick = { navController.navigate("debug") },
+            onShopClick = { navController.navigate("shop") },
+            onWardrobeClick = { navController.navigate("wardrobe") },
+            onSettingsClick = { navController.navigate("settings") }
+        )
     )
 
     if (pendingLevelUp > 0) {
@@ -1705,37 +1709,73 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
 }
 
 
+data class HomeScreenUiState(
+    val todaySteps: Int,
+    val actionPoints: Int,
+    val stepGaugeProgress: Float,
+    val loveCount: Int,
+    val heartCount: Int,
+    val heartGaugeProgress: Float,
+    val playerName: String,
+    val bgRes: Int,
+    val dialogueMessage: String,
+    val expressionRes: Int,
+    val activeTimeStr: String,
+    val distanceStr: String,
+    val caloriesStr: String,
+    val weatherInfo: WeatherInfo? = null,
+    val isHomeChatLoading: Boolean = false,
+    val toastMessage: String? = null
+)
+
+data class HomeScreenActions(
+    val onCharacterClick: () -> Unit,
+    val onFreeChatClick: () -> Unit,
+    val onDiaryClick: () -> Unit,
+    val onRecordsClick: () -> Unit,
+    val onDebugClick: () -> Unit,
+    val onRefreshDialogue: () -> Unit = {},
+    val onWeatherTap: () -> Unit = {},
+    val onHomeChatSend: (String) -> Unit = {},
+    val onMemoriesClick: () -> Unit = {},
+    val onShopClick: () -> Unit = {},
+    val onWardrobeClick: () -> Unit = {},
+    val onSettingsClick: () -> Unit = {}
+)
+
 @Composable
 fun HomeScreenContent(
-    todaySteps: Int,    actionPoints: Int,
-    stepGaugeProgress: Float,
-    loveCount: Int,
-    heartCount: Int,
-    heartGaugeProgress: Float,
-    playerName: String,
-    bgRes: Int,
-    dialogueMessage: String,
-    expressionRes: Int,
-    // ★ 追加
-    activeTimeStr: String,
-    distanceStr: String,
-    caloriesStr: String,
-    weatherInfo: WeatherInfo? = null,
-    isHomeChatLoading: Boolean = false,
-    onRefreshDialogue: () -> Unit = {},
-    onWeatherTap: () -> Unit = {},
-    onHomeChatSend: (String) -> Unit = {},
-    onCharacterClick: () -> Unit,
-    onFreeChatClick: () -> Unit,
-    onDiaryClick: () -> Unit,
-    onRecordsClick: () -> Unit,
-    onMemoriesClick: () -> Unit = {},
-    onDebugClick: () -> Unit,
-    onShopClick: () -> Unit = {},
-    onWardrobeClick: () -> Unit = {},
-    onSettingsClick: () -> Unit = {},
-    toastMessage: String? = null
+    uiState: HomeScreenUiState,
+    actions: HomeScreenActions
 ) {
+    val todaySteps = uiState.todaySteps
+    val actionPoints = uiState.actionPoints
+    val stepGaugeProgress = uiState.stepGaugeProgress
+    val loveCount = uiState.loveCount
+    val heartCount = uiState.heartCount
+    val heartGaugeProgress = uiState.heartGaugeProgress
+    val playerName = uiState.playerName
+    val bgRes = uiState.bgRes
+    val dialogueMessage = uiState.dialogueMessage
+    val expressionRes = uiState.expressionRes
+    val activeTimeStr = uiState.activeTimeStr
+    val distanceStr = uiState.distanceStr
+    val caloriesStr = uiState.caloriesStr
+    val weatherInfo = uiState.weatherInfo
+    val isHomeChatLoading = uiState.isHomeChatLoading
+    val toastMessage = uiState.toastMessage
+    val onCharacterClick = actions.onCharacterClick
+    val onFreeChatClick = actions.onFreeChatClick
+    val onDiaryClick = actions.onDiaryClick
+    val onRecordsClick = actions.onRecordsClick
+    val onMemoriesClick = actions.onMemoriesClick
+    val onDebugClick = actions.onDebugClick
+    val onShopClick = actions.onShopClick
+    val onWardrobeClick = actions.onWardrobeClick
+    val onSettingsClick = actions.onSettingsClick
+    val onRefreshDialogue = actions.onRefreshDialogue
+    val onWeatherTap = actions.onWeatherTap
+    val onHomeChatSend = actions.onHomeChatSend
     var showWeatherSheet by remember { mutableStateOf(false) }
 
     // ヘルプキャラ(HintSdHikari)専用の固定位置。メインキャラの余白値とは無関係。
@@ -2692,25 +2732,28 @@ fun HomeNavItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: St
 fun HomeScreenPreview() {
     ラブ万歩計Theme {
         HomeScreenContent(
-            todaySteps = 7842,
-            actionPoints = 2,
-            stepGaugeProgress = 0.78f,
-            loveCount = 2,
-            heartCount = 6,
-            heartGaugeProgress = 0.6f,
-            playerName = "プレイヤー",
-            bgRes = R.drawable.home_haikei,
-            dialogueMessage = "今日も一緒にがんばろうね♪",
-            expressionRes = R.drawable.hikari_smile,
-            // ★ 足りなかった引数を追加
-            activeTimeStr = "1時間 32分",
-            distanceStr = "5.6 km",
-            caloriesStr = "238 kcal",
-            onCharacterClick = {},
-            onFreeChatClick = {},
-            onDiaryClick = {},
-            onRecordsClick = {},
-            onDebugClick = {}
+            uiState = HomeScreenUiState(
+                todaySteps = 7842,
+                actionPoints = 2,
+                stepGaugeProgress = 0.78f,
+                loveCount = 2,
+                heartCount = 6,
+                heartGaugeProgress = 0.6f,
+                playerName = "プレイヤー",
+                bgRes = R.drawable.home_haikei,
+                dialogueMessage = "今日も一緒にがんばろうね♪",
+                expressionRes = R.drawable.hikari_smile,
+                activeTimeStr = "1時間 32分",
+                distanceStr = "5.6 km",
+                caloriesStr = "238 kcal"
+            ),
+            actions = HomeScreenActions(
+                onCharacterClick = {},
+                onFreeChatClick = {},
+                onDiaryClick = {},
+                onRecordsClick = {},
+                onDebugClick = {}
+            )
         )
     }
 }
