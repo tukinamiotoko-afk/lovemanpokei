@@ -1793,32 +1793,24 @@ data class HomeScreenActions(
     val onSettingsClick: () -> Unit = {}
 )
 
-// キャラ画像は素材によって透明な余白の量がバラバラ（特に足元）なので、
-// 実際に描かれている部分（不透明ピクセル）の外接矩形だけを切り出して使う。
-// これにより、素材ごとの余白差に関係なく「絵の本当の下端」をカード上端に揃えられる。
-private fun trimTransparentEdges(bitmap: Bitmap): Bitmap {
+// キャラ画像は素材によって足元の透明な余白の量がバラバラなので、
+// 画像全体のサイズ・縦横比はそのまま使いつつ（サイズ感が変わらないように）、
+// 「下端から実際に絵が描かれている行までの透明な余白の割合」だけを測っておき、
+// その分だけ表示位置を下にずらしてカード上端にちょうど合わせる。
+private fun bottomDeadSpaceFraction(bitmap: Bitmap): Float {
     val w = bitmap.width
     val h = bitmap.height
-    val pixels = IntArray(w * h)
-    bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
     val alphaThreshold = 10
-    var top = -1
-    var bottom = -1
-    var left = -1
-    var right = -1
-    for (y in 0 until h) {
-        val rowStart = y * w
+    val row = IntArray(w)
+    for (y in (h - 1) downTo 0) {
+        bitmap.getPixels(row, 0, w, 0, y, w, 1)
         for (x in 0 until w) {
-            if ((pixels[rowStart + x] ushr 24) and 0xFF > alphaThreshold) {
-                if (top == -1) top = y
-                bottom = y
-                if (left == -1 || x < left) left = x
-                if (right == -1 || x > right) right = x
+            if ((row[x] ushr 24) and 0xFF > alphaThreshold) {
+                return (h - 1 - y).toFloat() / h.toFloat()
             }
         }
     }
-    if (top == -1 || right <= left || bottom <= top) return bitmap
-    return Bitmap.createBitmap(bitmap, left, top, right - left + 1, bottom - top + 1)
+    return 0f
 }
 
 @Composable
@@ -1865,8 +1857,7 @@ fun HomeScreenContent(
     var visualCardHeightPx by remember { mutableStateOf(0f) }
     val fallbackVisualCardHeightPx = with(density) { 150.dp.toPx() }
     val effectiveVisualCardHeightPx = if (visualCardHeightPx > 0f) visualCardHeightPx else fallbackVisualCardHeightPx
-    val characterCardOverlap = 18.dp
-    val characterGroundPadding = 12.dp + with(density) { effectiveVisualCardHeightPx.toDp() } - characterCardOverlap
+    val characterGroundPadding = 12.dp + with(density) { effectiveVisualCardHeightPx.toDp() }
 
     // painterResource()が端末によっては起動直後にリソースID解決へ失敗することがあるため、
     // 背景画像だけはBitmapFactoryで直接デコードして読み込む（より原始的で確実な経路）
@@ -1904,8 +1895,7 @@ fun HomeScreenContent(
             .zIndex(0.5f)) {
             val characterBitmap = remember(expressionRes) {
                 try {
-                    val original = BitmapFactory.decodeResource(bgContext.resources, expressionRes)
-                    original?.let { trimTransparentEdges(it) }
+                    BitmapFactory.decodeResource(bgContext.resources, expressionRes)
                 } catch (e: Exception) {
                     null
                 }
@@ -1918,6 +1908,9 @@ fun HomeScreenContent(
                     3f / 5f
                 }
             }
+            val characterBottomDeadFraction = remember(characterBitmap) {
+                characterBitmap?.let { bottomDeadSpaceFraction(it) } ?: 0f
+            }
             val characterModifier = Modifier
                 .fillMaxHeight(1.0f)
                 .aspectRatio(characterAspectRatio, matchHeightConstraintsFirst = true)
@@ -1926,6 +1919,7 @@ fun HomeScreenContent(
                     scaleX = characterScale
                     scaleY = characterScale
                     transformOrigin = TransformOrigin(0.5f, 1f)
+                    translationY = characterBottomDeadFraction * size.height * characterScale
                 }
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
                     onCharacterClick()
