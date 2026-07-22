@@ -2058,18 +2058,16 @@ fun HomeScreenContent(
         }
 
         // 上部カード行 + ボタン列。独立したオーバーレイとしてキャラの上に被さる
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
                 .padding(horizontal = 8.dp, vertical = 8.dp)
-                .zIndex(1f),
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                .zIndex(1f)
         ) {
-            // ラブレベル・行動ポイント・ジェムの3枚だけ高さを揃える（ボタン列の高さに引きずられないよう内側のRowで完結させる）
+            // ラブレベル・行動ポイント・ジェムの3枚だけ高さを揃える
             Row(
-                modifier = Modifier.weight(1f).height(IntrinsicSize.Max),
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 HomeLoveLevelCard(
@@ -2087,7 +2085,10 @@ fun HomeScreenContent(
                     gems = gemCount
                 )
             }
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp, alignment = Alignment.End)
+            ) {
                 HomeTopCircleButton(Icons.Default.Notifications, size = 26.dp)
                 HomeTopCircleButton(Icons.Default.Settings, onClick = onSettingsClick, size = 26.dp)
                 HomeTopCircleButton(
