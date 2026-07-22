@@ -357,6 +357,11 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getString("EQUIPPED_COSTUME_ID", "default") ?: "default"
         set(value) = prefs.edit { putString("EQUIPPED_COSTUME_ID", value) }
 
+    // アプリ内通貨「ジェム」。行動ポイントとは別物で、衣装の購入に使う。
+    var gemCount: Int
+        get() = prefs.getInt("GEM_COUNT", 0)
+        set(value) = prefs.edit { putInt("GEM_COUNT", value) }
+
     suspend fun recordSteps(date: String, steps: Int, activeTimeMillis: Long = 0L) {
         stepDao.upsert(StepRecord(date = date, stepCount = steps, activeTimeMillis = activeTimeMillis))
     }
@@ -748,9 +753,28 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
         return false
     }
 
+    // アプリ内通貨「ジェム」。行動ポイントとは別物で、衣装の購入に使う。
+    val gemCount = mutableIntStateOf(repository.gemCount)
+
+    // TODO: 現状はプレースホルダー。Google Play Billingと繋いだら、
+    // 購入完了コールバックからこの関数を呼ぶようにする。
+    fun addGems(amount: Int) {
+        repository.gemCount += amount
+        gemCount.intValue = repository.gemCount
+    }
+
+    fun spendGems(amount: Int): Boolean {
+        if (gemCount.intValue >= amount) {
+            repository.gemCount -= amount
+            gemCount.intValue = repository.gemCount
+            return true
+        }
+        return false
+    }
+
     fun buyCostume(costume: Costume): Boolean {
         if (costume.id in ownedCostumeIds.value) return false
-        if (!spendPoints(costume.price)) return false
+        if (!spendGems(costume.gemPrice)) return false
         val updated = ownedCostumeIds.value + costume.id
         repository.ownedCostumeIds = updated
         ownedCostumeIds.value = updated
@@ -4721,7 +4745,7 @@ val loveLevelWalls = listOf(
 data class Costume(
     val id: String,
     val name: String,
-    val price: Int,
+    val gemPrice: Int,
     val smileRes: Int,
     val blushRes: Int,
     val celebrateRes: Int,
@@ -4729,13 +4753,24 @@ data class Costume(
 )
 
 val costumeCatalog = listOf(
-    Costume("default",   "私服",         0,  R.drawable.hikari_smile, R.drawable.hikari_blush, R.drawable.hikari_celebrate, R.drawable.hikari_think),
-    Costume("barikyari",  "バリキャリ",    10, R.drawable.hikari_barikyari_smile, R.drawable.hikari_barikyari_blush, R.drawable.hikari_barikyari_celebrate, R.drawable.hikari_bairikyari_think),
-    Costume("boisyoutu",  "ボーイッシュ",  8,  R.drawable.hikari_boisyoutu_smile, R.drawable.hikari_boisyoutu_blush, R.drawable.hikari_boisyoutu_celebrate, R.drawable.hikari_boisyoutu_think),
-    Costume("punks",      "パンクス",      15, R.drawable.hikari_punks_smile, R.drawable.hikari_punks_blush, R.drawable.hikari_punks_celebrate, R.drawable.hikari_punks_think),
-    Costume("mizugi",     "水着",         12, R.drawable.hikari_mizugi_smile, R.drawable.hikari_mizugi_blush, R.drawable.hikari_mizugi_celebrate, R.drawable.hikari_mizugi_think),
-    Costume("santa",      "サンタ",       15, R.drawable.hikari_santa_smile, R.drawable.hikari_santa_blush, R.drawable.hikari_santa_cerebrate, R.drawable.hikari_santa_think),
-    Costume("epuron",     "エプロン",      10, R.drawable.hikari_epuron_smile, R.drawable.hikari_epuron_blush, R.drawable.hikari_epuron_celebrate, R.drawable.hikari_epuron_think)
+    Costume("default",   "私服",         0,   R.drawable.hikari_smile, R.drawable.hikari_blush, R.drawable.hikari_celebrate, R.drawable.hikari_think),
+    Costume("barikyari",  "バリキャリ",    200, R.drawable.hikari_barikyari_smile, R.drawable.hikari_barikyari_blush, R.drawable.hikari_barikyari_celebrate, R.drawable.hikari_bairikyari_think),
+    Costume("boisyoutu",  "ボーイッシュ",  200, R.drawable.hikari_boisyoutu_smile, R.drawable.hikari_boisyoutu_blush, R.drawable.hikari_boisyoutu_celebrate, R.drawable.hikari_boisyoutu_think),
+    Costume("punks",      "パンクス",      200, R.drawable.hikari_punks_smile, R.drawable.hikari_punks_blush, R.drawable.hikari_punks_celebrate, R.drawable.hikari_punks_think),
+    Costume("mizugi",     "水着",         200, R.drawable.hikari_mizugi_smile, R.drawable.hikari_mizugi_blush, R.drawable.hikari_mizugi_celebrate, R.drawable.hikari_mizugi_think),
+    Costume("santa",      "サンタ",       200, R.drawable.hikari_santa_smile, R.drawable.hikari_santa_blush, R.drawable.hikari_santa_cerebrate, R.drawable.hikari_santa_think),
+    Costume("epuron",     "エプロン",      200, R.drawable.hikari_epuron_smile, R.drawable.hikari_epuron_blush, R.drawable.hikari_epuron_celebrate, R.drawable.hikari_epuron_think)
+)
+
+// ジェムの購入パック（現状はプレースホルダー：実際の課金と繋がるまでは
+// タップで即座にジェムが付与される。Google Play Billingと繋ぐ際にこのリストの
+// 各パックへ商品IDを紐付ける）
+data class GemPack(val gemAmount: Int, val priceLabel: String)
+
+val gemPackCatalog = listOf(
+    GemPack(200, "¥120"),
+    GemPack(400, "¥240"),
+    GemPack(600, "¥360")
 )
 
 data class BgmTrack(val id: String, val name: String, val resId: Int)
@@ -6653,10 +6688,11 @@ fun MemoryCard(item: MemoryItem, isAvailable: Boolean, isUnlocked: Boolean) {
 @Composable
 fun ShopScreen(navController: NavController, viewModel: StepViewModel) {
     val pinkAccent = Color(0xFFFF6B9D)
-    val actionPoints by viewModel.currentActionPoints
+    val gemCount by viewModel.gemCount
     val ownedIds by viewModel.ownedCostumeIds
     val shopItems = remember { costumeCatalog.filter { it.id != "default" } }
     var toastMessage by remember { mutableStateOf<String?>(null) }
+    var showGemShop by remember { mutableStateOf(false) }
 
     LaunchedEffect(toastMessage) {
         if (toastMessage != null) {
@@ -6675,10 +6711,19 @@ fun ShopScreen(navController: NavController, viewModel: StepViewModel) {
                     }
                 },
                 actions = {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 12.dp)) {
-                        Icon(Icons.Default.Bolt, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable { showGemShop = true }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text("💎", fontSize = 16.sp)
                         Spacer(modifier = Modifier.width(2.dp))
-                        Text("$actionPoints", fontWeight = FontWeight.Bold, color = Color.White)
+                        Text("$gemCount", fontWeight = FontWeight.Bold, color = Color.White)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(Icons.Default.Add, contentDescription = "ジェムを購入", tint = Color.White, modifier = Modifier.size(16.dp))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF5B9BE0))
@@ -6717,12 +6762,12 @@ fun ShopScreen(navController: NavController, viewModel: StepViewModel) {
                     ShopCostumeCard(
                         costume = costume,
                         isOwned = costume.id in ownedIds,
-                        canAfford = actionPoints >= costume.price,
+                        canAfford = gemCount >= costume.gemPrice,
                         onBuy = {
                             if (viewModel.buyCostume(costume)) {
                                 toastMessage = "${costume.name}を購入しました！"
                             } else {
-                                toastMessage = "行動ポイントが足りません"
+                                toastMessage = "ジェムが足りません"
                             }
                         }
                     )
@@ -6738,6 +6783,66 @@ fun ShopScreen(navController: NavController, viewModel: StepViewModel) {
                         .padding(bottom = 32.dp)
                 ) {
                     Text(msg, color = Color.White, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
+                }
+            }
+
+            if (showGemShop) {
+                GemPurchaseDialog(
+                    onDismiss = { showGemShop = false },
+                    onBuyPack = { pack ->
+                        viewModel.addGems(pack.gemAmount)
+                        toastMessage = "${pack.gemAmount}💎 を受け取りました！"
+                        showGemShop = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+// ジェム購入ダイアログ。現状は実際の課金には繋がっておらず、
+// タップすると即座にジェムが付与されるプレースホルダー。
+// 実装時：Google Play Billingのpurchase完了コールバックから
+// viewModel.addGems(pack.gemAmount) を呼ぶようにする
+@Composable
+fun GemPurchaseDialog(onDismiss: () -> Unit, onBuyPack: (GemPack) -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("ジェムを購入", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF333333))
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "※現在は準備中のため、タップすると無料でジェムが付与されます",
+                    fontSize = 11.sp,
+                    color = Color(0xFF999999)
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+                gemPackCatalog.forEach { pack ->
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0xFFFFF0F5),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clickable { onBuyPack(pack) }
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("💎", fontSize = 18.sp)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("${pack.gemAmount}", fontWeight = FontWeight.Bold, color = Color(0xFF333333))
+                            }
+                            Text(pack.priceLabel, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
+                    Text("閉じる")
                 }
             }
         }
@@ -6795,7 +6900,7 @@ fun ShopCostumeCard(costume: Costume, isOwned: Boolean, canAfford: Boolean, onBu
                 contentPadding = PaddingValues(0.dp)
             ) {
                 Text(
-                    if (canAfford) "${costume.price}pt で購入" else "${costume.price}pt（不足）",
+                    if (canAfford) "${costume.gemPrice}💎 で購入" else "${costume.gemPrice}💎（不足）",
                     fontSize = 12.sp
                 )
             }
