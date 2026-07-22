@@ -1836,7 +1836,8 @@ fun HomeScreenContent(
     var visualCardHeightPx by remember { mutableStateOf(0f) }
     val fallbackVisualCardHeightPx = with(density) { 150.dp.toPx() }
     val effectiveVisualCardHeightPx = if (visualCardHeightPx > 0f) visualCardHeightPx else fallbackVisualCardHeightPx
-    val characterGroundPadding = 12.dp + with(density) { effectiveVisualCardHeightPx.toDp() }
+    val characterCardOverlap = 18.dp
+    val characterGroundPadding = 12.dp + with(density) { effectiveVisualCardHeightPx.toDp() } - characterCardOverlap
 
     // painterResource()が端末によっては起動直後にリソースID解決へ失敗することがあるため、
     // 背景画像だけはBitmapFactoryで直接デコードして読み込む（より原始的で確実な経路）
@@ -1866,16 +1867,26 @@ fun HomeScreenContent(
         // 足元（接地位置）はセリフ枠の見た目の上端（characterGroundPadding）で固定し、
         // サイズは characterScale だけで調整する。
         // 拡大率は下端(transformOrigin y=1f)を軸にするので、スケールを変えても接地位置は動かない。
-        val characterScale = 0.82f
+        val characterScale = 0.72f
         Box(modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
             .padding(bottom = characterGroundPadding)) {
+            val characterPainter = painterResource(id = expressionRes)
+            val characterAspectRatio = remember(characterPainter.intrinsicSize) {
+                val intrinsicSize = characterPainter.intrinsicSize
+                if (intrinsicSize.width > 0f && intrinsicSize.height > 0f) {
+                    intrinsicSize.width / intrinsicSize.height
+                } else {
+                    3f / 5f
+                }
+            }
             Image(
-                painter = painterResource(id = expressionRes),
+                painter = characterPainter,
                 contentDescription = "ひかり",
                 modifier = Modifier
                     .fillMaxHeight(1.0f)
+                    .aspectRatio(characterAspectRatio, matchHeightConstraintsFirst = true)
                     .align(Alignment.BottomCenter)
                     .graphicsLayer {
                         scaleX = characterScale
