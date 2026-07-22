@@ -159,6 +159,8 @@ import java.io.File
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
@@ -1875,12 +1877,17 @@ fun HomeScreenContent(
     val characterBottomPadding = 240.dp
 
     // メインキャラの接地位置＝セリフ枠（バナー＋入力欄）の実際の見た目の上端。
-    // テキスト欄は常に2行固定高さなのでカードの高さは安定しており、実測してよい。
+    // 「カードの高さを測って12dp足す」という積み上げ計算ではなく、
+    // 画面全体のBoxの下端と、実際に描画されたカードの上端、両方の絶対位置を
+    // 直接測定して、その差分をそのままキャラ表示エリアの高さに使う。
     val density = LocalDensity.current
-    var visualCardHeightPx by remember { mutableStateOf(0f) }
-    val fallbackVisualCardHeightPx = with(density) { 150.dp.toPx() }
-    val effectiveVisualCardHeightPx = if (visualCardHeightPx > 0f) visualCardHeightPx else fallbackVisualCardHeightPx
-    val characterGroundPadding = 12.dp + with(density) { effectiveVisualCardHeightPx.toDp() }
+    var rootBoxBottomYPx by remember { mutableStateOf(0f) }
+    var cardTopYPx by remember { mutableStateOf(0f) }
+    val fallbackGroundPaddingPx = with(density) { 150.dp.toPx() }
+    val measuredGroundPaddingPx = rootBoxBottomYPx - cardTopYPx
+    val characterGroundPadding = with(density) {
+        (if (measuredGroundPaddingPx > 0f) measuredGroundPaddingPx else fallbackGroundPaddingPx).toDp()
+    }
 
     // painterResource()が端末によっては起動直後にリソースID解決へ失敗することがあるため、
     // 背景画像だけはBitmapFactoryで直接デコードして読み込む（より原始的で確実な経路）
@@ -1893,7 +1900,11 @@ fun HomeScreenContent(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .onGloballyPositioned { coordinates ->
+            rootBoxBottomYPx = coordinates.positionInRoot().y + coordinates.size.height
+        }) {
         if (bgBitmap != null) {
             Image(
                 bitmap = bgBitmap,
@@ -2077,13 +2088,13 @@ fun HomeScreenContent(
                 .offset(y = (-12).dp)
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
-                // 見た目のあるカード本体。実測してキャラの接地位置に使う
+                // 見た目のあるカード本体。実際の画面上の位置を直接測ってキャラの接地位置に使う
                 // （テキスト欄は常に2行固定高さなので、この値はメッセージ内容によらず安定する）
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .onSizeChanged { size ->
-                            if (size.height > 0) visualCardHeightPx = size.height.toFloat()
+                        .onGloballyPositioned { coordinates ->
+                            cardTopYPx = coordinates.positionInRoot().y
                         }
                         .shadow(8.dp, RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                         .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
