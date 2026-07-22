@@ -4387,6 +4387,35 @@ fun DiaryEntryCard(
     }
 }
 
+// お問い合わせ内容をEmailJS経由で送信する。
+// 宛先メールアドレスはEmailJSのテンプレート設定側にのみ保存されており、
+// アプリ側にはService ID・Template ID・Public Keyしか含まれない
+suspend fun sendInquiryEmail(message: String): Boolean = withContext(Dispatchers.IO) {
+    try {
+        val url = URL("https://api.emailjs.com/api/v1.0/email/send")
+        val conn = url.openConnection() as HttpURLConnection
+        conn.requestMethod = "POST"
+        conn.setRequestProperty("Content-Type", "application/json")
+        conn.doOutput = true
+
+        val body = JSONObject().apply {
+            put("service_id", "service_nsf8tx3")
+            put("template_id", "template_0ruqjoc")
+            put("user_id", "W5Zz9F2_2B5eV2jnY")
+            put("template_params", JSONObject().apply {
+                put("name", "アプリユーザー")
+                put("message", message)
+            })
+        }.toString()
+
+        conn.outputStream.write(body.toByteArray(Charsets.UTF_8))
+        val responseCode = conn.responseCode
+        responseCode in 200..299
+    } catch (e: Exception) {
+        false
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
@@ -4405,7 +4434,17 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
     val tabTitles = listOf("プロフィール", "サウンド", "プレミアム", "その他")
     var selectedTab by remember { mutableStateOf(0) }
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var inquiryText by remember { mutableStateOf("") }
+    var isSendingInquiry by remember { mutableStateOf(false) }
+    var inquiryResultMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(inquiryResultMessage) {
+        if (inquiryResultMessage != null) {
+            delay(2500)
+            inquiryResultMessage = null
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -4617,20 +4656,32 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                         )
                         Button(
                             onClick = {
-                                val intent = Intent(Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:")).apply {
-                                    putExtra(Intent.EXTRA_EMAIL, arrayOf("huashanz319@gmail.com"))
-                                    putExtra(Intent.EXTRA_SUBJECT, "【ラブ万歩計】お問い合わせ")
-                                    putExtra(Intent.EXTRA_TEXT, inquiryText)
-                                }
-                                try {
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
+                                val messageToSend = inquiryText
+                                isSendingInquiry = true
+                                scope.launch {
+                                    val success = sendInquiryEmail(messageToSend)
+                                    isSendingInquiry = false
+                                    if (success) {
+                                        inquiryText = ""
+                                        inquiryResultMessage = "送信しました。ありがとうございます！"
+                                    } else {
+                                        inquiryResultMessage = "送信に失敗しました。時間をおいて再度お試しください"
+                                    }
                                 }
                             },
-                            enabled = inquiryText.isNotBlank(),
+                            enabled = inquiryText.isNotBlank() && !isSendingInquiry,
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(containerColor = pinkAccent)
-                        ) { Text("メールで送信") }
+                        ) {
+                            if (isSendingInquiry) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
+                            } else {
+                                Text("送信する")
+                            }
+                        }
+                        inquiryResultMessage?.let { msg ->
+                            Text(msg, fontSize = 12.sp, color = pinkAccent, modifier = Modifier.fillMaxWidth())
+                        }
                     }
                 }
             }
