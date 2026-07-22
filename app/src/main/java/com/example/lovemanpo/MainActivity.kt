@@ -1486,6 +1486,7 @@ fun ProfileSetupScreen(navController: NavController, viewModel: StepViewModel) {
 fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     val todaySteps by viewModel.todaySteps
     val actionPoints by viewModel.currentActionPoints
+    val gemCount by viewModel.gemCount
     val stepGaugeProgress by viewModel.stepGaugeProgress
     val loveCount by viewModel.loveCount
     val heartCount by viewModel.heartCount
@@ -1649,6 +1650,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         uiState = HomeScreenUiState(
             todaySteps = todaySteps,
             actionPoints = actionPoints,
+            gemCount = gemCount,
             stepGaugeProgress = stepGaugeProgress,
             loveCount = loveCount,
             heartCount = heartCount,
@@ -1788,6 +1790,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
 data class HomeScreenUiState(
     val todaySteps: Int,
     val actionPoints: Int,
+    val gemCount: Int,
     val stepGaugeProgress: Float,
     val loveCount: Int,
     val heartCount: Int,
@@ -1869,6 +1872,7 @@ fun HomeScreenContent(
 ) {
     val todaySteps = uiState.todaySteps
     val actionPoints = uiState.actionPoints
+    val gemCount = uiState.gemCount
     val stepGaugeProgress = uiState.stepGaugeProgress
     val loveCount = uiState.loveCount
     val heartCount = uiState.heartCount
@@ -2063,20 +2067,24 @@ fun HomeScreenContent(
             verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            // ラブレベル・行動ポイントの2枚だけ高さを揃える（ボタン列の高さに引きずられないよう内側のRowで完結させる）
+            // ラブレベル・行動ポイント・ジェムの3枚だけ高さを揃える（ボタン列の高さに引きずられないよう内側のRowで完結させる）
             Row(
                 modifier = Modifier.weight(1f).height(IntrinsicSize.Max),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 HomeLoveLevelCard(
-                    modifier = Modifier.weight(0.72f).fillMaxHeight(),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     lv = loveCount,
                     progress = heartGaugeProgress,
                     hearts = heartCount
                 )
                 HomeActionPointsCard(
-                    modifier = Modifier.weight(0.72f).fillMaxHeight(),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     pts = actionPoints
+                )
+                HomeGemCard(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    gems = gemCount
                 )
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2463,6 +2471,30 @@ fun HomeActionPointsCard(modifier: Modifier = Modifier, pts: Int) {
         }
     }
 
+}
+
+@Composable
+fun HomeGemCard(modifier: Modifier = Modifier, gems: Int) {
+    Box(
+        modifier = modifier
+            .shadow(14.dp, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(16.dp))
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFFFFFF), Color(0xFFF3E5FF))))
+            .border(1.dp, Color(0xFF9C6ADE).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+    ) {
+        val tightTextStyle = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
+        Column(
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp).fillMaxHeight(),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("💎", fontSize = 12.sp)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("ジェム", fontSize = 12.sp, color = Color(0xFF6A1B9A), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
+            }
+            Text("$gems", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF4A148C), fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
+        }
+    }
 }
 fun Modifier.gradientTint(colors: List<Color>): Modifier = this
     .graphicsLayer(alpha = 0.99f)
@@ -2901,6 +2933,7 @@ fun HomeScreenPreview() {
             uiState = HomeScreenUiState(
                 todaySteps = 7842,
                 actionPoints = 2,
+                gemCount = 0,
                 stepGaugeProgress = 0.78f,
                 loveCount = 2,
                 heartCount = 6,
