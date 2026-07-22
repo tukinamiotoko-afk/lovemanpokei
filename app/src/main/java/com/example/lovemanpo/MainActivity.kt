@@ -2069,7 +2069,7 @@ fun HomeScreenContent(
             Row(
                 modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
                 HomeLoveLevelCard(
                     modifier = Modifier.weight(1.3f).fillMaxHeight(),
@@ -2470,15 +2470,15 @@ fun HomeGemCard(modifier: Modifier = Modifier, gems: Int) {
     ) {
         val tightTextStyle = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
         Column(
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
-            verticalArrangement = Arrangement.spacedBy((-4).dp)
+            modifier = Modifier.padding(horizontal = 5.dp, vertical = 0.dp),
+            verticalArrangement = Arrangement.spacedBy((-5).dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("💎", fontSize = 11.sp)
-                Spacer(modifier = Modifier.width(3.dp))
-                Text("ジェム", fontSize = 11.sp, color = Color(0xFF6A1B9A), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
+                Text("💎", fontSize = 9.sp)
+                Spacer(modifier = Modifier.width(2.dp))
+                Text("ジェム", fontSize = 9.sp, color = Color(0xFF6A1B9A), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
             }
-            Text("$gems", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF4A148C), fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
+            Text("$gems", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF4A148C), fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
         }
     }
 }
