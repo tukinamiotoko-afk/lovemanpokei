@@ -1887,7 +1887,8 @@ fun HomeScreenContent(
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
                         onCharacterClick()
                     },
-                contentScale = ContentScale.Fit
+                contentScale = ContentScale.Fit,
+                alignment = Alignment.BottomCenter
             )
 
             // 上部カード行の高さぶん、明示的に下げてから表示する
