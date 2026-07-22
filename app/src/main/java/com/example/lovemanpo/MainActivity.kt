@@ -1793,24 +1793,47 @@ data class HomeScreenActions(
     val onSettingsClick: () -> Unit = {}
 )
 
-// キャラ画像は素材によって足元の透明な余白の量がバラバラなので、
-// 画像全体のサイズ・縦横比はそのまま使いつつ（サイズ感が変わらないように）、
-// 「下端から実際に絵が描かれている行までの透明な余白の割合」だけを測っておき、
-// その分だけ表示位置を下にずらしてカード上端にちょうど合わせる。
-private fun bottomDeadSpaceFraction(bitmap: Bitmap): Float {
+// キャラ画像は素材によって余白（特に足元の透明部分）の量がバラバラなので、
+// 手動の数値調整ではなく、実際に描かれている部分（不透明ピクセル）の外接矩形を
+// 自動検出して使う。切り出した絵は、元画像全体に対して縦に占めていた割合ぶんの
+// 高さだけを割り当てて配置するので、余白を除いてもキャラの見た目の大きさは変わらず、
+// 絵の本当の下端がそのままコンテナの下端（＝カード上端）に揃う。
+private class ContentBounds(val left: Int, val top: Int, val right: Int, val bottom: Int)
+
+private fun findContentBounds(bitmap: Bitmap): ContentBounds? {
     val w = bitmap.width
     val h = bitmap.height
+    val pixels = IntArray(w * h)
+    bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
     val alphaThreshold = 10
-    val row = IntArray(w)
-    for (y in (h - 1) downTo 0) {
-        bitmap.getPixels(row, 0, w, 0, y, w, 1)
+    var top = -1
+    var bottom = -1
+    var left = -1
+    var right = -1
+    for (y in 0 until h) {
+        val rowStart = y * w
         for (x in 0 until w) {
-            if ((row[x] ushr 24) and 0xFF > alphaThreshold) {
-                return (h - 1 - y).toFloat() / h.toFloat()
+            if ((pixels[rowStart + x] ushr 24) and 0xFF > alphaThreshold) {
+                if (top == -1) top = y
+                bottom = y
+                if (left == -1 || x < left) left = x
+                if (right == -1 || x > right) right = x
             }
         }
     }
-    return 0f
+    if (top == -1 || right < left || bottom < top) return null
+    return ContentBounds(left, top, right, bottom)
+}
+
+private class TrimmedCharacterImage(val bitmap: Bitmap, val heightFraction: Float)
+
+private fun trimCharacterBitmap(source: Bitmap): TrimmedCharacterImage {
+    val bounds = findContentBounds(source) ?: return TrimmedCharacterImage(source, 1f)
+    val croppedWidth = bounds.right - bounds.left + 1
+    val croppedHeight = bounds.bottom - bounds.top + 1
+    val cropped = Bitmap.createBitmap(source, bounds.left, bounds.top, croppedWidth, croppedHeight)
+    val heightFraction = croppedHeight.toFloat() / source.height.toFloat()
+    return TrimmedCharacterImage(cropped, heightFraction)
 }
 
 @Composable
@@ -1893,40 +1916,40 @@ fun HomeScreenContent(
             .statusBarsPadding()
             .padding(bottom = characterGroundPadding)
             .zIndex(0.5f)) {
-            val characterBitmap = remember(expressionRes) {
+            val trimmedCharacter = remember(expressionRes) {
                 try {
-                    BitmapFactory.decodeResource(bgContext.resources, expressionRes)
+                    val original = BitmapFactory.decodeResource(bgContext.resources, expressionRes)
+                    original?.let { trimCharacterBitmap(it) }
                 } catch (e: Exception) {
                     null
                 }
             }
-            val characterAspectRatio = remember(characterBitmap) {
-                val bmp = characterBitmap
+            val characterAspectRatio = remember(trimmedCharacter) {
+                val bmp = trimmedCharacter?.bitmap
                 if (bmp != null && bmp.width > 0 && bmp.height > 0) {
                     bmp.width.toFloat() / bmp.height.toFloat()
                 } else {
                     3f / 5f
                 }
             }
-            val characterBottomDeadFraction = remember(characterBitmap) {
-                characterBitmap?.let { bottomDeadSpaceFraction(it) } ?: 0f
-            }
+            // 元画像の中でキャラの絵が実際に占めていた高さの割合ぶんだけ、
+            // コンテナ高さを割り当てる（余白を取り除いても見た目の大きさが変わらないようにする）
+            val characterHeightFraction = trimmedCharacter?.heightFraction ?: 1f
             val characterModifier = Modifier
-                .fillMaxHeight(1.0f)
+                .fillMaxHeight(characterHeightFraction)
                 .aspectRatio(characterAspectRatio, matchHeightConstraintsFirst = true)
                 .align(Alignment.BottomCenter)
                 .graphicsLayer {
                     scaleX = characterScale
                     scaleY = characterScale
                     transformOrigin = TransformOrigin(0.5f, 1f)
-                    translationY = characterBottomDeadFraction * size.height * characterScale
                 }
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
                     onCharacterClick()
                 }
-            if (characterBitmap != null) {
+            if (trimmedCharacter != null) {
                 Image(
-                    bitmap = characterBitmap.asImageBitmap(),
+                    bitmap = trimmedCharacter.bitmap.asImageBitmap(),
                     contentDescription = "ひかり",
                     modifier = characterModifier,
                     contentScale = ContentScale.Fit,
