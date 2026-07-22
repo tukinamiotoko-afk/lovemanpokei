@@ -1793,6 +1793,34 @@ data class HomeScreenActions(
     val onSettingsClick: () -> Unit = {}
 )
 
+// キャラ画像は素材によって透明な余白の量がバラバラ（特に足元）なので、
+// 実際に描かれている部分（不透明ピクセル）の外接矩形だけを切り出して使う。
+// これにより、素材ごとの余白差に関係なく「絵の本当の下端」をカード上端に揃えられる。
+private fun trimTransparentEdges(bitmap: Bitmap): Bitmap {
+    val w = bitmap.width
+    val h = bitmap.height
+    val pixels = IntArray(w * h)
+    bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
+    val alphaThreshold = 10
+    var top = -1
+    var bottom = -1
+    var left = -1
+    var right = -1
+    for (y in 0 until h) {
+        val rowStart = y * w
+        for (x in 0 until w) {
+            if ((pixels[rowStart + x] ushr 24) and 0xFF > alphaThreshold) {
+                if (top == -1) top = y
+                bottom = y
+                if (left == -1 || x < left) left = x
+                if (right == -1 || x > right) right = x
+            }
+        }
+    }
+    if (top == -1 || right <= left || bottom <= top) return bitmap
+    return Bitmap.createBitmap(bitmap, left, top, right - left + 1, bottom - top + 1)
+}
+
 @Composable
 fun HomeScreenContent(
     uiState: HomeScreenUiState,
@@ -1874,33 +1902,51 @@ fun HomeScreenContent(
             .statusBarsPadding()
             .padding(bottom = characterGroundPadding)
             .zIndex(0.5f)) {
-            val characterPainter = painterResource(id = expressionRes)
-            val characterAspectRatio = remember(characterPainter.intrinsicSize) {
-                val intrinsicSize = characterPainter.intrinsicSize
-                if (intrinsicSize.width > 0f && intrinsicSize.height > 0f) {
-                    intrinsicSize.width / intrinsicSize.height
+            val characterBitmap = remember(expressionRes) {
+                try {
+                    val original = BitmapFactory.decodeResource(bgContext.resources, expressionRes)
+                    original?.let { trimTransparentEdges(it) }
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            val characterAspectRatio = remember(characterBitmap) {
+                val bmp = characterBitmap
+                if (bmp != null && bmp.width > 0 && bmp.height > 0) {
+                    bmp.width.toFloat() / bmp.height.toFloat()
                 } else {
                     3f / 5f
                 }
             }
-            Image(
-                painter = characterPainter,
-                contentDescription = "ひかり",
-                modifier = Modifier
-                    .fillMaxHeight(1.0f)
-                    .aspectRatio(characterAspectRatio, matchHeightConstraintsFirst = true)
-                    .align(Alignment.BottomCenter)
-                    .graphicsLayer {
-                        scaleX = characterScale
-                        scaleY = characterScale
-                        transformOrigin = TransformOrigin(0.5f, 1f)
-                    }
-                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-                        onCharacterClick()
-                    },
-                contentScale = ContentScale.Fit,
-                alignment = Alignment.BottomCenter
-            )
+            val characterModifier = Modifier
+                .fillMaxHeight(1.0f)
+                .aspectRatio(characterAspectRatio, matchHeightConstraintsFirst = true)
+                .align(Alignment.BottomCenter)
+                .graphicsLayer {
+                    scaleX = characterScale
+                    scaleY = characterScale
+                    transformOrigin = TransformOrigin(0.5f, 1f)
+                }
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                    onCharacterClick()
+                }
+            if (characterBitmap != null) {
+                Image(
+                    bitmap = characterBitmap.asImageBitmap(),
+                    contentDescription = "ひかり",
+                    modifier = characterModifier,
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.BottomCenter
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = expressionRes),
+                    contentDescription = "ひかり",
+                    modifier = characterModifier,
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.BottomCenter
+                )
+            }
 
             // 上部カード行の高さぶん、明示的に下げてから表示する
             Column(
