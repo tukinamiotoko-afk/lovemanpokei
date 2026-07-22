@@ -3684,6 +3684,17 @@ fun DiaryScreen(navController: NavController, viewModel: StepViewModel) {
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
+        bottomBar = {
+            HomeCustomBottomNav(
+                modifier = Modifier.navigationBarsPadding(),
+                onHome = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
+                onFreeChat = { navController.navigate("freechat") },
+                onDiary = {},
+                onRecords = { navController.navigate("records") },
+                onMemories = { navController.navigate("memories") },
+                selectedScreen = "diary"
+            )
+        },
         floatingActionButton = {
             // 通常は今日の日記が未記入のときのみ。デバッグ連続作成ONなら常に表示。
             if (!todayDiaryExists || multiDiaryDebug) {
