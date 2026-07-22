@@ -159,6 +159,7 @@ import java.io.File
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 
@@ -1870,7 +1871,8 @@ fun HomeScreenContent(
         Box(modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(bottom = characterGroundPadding)) {
+            .padding(bottom = characterGroundPadding)
+            .zIndex(0.5f)) {
             Image(
                 painter = painterResource(id = expressionRes),
                 contentDescription = "ひかり",
@@ -1914,6 +1916,7 @@ fun HomeScreenContent(
                 .align(Alignment.BottomStart)
                 .padding(bottom = characterBottomPadding)
                 .offset(x = (-20).dp)
+                .zIndex(1f)
         )
 
         // 買い物・着替えボタンは上部のボタン列から切り離し、その少し下の右側に配置する
@@ -1921,7 +1924,8 @@ fun HomeScreenContent(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
-                .padding(end = 0.dp, top = 134.dp),
+                .padding(end = 0.dp, top = 134.dp)
+                .zIndex(1f),
             verticalArrangement = Arrangement.spacedBy(14.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -1944,7 +1948,8 @@ fun HomeScreenContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
+                .padding(horizontal = 8.dp, vertical = 8.dp)
+                .zIndex(1f),
             verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
