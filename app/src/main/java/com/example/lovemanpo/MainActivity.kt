@@ -2068,20 +2068,21 @@ fun HomeScreenContent(
             // ラブレベル・行動ポイント・ジェムの3枚だけ高さを揃える
             Row(
                 modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 HomeLoveLevelCard(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    modifier = Modifier.weight(1.3f).fillMaxHeight(),
                     lv = loveCount,
                     progress = heartGaugeProgress,
                     hearts = heartCount
                 )
                 HomeActionPointsCard(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    modifier = Modifier.weight(1.3f).fillMaxHeight(),
                     pts = actionPoints
                 )
                 HomeGemCard(
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    modifier = Modifier.weight(0.7f),
                     gems = gemCount
                 )
             }
@@ -2469,15 +2470,15 @@ fun HomeGemCard(modifier: Modifier = Modifier, gems: Int) {
     ) {
         val tightTextStyle = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
         Column(
-            modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp).fillMaxHeight(),
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+            verticalArrangement = Arrangement.spacedBy((-2).dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("💎", fontSize = 12.sp)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("ジェム", fontSize = 12.sp, color = Color(0xFF6A1B9A), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
+                Text("💎", fontSize = 11.sp)
+                Spacer(modifier = Modifier.width(3.dp))
+                Text("ジェム", fontSize = 11.sp, color = Color(0xFF6A1B9A), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
             }
-            Text("$gems", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF4A148C), fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
+            Text("$gems", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF4A148C), fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
         }
     }
 }
