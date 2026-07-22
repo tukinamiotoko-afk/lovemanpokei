@@ -4390,7 +4390,9 @@ fun DiaryEntryCard(
 // お問い合わせ内容をEmailJS経由で送信する。
 // 宛先メールアドレスはEmailJSのテンプレート設定側にのみ保存されており、
 // アプリ側にはService ID・Template ID・Public Keyしか含まれない
-suspend fun sendInquiryEmail(message: String): Boolean = withContext(Dispatchers.IO) {
+data class InquirySendResult(val success: Boolean, val detail: String)
+
+suspend fun sendInquiryEmail(message: String): InquirySendResult = withContext(Dispatchers.IO) {
     try {
         val url = URL("https://api.emailjs.com/api/v1.0/email/send")
         val conn = url.openConnection() as HttpURLConnection
@@ -4410,9 +4412,14 @@ suspend fun sendInquiryEmail(message: String): Boolean = withContext(Dispatchers
 
         conn.outputStream.write(body.toByteArray(Charsets.UTF_8))
         val responseCode = conn.responseCode
-        responseCode in 200..299
+        val responseBody = if (responseCode in 200..299) {
+            conn.inputStream.bufferedReader(Charsets.UTF_8).readText()
+        } else {
+            conn.errorStream?.bufferedReader(Charsets.UTF_8)?.readText() ?: "(no body)"
+        }
+        InquirySendResult(responseCode in 200..299, "$responseCode: $responseBody")
     } catch (e: Exception) {
-        false
+        InquirySendResult(false, e.javaClass.simpleName + ": " + (e.message ?: "unknown"))
     }
 }
 
@@ -4440,8 +4447,9 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
     var inquiryResultMessage by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(inquiryResultMessage) {
-        if (inquiryResultMessage != null) {
-            delay(2500)
+        val msg = inquiryResultMessage
+        if (msg != null) {
+            delay(if (msg.startsWith("送信に失敗")) 15000 else 2500)
             inquiryResultMessage = null
         }
     }
@@ -4659,13 +4667,13 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                                 val messageToSend = inquiryText
                                 isSendingInquiry = true
                                 scope.launch {
-                                    val success = sendInquiryEmail(messageToSend)
+                                    val result = sendInquiryEmail(messageToSend)
                                     isSendingInquiry = false
-                                    if (success) {
+                                    if (result.success) {
                                         inquiryText = ""
                                         inquiryResultMessage = "送信しました。ありがとうございます！"
                                     } else {
-                                        inquiryResultMessage = "送信に失敗しました。時間をおいて再度お試しください"
+                                        inquiryResultMessage = "送信に失敗しました: ${result.detail}"
                                     }
                                 }
                             },
