@@ -4402,8 +4402,10 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
     var tempBodyNotes by remember { mutableStateOf(viewModel.bodyNotes) }
     val isPremium by remember { derivedStateOf { viewModel.isPremium } }
     val pinkAccent = Color(0xFFFF6B9D)
-    val tabTitles = listOf("プロフィール", "サウンド", "プレミアム")
+    val tabTitles = listOf("プロフィール", "サウンド", "プレミアム", "その他")
     var selectedTab by remember { mutableStateOf(0) }
+    val context = LocalContext.current
+    var inquiryText by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -4600,6 +4602,35 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                                 }
                             }
                         }
+                    }
+                    3 -> {
+                        Text("お問い合わせ", fontWeight = FontWeight.Bold, color = pinkAccent, modifier = Modifier.fillMaxWidth())
+                        Text(
+                            "不具合の報告やご要望など、お気軽にお送りください。",
+                            fontSize = 12.sp, color = Color(0xFF888888), modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = inquiryText,
+                            onValueChange = { inquiryText = it },
+                            placeholder = { Text("お問い合わせ内容を入力してください", color = Color(0xFFBBBBBB), fontSize = 13.sp) },
+                            modifier = Modifier.fillMaxWidth().height(160.dp)
+                        )
+                        Button(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:")).apply {
+                                    putExtra(Intent.EXTRA_EMAIL, arrayOf("huashanz319@gmail.com"))
+                                    putExtra(Intent.EXTRA_SUBJECT, "【ラブ万歩計】お問い合わせ")
+                                    putExtra(Intent.EXTRA_TEXT, inquiryText)
+                                }
+                                try {
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                }
+                            },
+                            enabled = inquiryText.isNotBlank(),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = pinkAccent)
+                        ) { Text("メールで送信") }
                     }
                 }
             }
