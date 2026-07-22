@@ -2470,8 +2470,8 @@ fun HomeGemCard(modifier: Modifier = Modifier, gems: Int) {
     ) {
         val tightTextStyle = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
         Column(
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-            verticalArrangement = Arrangement.spacedBy((-2).dp)
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+            verticalArrangement = Arrangement.spacedBy((-4).dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("💎", fontSize = 11.sp)
