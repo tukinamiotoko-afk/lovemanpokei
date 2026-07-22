@@ -2382,12 +2382,6 @@ fun HomeStatItemSmall(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
 
 @Composable
 fun HomeLoveLevelCard(modifier: Modifier = Modifier, lv: Int, progress: Float, hearts: Int) {
-    val faceRes = when (lv) {
-        in 1..3  -> R.drawable.hikari_sd_face_level1
-        in 4..6  -> R.drawable.hikari_sd_face_level2
-        in 7..8  -> R.drawable.hikari_sd_face_level3
-        else     -> R.drawable.hikari_sd_face_level4
-    }
     Box(
         modifier = modifier
             .shadow(14.dp, RoundedCornerShape(16.dp))
@@ -2397,16 +2391,6 @@ fun HomeLoveLevelCard(modifier: Modifier = Modifier, lv: Int, progress: Float, h
     ) {
         val tightTextStyle = TextStyle(platformStyle = PlatformTextStyle(includeFontPadding = false))
         Row(modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                painter = painterResource(id = faceRes),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFFFE0E9)),
-                contentScale = ContentScale.Crop
-            )
-            Spacer(modifier = Modifier.width(6.dp))
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy((-2).dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Favorite, null, tint = Color.Unspecified, modifier = Modifier.size(11.dp).gradientTint(listOf(Color(0xFFFF80AB), Color(0xFFE91E63))))
