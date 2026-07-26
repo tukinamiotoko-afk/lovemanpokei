@@ -158,12 +158,12 @@ import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
 import com.revenuecat.purchases.CustomerInfo
-import com.revenuecat.purchases.GetStoreProductsCallback
 import com.revenuecat.purchases.Purchases
 import com.revenuecat.purchases.PurchasesConfiguration
 import com.revenuecat.purchases.PurchasesError
+import com.revenuecat.purchases.PurchaseParams
+import com.revenuecat.purchases.interfaces.GetStoreProductsCallback
 import com.revenuecat.purchases.interfaces.PurchaseCallback
-import com.revenuecat.purchases.models.PurchaseParams
 import com.revenuecat.purchases.models.StoreProduct
 import com.revenuecat.purchases.models.StoreTransaction
 import androidx.compose.ui.text.rememberTextMeasurer
