@@ -68,8 +68,8 @@ dependencies {
     // Gemini API
     implementation(libs.google.generativeai)
 
-    // Google Play Billing（ジェムの課金購入）
-    implementation(libs.android.billing.ktx)
+    // RevenueCat（ジェムの課金購入）
+    implementation(libs.revenuecat.purchases)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)

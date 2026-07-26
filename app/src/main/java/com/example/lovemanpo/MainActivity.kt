@@ -157,17 +157,15 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
-import com.android.billingclient.api.BillingClient
-import com.android.billingclient.api.BillingClientStateListener
-import com.android.billingclient.api.BillingFlowParams
-import com.android.billingclient.api.BillingResult
-import com.android.billingclient.api.ConsumeParams
-import com.android.billingclient.api.PendingPurchasesParams
-import com.android.billingclient.api.ProductDetails
-import com.android.billingclient.api.Purchase
-import com.android.billingclient.api.PurchasesUpdatedListener
-import com.android.billingclient.api.QueryProductDetailsParams
-import com.android.billingclient.api.QueryPurchasesParams
+import com.revenuecat.purchases.CustomerInfo
+import com.revenuecat.purchases.GetStoreProductsCallback
+import com.revenuecat.purchases.Purchases
+import com.revenuecat.purchases.PurchasesConfiguration
+import com.revenuecat.purchases.PurchasesError
+import com.revenuecat.purchases.interfaces.PurchaseCallback
+import com.revenuecat.purchases.models.PurchaseParams
+import com.revenuecat.purchases.models.StoreProduct
+import com.revenuecat.purchases.models.StoreTransaction
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.layout.onSizeChanged
@@ -393,12 +391,14 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
     }
 }
 
-// Google Playの課金（ジェムパック購入）を管理するクラス。
-// 消費型アイテムとして扱い、購入完了時にconsumeAsyncで消費してから
-// onGemsGrantedを呼び出す（消費しておかないと同じ商品を再度買えなくなるため）。
-// 商品IDはPlay Console側に同じIDで登録しておく必要がある
+// ジェムパックの課金購入をRevenueCat経由で管理するクラス。
+// RevenueCatのダッシュボード側で、Google Play Consoleに登録した商品と
+// 同じ商品ID（gems_200など）を"Consumable"として登録しておくこと。
+// 実際の宛先(Play Console上の課金設定)はRevenueCat側で仲介されるため、
+// アプリにはPublic API Keyのみが含まれる
 class GemBillingManager(context: Context, private val onGemsGranted: (Int) -> Unit) {
     companion object {
+        const val REVENUECAT_API_KEY = "goog_qGVQoTptBiSTTuSMHWBNkuKlpbG"
         val PRODUCT_GEM_AMOUNTS = mapOf(
             "gems_200" to 200,
             "gems_400" to 400,
@@ -406,90 +406,43 @@ class GemBillingManager(context: Context, private val onGemsGranted: (Int) -> Un
         )
     }
 
-    var productDetailsList by mutableStateOf<List<ProductDetails>>(emptyList())
-        private set
-    var isReady by mutableStateOf(false)
+    var storeProducts by mutableStateOf<List<StoreProduct>>(emptyList())
         private set
 
-    private val purchasesUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
-        if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
-            purchases.forEach { handlePurchase(it) }
+    init {
+        if (!Purchases.isConfigured) {
+            Purchases.configure(PurchasesConfiguration.Builder(context, REVENUECAT_API_KEY).build())
         }
     }
-
-    private val billingClient = BillingClient.newBuilder(context)
-        .setListener(purchasesUpdatedListener)
-        .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
-        .build()
 
     fun startConnection() {
-        billingClient.startConnection(object : BillingClientStateListener {
-            override fun onBillingSetupFinished(billingResult: BillingResult) {
-                if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                    isReady = true
-                    queryProductDetails()
-                    queryExistingPurchases()
+        Purchases.sharedInstance.getProducts(
+            PRODUCT_GEM_AMOUNTS.keys.toList(),
+            object : GetStoreProductsCallback {
+                override fun onReceived(storeProducts: List<StoreProduct>) {
+                    this@GemBillingManager.storeProducts = storeProducts
                 }
+                override fun onError(error: PurchasesError) {}
             }
-            override fun onBillingServiceDisconnected() {
-                isReady = false
-            }
-        })
-    }
-
-    private fun queryProductDetails() {
-        val productList = PRODUCT_GEM_AMOUNTS.keys.map { id ->
-            QueryProductDetailsParams.Product.newBuilder()
-                .setProductId(id)
-                .setProductType(BillingClient.ProductType.INAPP)
-                .build()
-        }
-        val params = QueryProductDetailsParams.newBuilder().setProductList(productList).build()
-        billingClient.queryProductDetailsAsync(params) { billingResult, result ->
-            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                productDetailsList = result.productDetailsList
-            }
-        }
-    }
-
-    private fun queryExistingPurchases() {
-        billingClient.queryPurchasesAsync(
-            QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build()
-        ) { billingResult, purchases ->
-            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                purchases.forEach { handlePurchase(it) }
-            }
-        }
-    }
-
-    fun launchPurchaseFlow(activity: Activity, productDetails: ProductDetails) {
-        val productDetailsParamsList = listOf(
-            BillingFlowParams.ProductDetailsParams.newBuilder()
-                .setProductDetails(productDetails)
-                .build()
         )
-        val billingFlowParams = BillingFlowParams.newBuilder()
-            .setProductDetailsParamsList(productDetailsParamsList)
-            .build()
-        billingClient.launchBillingFlow(activity, billingFlowParams)
     }
 
-    private fun handlePurchase(purchase: Purchase) {
-        if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
-            val gemAmount = purchase.products.firstOrNull()?.let { PRODUCT_GEM_AMOUNTS[it] } ?: 0
-            val consumeParams = ConsumeParams.newBuilder()
-                .setPurchaseToken(purchase.purchaseToken)
-                .build()
-            billingClient.consumeAsync(consumeParams) { billingResult, _ ->
-                if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && gemAmount > 0) {
-                    onGemsGranted(gemAmount)
+    fun launchPurchaseFlow(activity: Activity, storeProduct: StoreProduct) {
+        val purchaseParams = PurchaseParams.Builder(activity, storeProduct).build()
+        Purchases.sharedInstance.purchase(
+            purchaseParams,
+            object : PurchaseCallback {
+                override fun onCompleted(storeTransaction: StoreTransaction, customerInfo: CustomerInfo) {
+                    val gemAmount = PRODUCT_GEM_AMOUNTS[storeProduct.id] ?: 0
+                    if (gemAmount > 0) onGemsGranted(gemAmount)
                 }
+                override fun onError(error: PurchasesError, userCancelled: Boolean) {}
             }
-        }
+        )
     }
 
     fun endConnection() {
-        billingClient.endConnection()
+        // RevenueCatはアプリ全体でシングルトンとして保持されるため、明示的な切断は不要
     }
 }
 
@@ -4994,7 +4947,7 @@ val costumeCatalog = listOf(
 )
 
 // ジェムの購入パックの商品ID→ジェム数の対応はGemBillingManager.PRODUCT_GEM_AMOUNTSを参照。
-// 実際の価格・商品名はGoogle Play Console側に登録した内容がProductDetailsとして返ってくる
+// 実際の価格・商品名はRevenueCat経由でStoreProductとして返ってくる
 
 data class BgmTrack(val id: String, val name: String, val resId: Int)
 
@@ -7026,13 +6979,13 @@ fun ShopScreen(navController: NavController, viewModel: StepViewModel) {
 // 購入完了・消費はGemBillingManager側で処理され、viewModel.gemCountが自動で更新される
 @Composable
 fun GemPurchaseDialog(billingManager: GemBillingManager, onDismiss: () -> Unit, activity: Activity?) {
-    val productDetailsList = billingManager.productDetailsList
+    val storeProducts = billingManager.storeProducts
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text("ジェムを購入", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF333333))
                 Spacer(modifier = Modifier.height(4.dp))
-                if (productDetailsList.isEmpty()) {
+                if (storeProducts.isEmpty()) {
                     Text(
                         "現在準備中です。しばらくしてからお試しください。",
                         fontSize = 12.sp,
@@ -7040,9 +6993,9 @@ fun GemPurchaseDialog(billingManager: GemBillingManager, onDismiss: () -> Unit, 
                     )
                 } else {
                     Spacer(modifier = Modifier.height(10.dp))
-                    productDetailsList.forEach { productDetails ->
-                        val gemAmount = GemBillingManager.PRODUCT_GEM_AMOUNTS[productDetails.productId] ?: 0
-                        val priceLabel = productDetails.oneTimePurchaseOfferDetails?.formattedPrice ?: ""
+                    storeProducts.forEach { storeProduct ->
+                        val gemAmount = GemBillingManager.PRODUCT_GEM_AMOUNTS[storeProduct.id] ?: 0
+                        val priceLabel = storeProduct.price.formatted
                         Surface(
                             shape = RoundedCornerShape(10.dp),
                             color = Color(0xFFFFF0F5),
@@ -7051,7 +7004,7 @@ fun GemPurchaseDialog(billingManager: GemBillingManager, onDismiss: () -> Unit, 
                                 .padding(vertical = 4.dp)
                                 .clickable(enabled = activity != null) {
                                     if (activity != null) {
-                                        billingManager.launchPurchaseFlow(activity, productDetails)
+                                        billingManager.launchPurchaseFlow(activity, storeProduct)
                                     }
                                 }
                         ) {
