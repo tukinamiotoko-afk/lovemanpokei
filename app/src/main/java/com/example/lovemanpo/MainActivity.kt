@@ -2,6 +2,7 @@ package com.example.lovemanpo
 
 import android.Manifest
 import android.content.ComponentName
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -156,6 +157,17 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
+import com.android.billingclient.api.BillingClient
+import com.android.billingclient.api.BillingClientStateListener
+import com.android.billingclient.api.BillingFlowParams
+import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.ConsumeParams
+import com.android.billingclient.api.PendingPurchasesParams
+import com.android.billingclient.api.ProductDetails
+import com.android.billingclient.api.Purchase
+import com.android.billingclient.api.PurchasesUpdatedListener
+import com.android.billingclient.api.QueryProductDetailsParams
+import com.android.billingclient.api.QueryPurchasesParams
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.layout.onSizeChanged
@@ -381,8 +393,118 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
     }
 }
 
+// Google Playの課金（ジェムパック購入）を管理するクラス。
+// 消費型アイテムとして扱い、購入完了時にconsumeAsyncで消費してから
+// onGemsGrantedを呼び出す（消費しておかないと同じ商品を再度買えなくなるため）。
+// 商品IDはPlay Console側に同じIDで登録しておく必要がある
+class GemBillingManager(context: Context, private val onGemsGranted: (Int) -> Unit) {
+    companion object {
+        val PRODUCT_GEM_AMOUNTS = mapOf(
+            "gems_200" to 200,
+            "gems_400" to 400,
+            "gems_600" to 600
+        )
+    }
+
+    var productDetailsList by mutableStateOf<List<ProductDetails>>(emptyList())
+        private set
+    var isReady by mutableStateOf(false)
+        private set
+
+    private val purchasesUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
+        if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
+            purchases.forEach { handlePurchase(it) }
+        }
+    }
+
+    private val billingClient = BillingClient.newBuilder(context)
+        .setListener(purchasesUpdatedListener)
+        .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
+        .build()
+
+    fun startConnection() {
+        billingClient.startConnection(object : BillingClientStateListener {
+            override fun onBillingSetupFinished(billingResult: BillingResult) {
+                if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                    isReady = true
+                    queryProductDetails()
+                    queryExistingPurchases()
+                }
+            }
+            override fun onBillingServiceDisconnected() {
+                isReady = false
+            }
+        })
+    }
+
+    private fun queryProductDetails() {
+        val productList = PRODUCT_GEM_AMOUNTS.keys.map { id ->
+            QueryProductDetailsParams.Product.newBuilder()
+                .setProductId(id)
+                .setProductType(BillingClient.ProductType.INAPP)
+                .build()
+        }
+        val params = QueryProductDetailsParams.newBuilder().setProductList(productList).build()
+        billingClient.queryProductDetailsAsync(params) { billingResult, result ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                productDetailsList = result.productDetailsList
+            }
+        }
+    }
+
+    private fun queryExistingPurchases() {
+        billingClient.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build()
+        ) { billingResult, purchases ->
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                purchases.forEach { handlePurchase(it) }
+            }
+        }
+    }
+
+    fun launchPurchaseFlow(activity: Activity, productDetails: ProductDetails) {
+        val productDetailsParamsList = listOf(
+            BillingFlowParams.ProductDetailsParams.newBuilder()
+                .setProductDetails(productDetails)
+                .build()
+        )
+        val billingFlowParams = BillingFlowParams.newBuilder()
+            .setProductDetailsParamsList(productDetailsParamsList)
+            .build()
+        billingClient.launchBillingFlow(activity, billingFlowParams)
+    }
+
+    private fun handlePurchase(purchase: Purchase) {
+        if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
+            val gemAmount = purchase.products.firstOrNull()?.let { PRODUCT_GEM_AMOUNTS[it] } ?: 0
+            val consumeParams = ConsumeParams.newBuilder()
+                .setPurchaseToken(purchase.purchaseToken)
+                .build()
+            billingClient.consumeAsync(consumeParams) { billingResult, _ ->
+                if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && gemAmount > 0) {
+                    onGemsGranted(gemAmount)
+                }
+            }
+        }
+    }
+
+    fun endConnection() {
+        billingClient.endConnection()
+    }
+}
+
 // --- ViewModel ---
-class StepViewModel(val repository: StepRepository) : ViewModel() {
+class StepViewModel(val repository: StepRepository, appContext: Context) : ViewModel() {
+    // ジェムパックの課金購入を管理する（Google Play Billing）
+    val gemBillingManager = GemBillingManager(appContext) { amount -> addGems(amount) }
+    init {
+        gemBillingManager.startConnection()
+    }
+    override fun onCleared() {
+        gemBillingManager.endConnection()
+        super.onCleared()
+    }
+
     val allStepRecords = mutableStateOf<List<StepRecord>>(emptyList())
     val hourlyStepRecords = mutableStateOf<List<HourlyStepRecord>>(emptyList())
     val todaySteps = mutableIntStateOf(0)
@@ -937,11 +1059,11 @@ class StepViewModel(val repository: StepRepository) : ViewModel() {
     }
 }
 
-class StepViewModelFactory(private val repository: StepRepository) : ViewModelProvider.Factory {
+class StepViewModelFactory(private val repository: StepRepository, private val appContext: Context) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(StepViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return StepViewModel(repository) as T
+            return StepViewModel(repository, appContext) as T
         }
         throw IllegalArgumentException("不明なViewModel")
     }
@@ -981,7 +1103,7 @@ class MainActivity : ComponentActivity() {
 
         val database = AppDatabase.getDatabase(this)
         val repository = StepRepository(database.stepDao(), getSharedPreferences("lovemanpo_prefs", MODE_PRIVATE))
-        val viewModelFactory = StepViewModelFactory(repository)
+        val viewModelFactory = StepViewModelFactory(repository, applicationContext)
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "StepSyncWork",
@@ -4871,16 +4993,8 @@ val costumeCatalog = listOf(
     Costume("epuron",     "エプロン",      200, R.drawable.hikari_epuron_smile, R.drawable.hikari_epuron_blush, R.drawable.hikari_epuron_celebrate, R.drawable.hikari_epuron_think)
 )
 
-// ジェムの購入パック（現状はプレースホルダー：実際の課金と繋がるまでは
-// タップで即座にジェムが付与される。Google Play Billingと繋ぐ際にこのリストの
-// 各パックへ商品IDを紐付ける）
-data class GemPack(val gemAmount: Int, val priceLabel: String)
-
-val gemPackCatalog = listOf(
-    GemPack(200, "¥120"),
-    GemPack(400, "¥240"),
-    GemPack(600, "¥360")
-)
+// ジェムの購入パックの商品ID→ジェム数の対応はGemBillingManager.PRODUCT_GEM_AMOUNTSを参照。
+// 実際の価格・商品名はGoogle Play Console側に登録した内容がProductDetailsとして返ってくる
 
 data class BgmTrack(val id: String, val name: String, val resId: Int)
 
@@ -6802,6 +6916,7 @@ fun ShopScreen(navController: NavController, viewModel: StepViewModel) {
     val shopItems = remember { costumeCatalog.filter { it.id != "default" } }
     var toastMessage by remember { mutableStateOf<String?>(null) }
     var showGemShop by remember { mutableStateOf(false) }
+    val activity = LocalContext.current as? Activity
 
     LaunchedEffect(toastMessage) {
         if (toastMessage != null) {
@@ -6897,55 +7012,61 @@ fun ShopScreen(navController: NavController, viewModel: StepViewModel) {
 
             if (showGemShop) {
                 GemPurchaseDialog(
+                    billingManager = viewModel.gemBillingManager,
                     onDismiss = { showGemShop = false },
-                    onBuyPack = { pack ->
-                        viewModel.addGems(pack.gemAmount)
-                        toastMessage = "${pack.gemAmount}💎 を受け取りました！"
-                        showGemShop = false
-                    }
+                    activity = activity
                 )
             }
         }
     }
 }
 
-// ジェム購入ダイアログ。現状は実際の課金には繋がっておらず、
-// タップすると即座にジェムが付与されるプレースホルダー。
-// 実装時：Google Play Billingのpurchase完了コールバックから
-// viewModel.addGems(pack.gemAmount) を呼ぶようにする
+// ジェム購入ダイアログ。Google Play Billingから取得した実際の商品一覧
+// （Play Consoleに登録した価格・商品名）を表示し、タップで購入フローを起動する。
+// 購入完了・消費はGemBillingManager側で処理され、viewModel.gemCountが自動で更新される
 @Composable
-fun GemPurchaseDialog(onDismiss: () -> Unit, onBuyPack: (GemPack) -> Unit) {
+fun GemPurchaseDialog(billingManager: GemBillingManager, onDismiss: () -> Unit, activity: Activity?) {
+    val productDetailsList = billingManager.productDetailsList
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(16.dp), color = Color.White) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text("ジェムを購入", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF333333))
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    "※現在は準備中のため、タップすると無料でジェムが付与されます",
-                    fontSize = 11.sp,
-                    color = Color(0xFF999999)
-                )
-                Spacer(modifier = Modifier.height(14.dp))
-                gemPackCatalog.forEach { pack ->
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFFFF0F5),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .clickable { onBuyPack(pack) }
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                if (productDetailsList.isEmpty()) {
+                    Text(
+                        "現在準備中です。しばらくしてからお試しください。",
+                        fontSize = 12.sp,
+                        color = Color(0xFF999999)
+                    )
+                } else {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    productDetailsList.forEach { productDetails ->
+                        val gemAmount = GemBillingManager.PRODUCT_GEM_AMOUNTS[productDetails.productId] ?: 0
+                        val priceLabel = productDetails.oneTimePurchaseOfferDetails?.formattedPrice ?: ""
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFFFFF0F5),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clickable(enabled = activity != null) {
+                                    if (activity != null) {
+                                        billingManager.launchPurchaseFlow(activity, productDetails)
+                                    }
+                                }
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("💎", fontSize = 18.sp)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("${pack.gemAmount}", fontWeight = FontWeight.Bold, color = Color(0xFF333333))
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("💎", fontSize = 18.sp)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("$gemAmount", fontWeight = FontWeight.Bold, color = Color(0xFF333333))
+                                }
+                                Text(priceLabel, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold)
                             }
-                            Text(pack.priceLabel, color = Color(0xFFFF6B9D), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
