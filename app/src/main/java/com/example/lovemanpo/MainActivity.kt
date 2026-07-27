@@ -1085,8 +1085,13 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
     
     LaunchedEffect(hasPermissions) {
         if (hasPermissions) {
+            // 権限許可の直後はOS側の権限反映が間に合っていないことがあるため、
+            // フォアグラウンドサービス起動まで少し待つ
+            delay(300)
             val serviceIntent = Intent(context, StepCounterService::class.java)
-            context.startForegroundService(serviceIntent)
+            try {
+                context.startForegroundService(serviceIntent)
+            } catch (e: Exception) {}
         } else {
             launcher.launch(permissions.toTypedArray())
         }

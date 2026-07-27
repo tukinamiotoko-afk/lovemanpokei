@@ -137,14 +137,22 @@ class StepCounterService : Service(), SensorEventListener {
 
     private fun startServiceForeground() {
         val initialNotification = createNotification(todayStepsCached)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(
-                NOTIFICATION_ID,
-                initialNotification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, initialNotification)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    initialNotification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, initialNotification)
+            }
+        } catch (e: Exception) {
+            // 権限反映のタイミングずれ等でフォアグラウンド開始に失敗した場合、
+            // アプリ全体をクラッシュさせずにサービスだけ止める
+            // （onTaskRemoved側のAlarmManager再起動で次のタイミングに再挑戦される）
+            Log.e(TAG, "startForeground failed", e)
+            stopSelf()
         }
     }
 
