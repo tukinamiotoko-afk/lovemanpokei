@@ -12,6 +12,7 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -6952,7 +6953,7 @@ fun ShopScreen(navController: NavController, viewModel: StepViewModel) {
     val shopItems = remember { costumeCatalog.filter { it.id != "default" } }
     var toastMessage by remember { mutableStateOf<String?>(null) }
     var showGemShop by remember { mutableStateOf(false) }
-    val activity = LocalContext.current as? Activity
+    val activity = LocalActivity.current
 
     LaunchedEffect(toastMessage) {
         if (toastMessage != null) {
