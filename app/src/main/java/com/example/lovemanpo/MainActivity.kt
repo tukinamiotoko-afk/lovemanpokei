@@ -165,6 +165,7 @@ import com.revenuecat.purchases.PurchasesError
 import com.revenuecat.purchases.PurchaseParams
 import com.revenuecat.purchases.interfaces.GetStoreProductsCallback
 import com.revenuecat.purchases.interfaces.PurchaseCallback
+import com.revenuecat.purchases.interfaces.ReceiveCustomerInfoCallback
 import com.revenuecat.purchases.models.StoreProduct
 import com.revenuecat.purchases.models.StoreTransaction
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -397,14 +398,21 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
     }
 }
 
-// ジェムパックの課金購入をRevenueCat経由で管理するクラス。
+// ジェムパック・プレミアムの課金購入をRevenueCat経由で管理するクラス。
 // RevenueCatのダッシュボード側で、Google Play Consoleに登録した商品と
-// 同じ商品ID（gems_200など）を"Consumable"として登録しておくこと。
+// 同じ商品ID（gems_200など）を登録しておくこと(ジェムは"Consumable"、
+// プレミアムは月額サブスクリプション商品として、Entitlement「premium」に紐付ける)。
 // 実際の宛先(Play Console上の課金設定)はRevenueCat側で仲介されるため、
 // アプリにはPublic API Keyのみが含まれる
-class GemBillingManager(context: Context, private val onGemsGranted: (Int) -> Unit) {
+class GemBillingManager(
+    context: Context,
+    private val onGemsGranted: (Int) -> Unit,
+    private val onPremiumStatusChanged: (Boolean) -> Unit
+) {
     companion object {
         const val REVENUECAT_API_KEY = "goog_qGVQoTptBiSTTuSMHWBNkuKlpbG"
+        const val PREMIUM_ENTITLEMENT_ID = "premium"
+        const val PREMIUM_PRODUCT_ID = "premium_monthly"
         val PRODUCT_GEM_AMOUNTS = mapOf(
             "gems_200" to 200,
             "gems_400" to 400,
@@ -413,6 +421,8 @@ class GemBillingManager(context: Context, private val onGemsGranted: (Int) -> Un
     }
 
     var storeProducts by mutableStateOf<List<StoreProduct>>(emptyList())
+        private set
+    var premiumProduct by mutableStateOf<StoreProduct?>(null)
         private set
 
     init {
@@ -431,6 +441,21 @@ class GemBillingManager(context: Context, private val onGemsGranted: (Int) -> Un
                 override fun onError(error: PurchasesError) {}
             }
         )
+        Purchases.sharedInstance.getProducts(
+            listOf(PREMIUM_PRODUCT_ID),
+            object : GetStoreProductsCallback {
+                override fun onReceived(storeProducts: List<StoreProduct>) {
+                    premiumProduct = storeProducts.firstOrNull()
+                }
+                override fun onError(error: PurchasesError) {}
+            }
+        )
+        Purchases.sharedInstance.getCustomerInfo(object : ReceiveCustomerInfoCallback {
+            override fun onReceived(customerInfo: CustomerInfo) {
+                onPremiumStatusChanged(customerInfo.entitlements[PREMIUM_ENTITLEMENT_ID]?.isActive == true)
+            }
+            override fun onError(error: PurchasesError) {}
+        })
     }
 
     fun launchPurchaseFlow(activity: Activity, storeProduct: StoreProduct) {
@@ -441,6 +466,9 @@ class GemBillingManager(context: Context, private val onGemsGranted: (Int) -> Un
                 override fun onCompleted(storeTransaction: StoreTransaction, customerInfo: CustomerInfo) {
                     val gemAmount = PRODUCT_GEM_AMOUNTS[storeProduct.id] ?: 0
                     if (gemAmount > 0) onGemsGranted(gemAmount)
+                    if (storeProduct.id == PREMIUM_PRODUCT_ID) {
+                        onPremiumStatusChanged(customerInfo.entitlements[PREMIUM_ENTITLEMENT_ID]?.isActive == true)
+                    }
                 }
                 override fun onError(error: PurchasesError, userCancelled: Boolean) {}
             }
@@ -455,7 +483,11 @@ class GemBillingManager(context: Context, private val onGemsGranted: (Int) -> Un
 // --- ViewModel ---
 class StepViewModel(val repository: StepRepository, appContext: Context) : ViewModel() {
     // ジェムパックの課金購入を管理する（Google Play Billing）
-    val gemBillingManager = GemBillingManager(appContext) { amount -> addGems(amount) }
+    val gemBillingManager = GemBillingManager(
+        appContext,
+        onGemsGranted = { amount -> addGems(amount) },
+        onPremiumStatusChanged = { active -> setPremiumStatus(active) }
+    )
     init {
         gemBillingManager.startConnection()
     }
@@ -654,8 +686,10 @@ class StepViewModel(val repository: StepRepository, appContext: Context) : ViewM
         repository.customCharacterNote = items.joinToString("\n")
     }
 
-    val isPremium get() = repository.isPremium
-    fun unlockPremium() { repository.isPremium = true }
+    private val premiumState = mutableStateOf(repository.isPremium)
+    val isPremium: Boolean get() = premiumState.value
+    fun unlockPremium() { repository.isPremium = true; premiumState.value = true }
+    fun setPremiumStatus(active: Boolean) { repository.isPremium = active; premiumState.value = active }
 
     val unlockedMemoryIds = mutableStateOf(repository.unlockedMemoryIds)
 
@@ -4636,6 +4670,8 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
     val tabTitles = listOf("プロフィール", "サウンド", "プレミアム", "その他")
     var selectedTab by remember { mutableStateOf(0) }
     val context = LocalContext.current
+    val activity = LocalActivity.current
+    val premiumProduct = viewModel.gemBillingManager.premiumProduct
     val scope = rememberCoroutineScope()
     var inquiryText by remember { mutableStateOf("") }
     var isSendingInquiry by remember { mutableStateOf(false) }
@@ -4837,10 +4873,21 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                                     Text("ひかりの性格や話し方をカスタマイズできます。\nプレミアムプランで利用可能です。", fontSize = 12.sp, color = Color(0xFF999999), lineHeight = 18.sp)
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Button(
-                                        onClick = { /* TODO: 課金処理 */ },
+                                        onClick = {
+                                            if (activity != null && premiumProduct != null) {
+                                                viewModel.gemBillingManager.launchPurchaseFlow(activity, premiumProduct)
+                                            }
+                                        },
+                                        enabled = activity != null && premiumProduct != null,
                                         modifier = Modifier.fillMaxWidth(),
                                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300))
-                                    ) { Text("プレミアムを購入する", color = Color.White) }
+                                    ) {
+                                        val priceLabel = premiumProduct?.price?.formatted
+                                        Text(
+                                            if (priceLabel != null) "プレミアムを購入する（$priceLabel/月）" else "プレミアムを購入する",
+                                            color = Color.White
+                                        )
+                                    }
                                 }
                             }
                         }
