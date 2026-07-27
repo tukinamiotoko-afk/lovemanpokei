@@ -373,6 +373,11 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getInt("GEM_COUNT", 0)
         set(value) = prefs.edit { putInt("GEM_COUNT", value) }
 
+    // ホーム画面に一番最初に来た時だけ、挨拶のセリフを出すためのフラグ
+    var hasShownFirstHomeGreeting: Boolean
+        get() = prefs.getBoolean("HAS_SHOWN_FIRST_HOME_GREETING", false)
+        set(value) = prefs.edit { putBoolean("HAS_SHOWN_FIRST_HOME_GREETING", value) }
+
     suspend fun recordSteps(date: String, steps: Int, activeTimeMillis: Long = 0L) {
         stepDao.upsert(StepRecord(date = date, stepCount = steps, activeTimeMillis = activeTimeMillis))
     }
@@ -1812,7 +1817,12 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     }
     LaunchedEffect(Unit) {
         if (viewModel.currentDefaultDialogue.value == null) {
-            viewModel.currentDefaultDialogue.value = pickDefaultDialogue()
+            viewModel.currentDefaultDialogue.value = if (!viewModel.repository.hasShownFirstHomeGreeting) {
+                viewModel.repository.hasShownFirstHomeGreeting = true
+                TouchDialogue("はじめまして、○○さん！これからよろしくお願いしますね♪", R.drawable.hikari_smile)
+            } else {
+                pickDefaultDialogue()
+            }
         }
     }
     val defaultDialogueEntry = viewModel.currentDefaultDialogue.value
