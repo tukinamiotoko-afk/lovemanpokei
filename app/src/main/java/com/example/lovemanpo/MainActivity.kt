@@ -1177,7 +1177,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
 
         val startDestination = remember(Unit) {
             if (viewModel.playerName.value.isEmpty()) {
-                "name_input"
+                "welcome"
             } else if (viewModel.userGender.value.isEmpty()) {
                 "profile_setup"
             } else if (!viewModel.batterySetupDone.value) {
@@ -1207,6 +1207,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                     slideOutHorizontally(tween(500, easing = FastOutSlowInEasing)) { it }
                 }
             ) {
+                composable("welcome") { WelcomeScreen(navController) }
                 composable("name_input") { NameInputScreen(viewModel, navController) }
                 composable("profile_setup") { ProfileSetupScreen(navController, viewModel) }
                 composable("battery_setup") { StabilitySetupScreen(navController, viewModel) }
@@ -1496,6 +1497,83 @@ fun openAutoStartSettings(context: Context) {
 }
 
 
+
+@Composable
+fun WelcomeScreen(navController: NavController) {
+    val pinkAccent = Color(0xFFFF6B9D)
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFFF5F8))) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Image(
+                painter = painterResource(id = R.drawable.hikari_smile),
+                contentDescription = null,
+                modifier = Modifier.size(180.dp),
+                contentScale = ContentScale.Fit
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                "はじめまして！",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = pinkAccent,
+                fontFamily = MplusRoundedFontFamily
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "わたし、ひかりです♪\nこれから一緒に歩いていきましょうね。",
+                fontSize = 15.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 22.sp,
+                fontFamily = MplusRoundedFontFamily,
+                color = Color(0xFF555555)
+            )
+            Spacer(modifier = Modifier.height(28.dp))
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White,
+                shadowElevation = 2.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(
+                        "このアプリでできること",
+                        fontWeight = FontWeight.Bold,
+                        color = pinkAccent,
+                        fontFamily = MplusRoundedFontFamily
+                    )
+                    WelcomeGuideLine("🚶", "歩くと「行動ポイント」が貯まります")
+                    WelcomeGuideLine("💬", "ポイントを使ってひかりとお話しできます")
+                    WelcomeGuideLine("💗", "仲良くなるとラブレベルが上がります")
+                    WelcomeGuideLine("👗", "ジェムを貯めて衣装を着替えられます")
+                }
+            }
+            Spacer(modifier = Modifier.height(32.dp))
+            Button(
+                onClick = {
+                    navController.navigate("name_input") { popUpTo("welcome") { inclusive = true } }
+                },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = pinkAccent)
+            ) {
+                Text("はじめる", fontSize = 16.sp, fontFamily = MplusRoundedFontFamily)
+            }
+        }
+    }
+}
+
+@Composable
+fun WelcomeGuideLine(emoji: String, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(emoji, fontSize = 20.sp)
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(text, fontSize = 13.sp, color = Color(0xFF555555), fontFamily = MplusRoundedFontFamily)
+    }
+}
 
 @Composable
 fun NameInputScreen(viewModel: StepViewModel, navController: NavController) {
