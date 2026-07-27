@@ -13,7 +13,7 @@ navigationCompose = "2.9.1"
 room = "2.8.0"
 work = "2.10.2"
 generativeai = "0.9.0"
-revenuecat = "8.16.1"
+revenuecat = "10.15.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
