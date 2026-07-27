@@ -1156,6 +1156,8 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
 
         var navTrigger by remember { mutableStateOf(0) }
         val routeHistory = remember { mutableListOf<String>() }
+        // アプリ開始前の案内・初期設定画面では、横スライドやキャラ演出を出さない
+        val onboardingRoutes = remember { setOf("welcome", "name_input", "profile_setup", "battery_setup") }
         LaunchedEffect(navController) {
             var isFirst = true
             navController.currentBackStackEntryFlow.collect { entry ->
@@ -1169,9 +1171,9 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 if (routeHistory.size >= 2 && routeHistory[routeHistory.size - 2] == route) {
                     routeHistory.removeAt(routeHistory.size - 1)
                 } else {
-                    // 前進 → キャラ演出を発火
+                    // 前進 → キャラ演出を発火（案内・初期設定画面同士の遷移は除く）
                     routeHistory.add(route)
-                    navTrigger++
+                    if (route !in onboardingRoutes) navTrigger++
                 }
             }
         }
@@ -1208,10 +1210,34 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                     slideOutHorizontally(tween(500, easing = FastOutSlowInEasing)) { it }
                 }
             ) {
-                composable("welcome") { WelcomeScreen(navController) }
-                composable("name_input") { NameInputScreen(viewModel, navController) }
-                composable("profile_setup") { ProfileSetupScreen(navController, viewModel) }
-                composable("battery_setup") { StabilitySetupScreen(navController, viewModel) }
+                composable(
+                    "welcome",
+                    enterTransition = { EnterTransition.None },
+                    exitTransition = { ExitTransition.None },
+                    popEnterTransition = { EnterTransition.None },
+                    popExitTransition = { ExitTransition.None }
+                ) { WelcomeScreen(navController) }
+                composable(
+                    "name_input",
+                    enterTransition = { EnterTransition.None },
+                    exitTransition = { ExitTransition.None },
+                    popEnterTransition = { EnterTransition.None },
+                    popExitTransition = { ExitTransition.None }
+                ) { NameInputScreen(viewModel, navController) }
+                composable(
+                    "profile_setup",
+                    enterTransition = { EnterTransition.None },
+                    exitTransition = { ExitTransition.None },
+                    popEnterTransition = { EnterTransition.None },
+                    popExitTransition = { ExitTransition.None }
+                ) { ProfileSetupScreen(navController, viewModel) }
+                composable(
+                    "battery_setup",
+                    enterTransition = { EnterTransition.None },
+                    exitTransition = { ExitTransition.None },
+                    popEnterTransition = { EnterTransition.None },
+                    popExitTransition = { ExitTransition.None }
+                ) { StabilitySetupScreen(navController, viewModel) }
                 composable("home") { HomeScreen(navController, viewModel) }
                 composable("chatmenu") { ChatMenuScreen(navController, viewModel) }
                 composable("freechat") { FreeChatScreen(navController, viewModel) }
