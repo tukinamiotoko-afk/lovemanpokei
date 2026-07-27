@@ -411,7 +411,7 @@ class GemBillingManager(
 ) {
     companion object {
         const val REVENUECAT_API_KEY = "goog_qGVQoTptBiSTTuSMHWBNkuKlpbG"
-        const val PREMIUM_ENTITLEMENT_ID = "premium"
+        const val PREMIUM_ENTITLEMENT_ID = "premium_monthly"
         const val PREMIUM_PRODUCT_ID = "premium_monthly"
         val PRODUCT_GEM_AMOUNTS = mapOf(
             "gems_200" to 200,
