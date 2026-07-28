@@ -5330,7 +5330,7 @@ val bgmTracks = listOf(
 data class HomeBackgroundOption(val id: String, val name: String)
 
 val homeBackgroundOptions = listOf(
-    HomeBackgroundOption("home", "いつもの部屋"),
+    HomeBackgroundOption("home", "海"),
     HomeBackgroundOption("station", "駅前（時間帯で自動変化）")
 )
 
