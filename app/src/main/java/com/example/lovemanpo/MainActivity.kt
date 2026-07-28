@@ -289,7 +289,7 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         set(value) = prefs.edit { putString("SELECTED_BGM_ID", value) }
 
     var bgmVolume: Float
-        get() = prefs.getFloat("BGM_VOLUME", 0.6f)
+        get() = prefs.getFloat("BGM_VOLUME", 0.3f)
         set(value) = prefs.edit { putFloat("BGM_VOLUME", value) }
 
     // その日にすでに表示したタッチセリフ（日付 → 表示済みテキストの集合）
@@ -1254,7 +1254,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 val prepared = track?.let {
                     withContext(Dispatchers.IO) {
                         try {
-                            MediaPlayer.create(context, it.resId)?.apply { isLooping = true; setVolume(bgmVolume, bgmVolume) }
+                            MediaPlayer.create(context, it.resId)?.apply { isLooping = false; setVolume(bgmVolume, bgmVolume) }
                         } catch (e: Exception) {
                             null
                         }
@@ -1263,6 +1263,15 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 if (!disposed) {
                     mediaPlayer = prepared
                     currentBgmPlayer = prepared
+                    // 曲が終わったら、間を空けてからもう一度最初から再生する（ループ再生ではなく休符を入れる）
+                    prepared?.setOnCompletionListener { player ->
+                        bgmScope.launch {
+                            delay(5000)
+                            if (!disposed) {
+                                try { player.seekTo(0); player.start() } catch (e: Exception) {}
+                            }
+                        }
+                    }
                     try { prepared?.start() } catch (e: Exception) {}
                 } else {
                     try { prepared?.release() } catch (e: Exception) {}
