@@ -1876,6 +1876,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     val activity = LocalActivity.current
     val adWatchCountToday by viewModel.adWatchCountToday
     val isAdLoaded = viewModel.rewardedAdManager.isAdLoaded
+    val isPremium by remember { derivedStateOf { viewModel.isPremium } }
     var weatherInfo by remember { mutableStateOf<WeatherInfo?>(null) }
     val scope = rememberCoroutineScope()
     val locationPermLauncher = rememberLauncherForActivityResult(
@@ -2048,15 +2049,24 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             isHomeChatLoading = isHomeChatLoading,
             toastMessage = homeToastMessage,
             adWatchCountToday = adWatchCountToday,
-            isAdLoaded = isAdLoaded
+            isAdLoaded = isAdLoaded,
+            isPremium = isPremium
         ),
         actions = HomeScreenActions(
             onWatchAd = {
-                val act = activity
-                if (act != null && adWatchCountToday < 5) {
-                    viewModel.rewardedAdManager.showAd(act) {
+                if (adWatchCountToday < 5) {
+                    if (isPremium) {
+                        // プレミアム会員は広告を見ずに直接回復できる
                         val granted = viewModel.grantAdRewardPoints()
                         if (granted > 0) homeToastMessage = "+${granted}pt 回復しました！"
+                    } else {
+                        val act = activity
+                        if (act != null) {
+                            viewModel.rewardedAdManager.showAd(act) {
+                                val granted = viewModel.grantAdRewardPoints()
+                                if (granted > 0) homeToastMessage = "+${granted}pt 回復しました！"
+                            }
+                        }
                     }
                 }
             },
@@ -2202,7 +2212,8 @@ data class HomeScreenUiState(
     val isHomeChatLoading: Boolean = false,
     val toastMessage: String? = null,
     val adWatchCountToday: Int = 0,
-    val isAdLoaded: Boolean = false
+    val isAdLoaded: Boolean = false,
+    val isPremium: Boolean = false
 )
 
 data class HomeScreenActions(
@@ -2288,6 +2299,7 @@ fun HomeScreenContent(
     val toastMessage = uiState.toastMessage
     val adWatchCountToday = uiState.adWatchCountToday
     val isAdLoaded = uiState.isAdLoaded
+    val isPremium = uiState.isPremium
     val onWatchAd = actions.onWatchAd
     val onCharacterClick = actions.onCharacterClick
     val onFreeChatClick = actions.onFreeChatClick
@@ -2459,14 +2471,15 @@ fun HomeScreenContent(
                 showBackground = false
             )
             if (adWatchCountToday < 5) {
+                val adButtonEnabled = isPremium || isAdLoaded
                 Image(
                     painter = painterResource(id = R.drawable.riwaado_aikon),
-                    contentDescription = "広告を見て会話ポイント回復",
+                    contentDescription = "会話ポイント回復",
                     modifier = Modifier
                         .size(38.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .clickable(enabled = isAdLoaded) { showAdExplanation = true }
-                        .alpha(if (isAdLoaded) 1f else 0.5f),
+                        .clickable(enabled = adButtonEnabled) { showAdExplanation = true }
+                        .alpha(if (adButtonEnabled) 1f else 0.5f),
                     contentScale = ContentScale.Fit
                 )
             }
@@ -2626,15 +2639,21 @@ fun HomeScreenContent(
             val remaining = 5 - adWatchCountToday
             AlertDialog(
                 onDismissRequest = { showAdExplanation = false },
-                title = { Text("広告を見て会話ポイントを回復") },
+                title = { Text(if (isPremium) "会話ポイントを回復" else "広告を見て会話ポイントを回復") },
                 text = {
-                    Text("広告を最後まで見ると、会話ポイントが${nextReward}pt回復します。\n1日${remaining}回まで見ることができ、見るたびに回復量が増えていきます。")
+                    Text(
+                        if (isPremium) {
+                            "プレミアム特典で、広告を見ずに会話ポイントが${nextReward}pt回復します。\n1日${remaining}回まででき、回復するたびに回復量が増えていきます。"
+                        } else {
+                            "広告を最後まで見ると、会話ポイントが${nextReward}pt回復します。\n1日${remaining}回まで見ることができ、見るたびに回復量が増えていきます。"
+                        }
+                    )
                 },
                 confirmButton = {
                     TextButton(onClick = {
                         showAdExplanation = false
                         onWatchAd()
-                    }) { Text("広告を見る") }
+                    }) { Text(if (isPremium) "回復する" else "広告を見る") }
                 },
                 dismissButton = {
                     TextButton(onClick = { showAdExplanation = false }) { Text("閉じる") }
@@ -5107,6 +5126,11 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                                         "例：「ねこが大好き」「料理が得意」「天然な一面がある」\nこれらの設定は、ひかりとの会話に自然に反映されます。",
                                         fontSize = 12.sp, color = Color(0xFF999999), lineHeight = 18.sp
                                     )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        "また、ホーム画面の会話ポイント回復も、広告を見ずに1日5回まで利用できるようになります。",
+                                        fontSize = 12.sp, color = Color(0xFF999999), lineHeight = 18.sp
+                                    )
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Button(
                                         onClick = {
@@ -7492,6 +7516,7 @@ fun PremiumShopScreen(navController: NavController, viewModel: StepViewModel) {
                         Spacer(modifier = Modifier.height(16.dp))
                         PremiumBenefitLine("ひかりの性格・話し方を自由にカスタマイズ")
                         PremiumBenefitLine("最大5個までの追加設定が可能")
+                        PremiumBenefitLine("広告を見ずに会話ポイントを1日5回まで回復")
                         Spacer(modifier = Modifier.height(20.dp))
                         if (isPremium) {
                             Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFFE8F5E9)) {
