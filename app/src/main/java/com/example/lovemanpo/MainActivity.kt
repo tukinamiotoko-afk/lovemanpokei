@@ -2402,6 +2402,24 @@ fun HomeScreenContent(
                 size = 38.dp,
                 showBackground = false
             )
+            if (adWatchCountToday < 5) {
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFF4DB6AC),
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clickable(enabled = isAdLoaded) { onWatchAd() }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = "広告を見てポイント回復",
+                            tint = if (isAdLoaded) Color.White else Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
         }
 
         // 上部カード行 + ボタン列。独立したオーバーレイとしてキャラの上に被さる
@@ -2424,33 +2442,10 @@ fun HomeScreenContent(
                     progress = heartGaugeProgress,
                     hearts = heartCount
                 )
-                Box(modifier = Modifier.weight(1.3f).fillMaxHeight()) {
-                    HomeActionPointsCard(
-                        modifier = Modifier.fillMaxSize(),
-                        pts = actionPoints
-                    )
-                    if (adWatchCountToday < 5) {
-                        Surface(
-                            shape = CircleShape,
-                            color = Color(0xFF4DB6AC),
-                            shadowElevation = 2.dp,
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .offset(x = 6.dp, y = (-6).dp)
-                                .size(22.dp)
-                                .clickable(enabled = isAdLoaded) { onWatchAd() }
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.PlayArrow,
-                                    contentDescription = "広告を見てポイント回復",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                        }
-                    }
-                }
+                HomeActionPointsCard(
+                    modifier = Modifier.weight(1.3f).fillMaxHeight(),
+                    pts = actionPoints
+                )
                 HomeGemCard(
                     modifier = Modifier.weight(0.7f),
                     gems = gemCount
