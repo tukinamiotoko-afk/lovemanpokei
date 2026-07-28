@@ -50,11 +50,9 @@
             </intent-filter>
         </receiver>
 
-        <!-- Googleが公開しているテスト用のAdMobアプリID。
-             本番公開前に、実際に作成したAdMobアプリの本物のApp IDに差し替えること -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-6253728869800176~4549097553" />
 
     </application>
 
