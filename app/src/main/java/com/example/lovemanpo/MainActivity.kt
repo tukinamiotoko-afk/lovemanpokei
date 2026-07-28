@@ -119,6 +119,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -1844,9 +1845,9 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     val playerName by viewModel.playerName
     val pendingLevelUp by viewModel.pendingLevelUpLevel
 
-    // ホーム画面の背景（設定画面で選択可能）
+    // ホーム画面の背景（設定画面で選択可能。「駅前」は時間帯で自動的に切り替わる）
     val selectedHomeBgId by viewModel.selectedHomeBgId
-    val bgRes = homeBackgroundCatalog.find { it.id == selectedHomeBgId }?.resId ?: R.drawable.home_haikei
+    val bgRes = resolveHomeBackgroundRes(selectedHomeBgId)
 
     // 天気
     val context = LocalContext.current
@@ -4848,7 +4849,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
     var tempBodyNotes by remember { mutableStateOf(viewModel.bodyNotes) }
     val isPremium by remember { derivedStateOf { viewModel.isPremium } }
     val pinkAccent = Color(0xFFFF6B9D)
-    val tabTitles = listOf("プロフィール", "サウンド", "プレミアム", "その他")
+    val tabTitles = listOf("プロフィール", "サウンド", "背景", "プレミアム", "その他")
     var selectedTab by remember { mutableStateOf(0) }
     val context = LocalContext.current
     val activity = LocalActivity.current
@@ -4977,11 +4978,18 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                             valueRange = 0f..1f,
                             modifier = Modifier.fillMaxWidth()
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    2 -> {
                         Text("背景", fontWeight = FontWeight.Bold, color = pinkAccent, modifier = Modifier.fillMaxWidth())
+                        Text(
+                            "「駅前」は時間帯によって朝・夕方・夜の見た目が自動で切り替わります",
+                            fontSize = 11.sp,
+                            color = Color(0xFF999999),
+                            modifier = Modifier.fillMaxWidth()
+                        )
                         val selectedHomeBgId by viewModel.selectedHomeBgId
                         Column(modifier = Modifier.fillMaxWidth()) {
-                            homeBackgroundCatalog.forEach { bg ->
+                            homeBackgroundOptions.forEach { bg ->
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.fillMaxWidth().clickable { viewModel.setSelectedHomeBg(bg.id) }
@@ -4992,7 +5000,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                             }
                         }
                     }
-                    2 -> {
+                    3 -> {
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(16.dp),
@@ -5087,7 +5095,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                             }
                         }
                     }
-                    3 -> {
+                    4 -> {
                         Text("お問い合わせ", fontWeight = FontWeight.Bold, color = pinkAccent, modifier = Modifier.fillMaxWidth())
                         Text(
                             "不具合の報告やご要望など、お気軽にお送りください。",
@@ -5319,14 +5327,23 @@ val bgmTracks = listOf(
     BgmTrack("ohisamanosentakusi", "おひさまの洗濯師", R.raw.ohisamanosentakusi)
 )
 
-data class HomeBackground(val id: String, val name: String, val resId: Int)
+data class HomeBackgroundOption(val id: String, val name: String)
 
-val homeBackgroundCatalog = listOf(
-    HomeBackground("home", "いつもの部屋", R.drawable.home_haikei),
-    HomeBackground("station_morning", "駅前（朝）", R.drawable.in_front_of_the_station_background_morning_haikei),
-    HomeBackground("station_evening", "駅前（夕方）", R.drawable.in_front_of_the_station_background_evening_haikei),
-    HomeBackground("station_night", "駅前（夜）", R.drawable.in_front_of_the_station_background_night_haikei)
+val homeBackgroundOptions = listOf(
+    HomeBackgroundOption("home", "いつもの部屋"),
+    HomeBackgroundOption("station", "駅前（時間帯で自動変化）")
 )
+
+// 選択中の背景IDから、実際に表示するdrawableを決める。
+// 「駅前」は現在時刻に応じて朝・夕方・夜の見た目を自動で切り替える
+fun resolveHomeBackgroundRes(selectedId: String): Int {
+    if (selectedId != "station") return R.drawable.home_haikei
+    return when (LocalTime.now().hour) {
+        in 5..15 -> R.drawable.in_front_of_the_station_background_morning_haikei
+        in 16..18 -> R.drawable.in_front_of_the_station_background_evening_haikei
+        else -> R.drawable.in_front_of_the_station_background_night_haikei
+    }
+}
 
 // ホーム画面のベース表情drawableを、現在装備中の衣装の対応する表情に置き換える
 fun costumedExpressionRes(baseRes: Int, costumeId: String): Int {
