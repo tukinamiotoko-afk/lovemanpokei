@@ -565,10 +565,6 @@ class StepViewModel(val repository: StepRepository, appContext: Context) : ViewM
     )
     // 広告視聴による会話ポイント回復を管理する（Google AdMob）
     val rewardedAdManager = RewardedAdManager(appContext)
-    init {
-        gemBillingManager.startConnection()
-        rewardedAdManager.initializeAndLoad()
-    }
     override fun onCleared() {
         gemBillingManager.endConnection()
         super.onCleared()
@@ -1155,6 +1151,16 @@ class StepViewModel(val repository: StepRepository, appContext: Context) : ViewM
         totalEarnedPoints.intValue = 0
         userGender.value = ""
         batterySetupDone.value = false
+    }
+
+    // gemBillingManagerのstartConnection()は、購入情報の取得結果を
+    // 同期的にコールバックで返してくることがあり、そのコールバックの中で
+    // setPremiumStatus()等このクラスの他のプロパティを触る。
+    // そのため、全プロパティの初期化が終わったこのクラスの一番最後で呼び出す
+    // （途中で呼ぶと、まだ初期化されていないプロパティにアクセスしてNPEになる）
+    init {
+        gemBillingManager.startConnection()
+        rewardedAdManager.initializeAndLoad()
     }
 }
 
