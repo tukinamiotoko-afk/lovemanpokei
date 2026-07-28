@@ -1266,7 +1266,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                     // 曲が終わったら、間を空けてからもう一度最初から再生する（ループ再生ではなく休符を入れる）
                     prepared?.setOnCompletionListener { player ->
                         bgmScope.launch {
-                            delay(5000)
+                            delay(15000)
                             if (!disposed) {
                                 try { player.seekTo(0); player.start() } catch (e: Exception) {}
                             }
