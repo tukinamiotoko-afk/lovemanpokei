@@ -5098,8 +5098,16 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                                         Text("最大5個まで追加できます", fontSize = 11.sp, color = Color(0xFFBB8888))
                                     }
                                 } else {
-                                    Text("ひかりの性格や話し方をカスタマイズできます。\nプレミアムプランで利用可能です。", fontSize = 12.sp, color = Color(0xFF999999), lineHeight = 18.sp)
-                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "プレミアムに加入すると、ひかりの性格・話し方を自由にカスタマイズできる「追加設定」を、最大5個まで登録できるようになります。",
+                                        fontSize = 12.sp, color = Color(0xFF999999), lineHeight = 18.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Text(
+                                        "例：「ねこが大好き」「料理が得意」「天然な一面がある」\nこれらの設定は、ひかりとの会話に自然に反映されます。",
+                                        fontSize = 12.sp, color = Color(0xFF999999), lineHeight = 18.sp
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
                                     Button(
                                         onClick = {
                                             if (activity != null && premiumProduct != null) {
