@@ -496,11 +496,9 @@ class GemBillingManager(
 }
 
 // 広告視聴による行動ポイント回復を管理するクラス（Google AdMob）。
-// AD_UNIT_IDはGoogleが公開しているテスト用の広告ユニットID。
-// 本番公開前に、実際に作成したAdMobの広告ユニットIDに差し替えること
 class RewardedAdManager(private val context: Context) {
     companion object {
-        const val AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
+        const val AD_UNIT_ID = "ca-app-pub-6253728869800176/7956457155"
     }
 
     private var rewardedAd: RewardedAd? = null
