@@ -23,8 +23,8 @@ android {
         applicationId = "com.pinkstep.lovemanpo"
         minSdk = 29
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -94,6 +94,9 @@ dependencies {
 
     // RevenueCat（ジェムの課金購入）
     implementation(libs.revenuecat.purchases)
+
+    // Google AdMob（広告視聴による行動ポイント回復）
+    implementation(libs.play.services.ads)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)

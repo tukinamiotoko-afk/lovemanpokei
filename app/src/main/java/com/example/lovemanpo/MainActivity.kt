@@ -168,6 +168,13 @@ import com.revenuecat.purchases.interfaces.PurchaseCallback
 import com.revenuecat.purchases.interfaces.ReceiveCustomerInfoCallback
 import com.revenuecat.purchases.models.StoreProduct
 import com.revenuecat.purchases.models.StoreTransaction
+import com.google.android.gms.ads.AdError
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.FullScreenContentCallback
+import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.rewarded.RewardedAd
+import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.layout.onSizeChanged
@@ -379,6 +386,14 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getBoolean("HAS_SHOWN_FIRST_HOME_GREETING", false)
         set(value) = prefs.edit { putBoolean("HAS_SHOWN_FIRST_HOME_GREETING", value) }
 
+    // 広告を見て行動ポイントを回復する機能：1日ごとにリセットされる視聴回数
+    var adWatchDate: String
+        get() = prefs.getString("AD_WATCH_DATE", "") ?: ""
+        set(value) = prefs.edit { putString("AD_WATCH_DATE", value) }
+    var adWatchCount: Int
+        get() = prefs.getInt("AD_WATCH_COUNT", 0)
+        set(value) = prefs.edit { putInt("AD_WATCH_COUNT", value) }
+
     suspend fun recordSteps(date: String, steps: Int, activeTimeMillis: Long = 0L) {
         stepDao.upsert(StepRecord(date = date, stepCount = steps, activeTimeMillis = activeTimeMillis))
     }
@@ -480,6 +495,62 @@ class GemBillingManager(
     }
 }
 
+// 広告視聴による行動ポイント回復を管理するクラス（Google AdMob）。
+// AD_UNIT_IDはGoogleが公開しているテスト用の広告ユニットID。
+// 本番公開前に、実際に作成したAdMobの広告ユニットIDに差し替えること
+class RewardedAdManager(private val context: Context) {
+    companion object {
+        const val AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
+    }
+
+    private var rewardedAd: RewardedAd? = null
+    private var isLoading = false
+
+    var isAdLoaded by mutableStateOf(false)
+        private set
+
+    fun initializeAndLoad() {
+        MobileAds.initialize(context) {
+            loadAd()
+        }
+    }
+
+    fun loadAd() {
+        if (isLoading || rewardedAd != null) return
+        isLoading = true
+        val adRequest = AdRequest.Builder().build()
+        RewardedAd.load(context, AD_UNIT_ID, adRequest, object : RewardedAdLoadCallback() {
+            override fun onAdLoaded(ad: RewardedAd) {
+                rewardedAd = ad
+                isAdLoaded = true
+                isLoading = false
+            }
+            override fun onAdFailedToLoad(error: LoadAdError) {
+                rewardedAd = null
+                isAdLoaded = false
+                isLoading = false
+            }
+        })
+    }
+
+    fun showAd(activity: Activity, onRewardEarned: () -> Unit) {
+        val ad = rewardedAd ?: run { loadAd(); return }
+        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+            override fun onAdDismissedFullScreenContent() {
+                rewardedAd = null
+                isAdLoaded = false
+                loadAd()
+            }
+            override fun onAdFailedToShowFullScreenContent(error: AdError) {
+                rewardedAd = null
+                isAdLoaded = false
+                loadAd()
+            }
+        }
+        ad.show(activity) { onRewardEarned() }
+    }
+}
+
 // --- ViewModel ---
 class StepViewModel(val repository: StepRepository, appContext: Context) : ViewModel() {
     // ジェムパックの課金購入を管理する（Google Play Billing）
@@ -488,12 +559,38 @@ class StepViewModel(val repository: StepRepository, appContext: Context) : ViewM
         onGemsGranted = { amount -> addGems(amount) },
         onPremiumStatusChanged = { active -> setPremiumStatus(active) }
     )
+    // 広告視聴による行動ポイント回復を管理する（Google AdMob）
+    val rewardedAdManager = RewardedAdManager(appContext)
     init {
         gemBillingManager.startConnection()
+        rewardedAdManager.initializeAndLoad()
     }
     override fun onCleared() {
         gemBillingManager.endConnection()
         super.onCleared()
+    }
+
+    // 広告視聴で回復した行動ポイント。1日ごとにリセットされ、5回まで、
+    // 1回ごとに回復量が1→2→3→4→5ptと増えていく
+    val adWatchCountToday = mutableIntStateOf(
+        if (repository.adWatchDate == LocalDate.now().toString()) repository.adWatchCount else 0
+    )
+    fun grantAdRewardPoints(): Int {
+        val today = LocalDate.now().toString()
+        if (repository.adWatchDate != today) {
+            repository.adWatchDate = today
+            repository.adWatchCount = 0
+        }
+        if (repository.adWatchCount >= 5) {
+            adWatchCountToday.intValue = repository.adWatchCount
+            return 0
+        }
+        repository.adWatchCount += 1
+        adWatchCountToday.intValue = repository.adWatchCount
+        val amount = repository.adWatchCount
+        repository.totalEarnedPoints += amount
+        totalEarnedPoints.intValue = repository.totalEarnedPoints
+        return amount
     }
 
     val allStepRecords = mutableStateOf<List<StepRecord>>(emptyList())
@@ -1724,6 +1821,9 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
 
     // 天気
     val context = LocalContext.current
+    val activity = LocalActivity.current
+    val adWatchCountToday by viewModel.adWatchCountToday
+    val isAdLoaded = viewModel.rewardedAdManager.isAdLoaded
     var weatherInfo by remember { mutableStateOf<WeatherInfo?>(null) }
     val scope = rememberCoroutineScope()
     val locationPermLauncher = rememberLauncherForActivityResult(
@@ -1894,9 +1994,20 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             caloriesStr = caloriesStr,
             weatherInfo = weatherInfo,
             isHomeChatLoading = isHomeChatLoading,
-            toastMessage = homeToastMessage
+            toastMessage = homeToastMessage,
+            adWatchCountToday = adWatchCountToday,
+            isAdLoaded = isAdLoaded
         ),
         actions = HomeScreenActions(
+            onWatchAd = {
+                val act = activity
+                if (act != null && adWatchCountToday < 5) {
+                    viewModel.rewardedAdManager.showAd(act) {
+                        val granted = viewModel.grantAdRewardPoints()
+                        if (granted > 0) homeToastMessage = "+${granted}pt 回復しました！"
+                    }
+                }
+            },
             onCharacterClick = {
             if (touchedDialogue != null) {
                 // まだ前のリアクションが表示中＝連続でタップ（複数回触った）
@@ -2034,7 +2145,9 @@ data class HomeScreenUiState(
     val caloriesStr: String,
     val weatherInfo: WeatherInfo? = null,
     val isHomeChatLoading: Boolean = false,
-    val toastMessage: String? = null
+    val toastMessage: String? = null,
+    val adWatchCountToday: Int = 0,
+    val isAdLoaded: Boolean = false
 )
 
 data class HomeScreenActions(
@@ -2049,7 +2162,8 @@ data class HomeScreenActions(
     val onMemoriesClick: () -> Unit = {},
     val onShopClick: () -> Unit = {},
     val onWardrobeClick: () -> Unit = {},
-    val onSettingsClick: () -> Unit = {}
+    val onSettingsClick: () -> Unit = {},
+    val onWatchAd: () -> Unit = {}
 )
 
 // キャラ画像は素材によって余白（特に足元の透明部分）の量がバラバラなので、
@@ -2117,6 +2231,9 @@ fun HomeScreenContent(
     val weatherInfo = uiState.weatherInfo
     val isHomeChatLoading = uiState.isHomeChatLoading
     val toastMessage = uiState.toastMessage
+    val adWatchCountToday = uiState.adWatchCountToday
+    val isAdLoaded = uiState.isAdLoaded
+    val onWatchAd = actions.onWatchAd
     val onCharacterClick = actions.onCharacterClick
     val onFreeChatClick = actions.onFreeChatClick
     val onDiaryClick = actions.onDiaryClick
@@ -2307,10 +2424,33 @@ fun HomeScreenContent(
                     progress = heartGaugeProgress,
                     hearts = heartCount
                 )
-                HomeActionPointsCard(
-                    modifier = Modifier.weight(1.3f).fillMaxHeight(),
-                    pts = actionPoints
-                )
+                Box(modifier = Modifier.weight(1.3f).fillMaxHeight()) {
+                    HomeActionPointsCard(
+                        modifier = Modifier.fillMaxSize(),
+                        pts = actionPoints
+                    )
+                    if (adWatchCountToday < 5) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFF4DB6AC),
+                            shadowElevation = 2.dp,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = 6.dp, y = (-6).dp)
+                                .size(22.dp)
+                                .clickable(enabled = isAdLoaded) { onWatchAd() }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.PlayArrow,
+                                    contentDescription = "広告を見てポイント回復",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                    }
+                }
                 HomeGemCard(
                     modifier = Modifier.weight(0.7f),
                     gems = gemCount
