@@ -109,6 +109,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -1248,17 +1249,22 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
 
         // アプリ全体で流すBGM。選択中のトラックが変わったら曲を切り替え、
         // アプリがバックグラウンドに行ったら一時停止・戻ってきたら再開する。
+        // ただし最初の案内・初期設定画面（ホーム画面に行くまで）は流さない。
+        val onboardingRoutes = remember { setOf("welcome", "name_input", "profile_setup", "battery_setup") }
+        val currentBackStackEntry by navController.currentBackStackEntryAsState()
+        val isInOnboarding = currentBackStackEntry?.destination?.route in onboardingRoutes
         val selectedBgmId by viewModel.selectedBgmId
+        val effectiveBgmId = if (isInOnboarding) "" else selectedBgmId
         val bgmVolume by viewModel.bgmVolume
         var currentBgmPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
         val lifecycleOwner = LocalLifecycleOwner.current
         val bgmScope = rememberCoroutineScope()
-        DisposableEffect(selectedBgmId) {
+        DisposableEffect(effectiveBgmId) {
             var mediaPlayer: MediaPlayer? = null
             var disposed = false
             val job = bgmScope.launch {
                 delay(500)
-                val track = bgmTracks.find { it.id == selectedBgmId }
+                val track = bgmTracks.find { it.id == effectiveBgmId }
                 val prepared = track?.let {
                     withContext(Dispatchers.IO) {
                         try {
@@ -1310,7 +1316,6 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
         var navTrigger by remember { mutableStateOf(0) }
         val routeHistory = remember { mutableListOf<String>() }
         // アプリ開始前の案内・初期設定画面では、横スライドやキャラ演出を出さない
-        val onboardingRoutes = remember { setOf("welcome", "name_input", "profile_setup", "battery_setup") }
         LaunchedEffect(navController) {
             var isFirst = true
             navController.currentBackStackEntryFlow.collect { entry ->
