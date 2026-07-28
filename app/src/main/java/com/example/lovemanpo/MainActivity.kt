@@ -376,7 +376,7 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getString("EQUIPPED_COSTUME_ID", "default") ?: "default"
         set(value) = prefs.edit { putString("EQUIPPED_COSTUME_ID", value) }
 
-    // アプリ内通貨「ジェム」。行動ポイントとは別物で、衣装の購入に使う。
+    // アプリ内通貨「ジェム」。会話ポイントとは別物で、衣装の購入に使う。
     var gemCount: Int
         get() = prefs.getInt("GEM_COUNT", 0)
         set(value) = prefs.edit { putInt("GEM_COUNT", value) }
@@ -386,7 +386,7 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getBoolean("HAS_SHOWN_FIRST_HOME_GREETING", false)
         set(value) = prefs.edit { putBoolean("HAS_SHOWN_FIRST_HOME_GREETING", value) }
 
-    // 広告を見て行動ポイントを回復する機能：1日ごとにリセットされる視聴回数
+    // 広告を見て会話ポイントを回復する機能：1日ごとにリセットされる視聴回数
     var adWatchDate: String
         get() = prefs.getString("AD_WATCH_DATE", "") ?: ""
         set(value) = prefs.edit { putString("AD_WATCH_DATE", value) }
@@ -495,7 +495,7 @@ class GemBillingManager(
     }
 }
 
-// 広告視聴による行動ポイント回復を管理するクラス（Google AdMob）。
+// 広告視聴による会話ポイント回復を管理するクラス（Google AdMob）。
 class RewardedAdManager(private val context: Context) {
     companion object {
         const val AD_UNIT_ID = "ca-app-pub-6253728869800176/7956457155"
@@ -557,7 +557,7 @@ class StepViewModel(val repository: StepRepository, appContext: Context) : ViewM
         onGemsGranted = { amount -> addGems(amount) },
         onPremiumStatusChanged = { active -> setPremiumStatus(active) }
     )
-    // 広告視聴による行動ポイント回復を管理する（Google AdMob）
+    // 広告視聴による会話ポイント回復を管理する（Google AdMob）
     val rewardedAdManager = RewardedAdManager(appContext)
     init {
         gemBillingManager.startConnection()
@@ -568,7 +568,7 @@ class StepViewModel(val repository: StepRepository, appContext: Context) : ViewM
         super.onCleared()
     }
 
-    // 広告視聴で回復した行動ポイント。1日ごとにリセットされ、5回まで、
+    // 広告視聴で回復した会話ポイント。1日ごとにリセットされ、5回まで、
     // 1回ごとに回復量が1→2→3→4→5ptと増えていく
     val adWatchCountToday = mutableIntStateOf(
         if (repository.adWatchDate == LocalDate.now().toString()) repository.adWatchCount else 0
@@ -963,7 +963,7 @@ class StepViewModel(val repository: StepRepository, appContext: Context) : ViewM
         return false
     }
 
-    // アプリ内通貨「ジェム」。行動ポイントとは別物で、衣装の購入に使う。
+    // アプリ内通貨「ジェム」。会話ポイントとは別物で、衣装の購入に使う。
     val gemCount = mutableIntStateOf(repository.gemCount)
 
     // TODO: 現状はプレースホルダー。Google Play Billingと繋いだら、
@@ -1717,7 +1717,7 @@ fun WelcomeScreen(navController: NavController) {
                         color = pinkAccent,
                         fontFamily = MplusRoundedFontFamily
                     )
-                    WelcomeGuideLine("🚶", "歩くと「行動ポイント」が貯まります")
+                    WelcomeGuideLine("🚶", "歩くと「会話ポイント」が貯まります")
                     WelcomeGuideLine("💬", "ポイントを使ってひかりとお話しできます")
                     WelcomeGuideLine("💗", "仲良くなるとラブレベルが上がります")
                     WelcomeGuideLine("👗", "ジェムを貯めて衣装を着替えられます")
@@ -2040,7 +2040,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             onWeatherTap = { weatherDialogueActive = true },
             onHomeChatSend = homeChatSend@{ text ->
             if (!viewModel.spendPointForChat()) {
-                homeToastMessage = "行動ポイントが足りません（2000歩で1ポイント）"
+                homeToastMessage = "会話ポイントが足りません（2000歩で1ポイント）"
                 return@homeChatSend
             }
             weatherDialogueActive = false
@@ -2254,6 +2254,7 @@ fun HomeScreenContent(
     val onWeatherTap = actions.onWeatherTap
     val onHomeChatSend = actions.onHomeChatSend
     var showWeatherSheet by remember { mutableStateOf(false) }
+    var showAdExplanation by remember { mutableStateOf(false) }
 
     // ヘルプキャラ(HintSdHikari)専用の固定位置。メインキャラの余白値とは無関係。
     val characterBottomPadding = 240.dp
@@ -2415,7 +2416,7 @@ fun HomeScreenContent(
                     color = Color(0xFF4DB6AC),
                     modifier = Modifier
                         .size(38.dp)
-                        .clickable(enabled = isAdLoaded) { onWatchAd() }
+                        .clickable(enabled = isAdLoaded) { showAdExplanation = true }
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
@@ -2437,7 +2438,7 @@ fun HomeScreenContent(
                 .padding(horizontal = 8.dp, vertical = 8.dp)
                 .zIndex(1f)
         ) {
-            // ラブレベル・行動ポイント・ジェムの3枚だけ高さを揃える
+            // ラブレベル・会話ポイント・ジェムの3枚だけ高さを揃える
             Row(
                 modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Max),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -2578,7 +2579,28 @@ fun HomeScreenContent(
             HourlyWeatherSheet(weatherInfo = weatherInfo, onDismiss = { showWeatherSheet = false })
         }
 
-        // アプリ側のシステムメッセージ（行動ポイント不足など）。キャラのセリフとは区別して表示する
+        if (showAdExplanation) {
+            val nextReward = adWatchCountToday + 1
+            val remaining = 5 - adWatchCountToday
+            AlertDialog(
+                onDismissRequest = { showAdExplanation = false },
+                title = { Text("広告を見て会話ポイントを回復") },
+                text = {
+                    Text("広告を最後まで見ると、会話ポイントが${nextReward}pt回復します。\n1日${remaining}回まで見ることができ、見るたびに回復量が増えていきます。")
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showAdExplanation = false
+                        onWatchAd()
+                    }) { Text("広告を見る") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAdExplanation = false }) { Text("閉じる") }
+                }
+            )
+        }
+
+        // アプリ側のシステムメッセージ（会話ポイント不足など）。キャラのセリフとは区別して表示する
         toastMessage?.let { msg ->
             Surface(
                 shape = RoundedCornerShape(20.dp),
@@ -2796,7 +2818,7 @@ fun HomeLoveLevelCard(modifier: Modifier = Modifier, lv: Int, progress: Float, h
     }
 }
 
-// 2. 行動ポイントカードのコメントを削除
+// 2. 会話ポイントカードのコメントを削除
 @Composable
 fun HomeActionPointsCard(modifier: Modifier = Modifier, pts: Int) {
     Box(
@@ -2811,7 +2833,7 @@ fun HomeActionPointsCard(modifier: Modifier = Modifier, pts: Int) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Place, null, tint = Color.Unspecified, modifier = Modifier.size(13.dp).gradientTint(listOf(Color(0xFF80CBC4), Color(0xFF00695C))))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("行動ポイント", fontSize = 12.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
+                Text("会話ポイント", fontSize = 12.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold, fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
             }
             Text("$pts / 5 pt", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF1B5E20), fontFamily = MplusRoundedFontFamily, style = tightTextStyle)
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2874,8 +2896,8 @@ fun expressionToFaceRes(expr: Int): Int = when (expr) {
 @Composable
 fun HintSdHikari(modifier: Modifier = Modifier) {
     val hints = listOf(
-        "2,000歩歩くと\n行動ポイントが1つもらえるよ！",
-        "行動ポイントを使って\nひかりとお話しできるよ♪",
+        "2,000歩歩くと\n会話ポイントが1つもらえるよ！",
+        "会話ポイントを使って\nひかりとお話しできるよ♪",
         "毎日歩いてひかりとの\n仲を深めよう♪",
         "セリフをタップすると\nひかりが話しかけてくれるよ！",
         "おしゃべりからいつでも\nひかりと話せるよ♪"
@@ -3336,7 +3358,7 @@ fun DebugScreen(navController: NavController, viewModel: StepViewModel) {
             }
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(text = "行動ポイント操作", fontWeight = FontWeight.Bold)
+                    Text(text = "会話ポイント操作", fontWeight = FontWeight.Bold)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = { viewModel.debugAddActionPoints(1) }, modifier = Modifier.weight(1f)) { Text("+1 pt") }
                         Button(onClick = { viewModel.debugAddActionPoints(10) }, modifier = Modifier.weight(1f)) { Text("+10 pt") }
