@@ -177,6 +177,7 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
+import com.google.android.play.core.review.ReviewManagerFactory
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.layout.onSizeChanged
@@ -298,6 +299,14 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
     var selectedHomeBgId: String
         get() = prefs.getString("SELECTED_HOME_BG_ID", "home") ?: "home"
         set(value) = prefs.edit { putString("SELECTED_HOME_BG_ID", value) }
+
+    // アプリ内レビューの誘導：何回か会話したタイミングで一度だけ表示する
+    var conversationCountForReview: Int
+        get() = prefs.getInt("CONVERSATION_COUNT_FOR_REVIEW", 0)
+        set(value) = prefs.edit { putInt("CONVERSATION_COUNT_FOR_REVIEW", value) }
+    var hasRequestedReview: Boolean
+        get() = prefs.getBoolean("HAS_REQUESTED_REVIEW", false)
+        set(value) = prefs.edit { putBoolean("HAS_REQUESTED_REVIEW", value) }
 
     // その日にすでに表示したタッチセリフ（日付 → 表示済みテキストの集合）
     fun getShownTouchDialogues(date: String): Set<String> = prefs.getStringSet("SHOWN_TOUCH_DIALOGUES_$date", emptySet()) ?: emptySet()
@@ -615,6 +624,19 @@ class StepViewModel(val repository: StepRepository, appContext: Context) : ViewM
     fun setSelectedHomeBg(id: String) {
         selectedHomeBgId.value = id
         repository.selectedHomeBgId = id
+    }
+
+    // 会話（送信）のたびに呼ぶ。何回か会話したタイミングでレビューを一度だけ促すため、
+    // ちょうど閾値に達した回だけtrueを返す
+    fun noteConversationForReview(threshold: Int = 5): Boolean {
+        if (repository.hasRequestedReview) return false
+        val count = repository.conversationCountForReview + 1
+        repository.conversationCountForReview = count
+        if (count >= threshold) {
+            repository.hasRequestedReview = true
+            return true
+        }
+        return false
     }
 
     // ホーム画面の待機中セリフ。画面を離れてまた戻ってきただけでは変わらないよう、
@@ -2065,6 +2087,9 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             if (!viewModel.spendPointForChat()) {
                 homeToastMessage = "会話ポイントが足りません（2000歩で1ポイント）"
                 return@homeChatSend
+            }
+            if (viewModel.noteConversationForReview()) {
+                activity?.let { requestAppReview(it) }
             }
             weatherDialogueActive = false
             isHomeChatLoading = true
@@ -5343,6 +5368,21 @@ fun resolveHomeBackgroundRes(selectedId: String): Int {
         in 16..18 -> R.drawable.in_front_of_the_station_background_evening_haikei
         else -> R.drawable.in_front_of_the_station_background_night_haikei
     }
+}
+
+// Google Playのアプリ内レビューを表示する。結果に関わらずアプリの通常フローを継続する
+fun requestAppReview(activity: Activity) {
+    try {
+        val manager = ReviewManagerFactory.create(activity)
+        val request = manager.requestReviewFlow()
+        request.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                try {
+                    manager.launchReviewFlow(activity, task.result)
+                } catch (e: Exception) {}
+            }
+        }
+    } catch (e: Exception) {}
 }
 
 // ホーム画面のベース表情drawableを、現在装備中の衣装の対応する表情に置き換える

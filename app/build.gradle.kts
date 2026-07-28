@@ -95,8 +95,11 @@ dependencies {
     // RevenueCat（ジェムの課金購入）
     implementation(libs.revenuecat.purchases)
 
-    // Google AdMob（広告視聴による行動ポイント回復）
+    // Google AdMob（広告視聴による会話ポイント回復）
     implementation(libs.play.services.ads)
+
+    // Google Playアプリ内レビュー
+    implementation(libs.play.review)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)
