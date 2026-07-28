@@ -292,6 +292,11 @@ class StepRepository(private val stepDao: StepDao, private val prefs: SharedPref
         get() = prefs.getFloat("BGM_VOLUME", 0.3f)
         set(value) = prefs.edit { putFloat("BGM_VOLUME", value) }
 
+    // ホーム画面の背景画像
+    var selectedHomeBgId: String
+        get() = prefs.getString("SELECTED_HOME_BG_ID", "home") ?: "home"
+        set(value) = prefs.edit { putString("SELECTED_HOME_BG_ID", value) }
+
     // その日にすでに表示したタッチセリフ（日付 → 表示済みテキストの集合）
     fun getShownTouchDialogues(date: String): Set<String> = prefs.getStringSet("SHOWN_TOUCH_DIALOGUES_$date", emptySet()) ?: emptySet()
     fun setShownTouchDialogues(date: String, shown: Set<String>) = prefs.edit { putStringSet("SHOWN_TOUCH_DIALOGUES_$date", shown) }
@@ -607,6 +612,11 @@ class StepViewModel(val repository: StepRepository, appContext: Context) : ViewM
     fun setBgmVolume(volume: Float) {
         bgmVolume.floatValue = volume
         repository.bgmVolume = volume
+    }
+    val selectedHomeBgId = mutableStateOf(repository.selectedHomeBgId)
+    fun setSelectedHomeBg(id: String) {
+        selectedHomeBgId.value = id
+        repository.selectedHomeBgId = id
     }
 
     // ホーム画面の待機中セリフ。画面を離れてまた戻ってきただけでは変わらないよう、
@@ -1823,8 +1833,9 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     val playerName by viewModel.playerName
     val pendingLevelUp by viewModel.pendingLevelUpLevel
 
-    // 背景固定設定
-    val bgRes = R.drawable.home_haikei
+    // ホーム画面の背景（設定画面で選択可能）
+    val selectedHomeBgId by viewModel.selectedHomeBgId
+    val bgRes = homeBackgroundCatalog.find { it.id == selectedHomeBgId }?.resId ?: R.drawable.home_haikei
 
     // 天気
     val context = LocalContext.current
@@ -2411,22 +2422,16 @@ fun HomeScreenContent(
                 showBackground = false
             )
             if (adWatchCountToday < 5) {
-                Surface(
-                    shape = CircleShape,
-                    color = Color(0xFF4DB6AC),
+                Image(
+                    painter = painterResource(id = R.drawable.riwaado_aikon),
+                    contentDescription = "広告を見て会話ポイント回復",
                     modifier = Modifier
                         .size(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
                         .clickable(enabled = isAdLoaded) { showAdExplanation = true }
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.PlayArrow,
-                            contentDescription = "広告を見てポイント回復",
-                            tint = if (isAdLoaded) Color.White else Color.White.copy(alpha = 0.5f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
+                        .alpha(if (isAdLoaded) 1f else 0.5f),
+                    contentScale = ContentScale.Fit
+                )
             }
         }
 
@@ -4961,6 +4966,20 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                             valueRange = 0f..1f,
                             modifier = Modifier.fillMaxWidth()
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("背景", fontWeight = FontWeight.Bold, color = pinkAccent, modifier = Modifier.fillMaxWidth())
+                        val selectedHomeBgId by viewModel.selectedHomeBgId
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            homeBackgroundCatalog.forEach { bg ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth().clickable { viewModel.setSelectedHomeBg(bg.id) }
+                                ) {
+                                    RadioButton(selected = selectedHomeBgId == bg.id, onClick = { viewModel.setSelectedHomeBg(bg.id) })
+                                    Text(bg.name)
+                                }
+                            }
+                        }
                     }
                     2 -> {
                         Surface(
@@ -5287,6 +5306,15 @@ val bgmTracks = listOf(
     BgmTrack("hitujinokodou", "羊の鼓動", R.raw.hitujinokodou),
     BgmTrack("koibitoninattahi", "恋人になった日", R.raw.koibitoninattahi),
     BgmTrack("ohisamanosentakusi", "おひさまの洗濯師", R.raw.ohisamanosentakusi)
+)
+
+data class HomeBackground(val id: String, val name: String, val resId: Int)
+
+val homeBackgroundCatalog = listOf(
+    HomeBackground("home", "いつもの部屋", R.drawable.home_haikei),
+    HomeBackground("station_morning", "駅前（朝）", R.drawable.in_front_of_the_station_background_morning_haikei),
+    HomeBackground("station_evening", "駅前（夕方）", R.drawable.in_front_of_the_station_background_evening_haikei),
+    HomeBackground("station_night", "駅前（夜）", R.drawable.in_front_of_the_station_background_night_haikei)
 )
 
 // ホーム画面のベース表情drawableを、現在装備中の衣装の対応する表情に置き換える
