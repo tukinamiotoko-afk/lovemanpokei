@@ -1287,6 +1287,7 @@ fun PedometerAppWithNavigation(viewModelFactory: StepViewModelFactory) {
                 composable("memories") { MemoriesScreen(navController, viewModel) }
                 composable("shop") { ShopScreen(navController, viewModel) }
                 composable("wardrobe") { CostumeChangeScreen(navController, viewModel) }
+                composable("premium_shop") { PremiumShopScreen(navController, viewModel) }
             }
             key(navTrigger) {
                 if (navTrigger > 0) CharacterPullOverlay()
@@ -7094,15 +7095,37 @@ fun ShopScreen(navController: NavController, viewModel: StepViewModel) {
                     row++
                 }
             }
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(shopItems) { costume ->
+            Column(modifier = Modifier.fillMaxSize()) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color.White,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .clickable { navController.navigate("premium_shop") }
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB300))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("プレミアムプラン", fontWeight = FontWeight.Bold, color = Color(0xFF333333))
+                        }
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color(0xFF999999))
+                    }
+                }
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(shopItems) { costume ->
                     ShopCostumeCard(
                         costume = costume,
                         isOwned = costume.id in ownedIds,
@@ -7115,6 +7138,7 @@ fun ShopScreen(navController: NavController, viewModel: StepViewModel) {
                             }
                         }
                     )
+                }
                 }
             }
 
@@ -7138,6 +7162,109 @@ fun ShopScreen(navController: NavController, viewModel: StepViewModel) {
                 )
             }
         }
+    }
+}
+
+// ---- ショップ（プレミアム購入）----
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PremiumShopScreen(navController: NavController, viewModel: StepViewModel) {
+    val isPremium by remember { derivedStateOf { viewModel.isPremium } }
+    val premiumProduct = viewModel.gemBillingManager.premiumProduct
+    val activity = LocalActivity.current
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("プレミアム", color = Color.White, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF5B9BE0))
+            )
+        }
+    ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawRect(brush = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFBBDEFB), Color(0xFF5B9BE0))))
+                val dotColor = Color.White.copy(alpha = 0.18f)
+                val spacing = 36.dp.toPx()
+                val dotRadius = 4.dp.toPx()
+                var row = 0
+                var y = 0f
+                while (y < size.height) {
+                    val xOffset = if (row % 2 == 0) 0f else spacing / 2
+                    var x = xOffset
+                    while (x < size.width) {
+                        drawCircle(color = dotColor, radius = dotRadius, center = Offset(x, y))
+                        x += spacing
+                    }
+                    y += spacing
+                    row++
+                }
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Surface(shape = RoundedCornerShape(20.dp), color = Color.White, modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(24.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB300))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("プレミアムプラン", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF333333))
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        PremiumBenefitLine("ひかりの性格・話し方を自由にカスタマイズ")
+                        PremiumBenefitLine("最大5個までの追加設定が可能")
+                        Spacer(modifier = Modifier.height(20.dp))
+                        if (isPremium) {
+                            Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFFE8F5E9)) {
+                                Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF4CAF50))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("加入中です", color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        } else {
+                            Button(
+                                onClick = {
+                                    if (activity != null && premiumProduct != null) {
+                                        viewModel.gemBillingManager.launchPurchaseFlow(activity, premiumProduct)
+                                    }
+                                },
+                                enabled = activity != null && premiumProduct != null,
+                                modifier = Modifier.fillMaxWidth().height(50.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB300))
+                            ) {
+                                val priceLabel = premiumProduct?.price?.formatted
+                                Text(
+                                    if (priceLabel != null) "$priceLabel / 月で始める" else "プレミアムに加入する",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PremiumBenefitLine(text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
+        Text("✨", fontSize = 16.sp)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text, fontSize = 13.sp, color = Color(0xFF555555))
     }
 }
 
