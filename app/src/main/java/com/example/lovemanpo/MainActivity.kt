@@ -2398,7 +2398,7 @@ fun HomeScreenContent(
     val bgBitmap = remember(bgRes) {
         try {
             BitmapFactory.decodeResource(bgContext.resources, bgRes)?.asImageBitmap()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             null
         }
     }
@@ -2434,7 +2434,7 @@ fun HomeScreenContent(
                 try {
                     val original = BitmapFactory.decodeResource(bgContext.resources, expressionRes)
                     original?.let { trimCharacterBitmap(it) }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     null
                 }
             }
