@@ -2671,6 +2671,7 @@ fun HomeScreenContent(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .padding(horizontal = 32.dp)
+                    .zIndex(2f)
             ) {
                 Text(msg, color = Color.White, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp))
             }
