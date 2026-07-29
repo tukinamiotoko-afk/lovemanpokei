@@ -1976,6 +1976,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
     var isHomeChatLoading by remember { mutableStateOf(false) }
     var weatherDialogueActive by remember { mutableStateOf(false) }
     var homeToastMessage by remember { mutableStateOf<String?>(null) }
+    var showChatLog by remember { mutableStateOf(false) }
     LaunchedEffect(homeToastMessage) {
         if (homeToastMessage != null) {
             delay(1800)
@@ -2053,6 +2054,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             isPremium = isPremium
         ),
         actions = HomeScreenActions(
+            onShowChatLog = { showChatLog = true },
             onWatchAd = {
                 if (adWatchCountToday < 5) {
                     if (isPremium) {
@@ -2192,6 +2194,55 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
             }
         )
     }
+
+    if (showChatLog) {
+        ChatLogDialog(
+            messages = viewModel.homeChatMessages,
+            onDismiss = { showChatLog = false }
+        )
+    }
+}
+
+@Composable
+fun ChatLogDialog(messages: List<ChatMessage>, onDismiss: () -> Unit) {
+    val pinkAccent = Color(0xFFFF6B9D)
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = RoundedCornerShape(16.dp), color = Color.White, modifier = Modifier.fillMaxHeight(0.7f)) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("会話ログ", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = pinkAccent)
+                Spacer(modifier = Modifier.height(8.dp))
+                if (messages.isEmpty()) {
+                    Text("まだ会話がありません", fontSize = 13.sp, color = Color(0xFF999999))
+                } else {
+                    Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                        messages.forEach { msg ->
+                            val isUser = msg.role == "user"
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = if (isUser) Color(0xFFFFE4EF) else Color(0xFFF0F8FF)
+                                ) {
+                                    Text(
+                                        text = if (isUser) msg.content else "ひかり：${msg.content}",
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                        fontSize = 13.sp,
+                                        color = Color(0xFF333333)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
+                    Text("閉じる")
+                }
+            }
+        }
+    }
 }
 
 
@@ -2231,7 +2282,8 @@ data class HomeScreenActions(
     val onShopClick: () -> Unit = {},
     val onWardrobeClick: () -> Unit = {},
     val onSettingsClick: () -> Unit = {},
-    val onWatchAd: () -> Unit = {}
+    val onWatchAd: () -> Unit = {},
+    val onShowChatLog: () -> Unit = {}
 )
 
 // キャラ画像は素材によって余白（特に足元の透明部分）の量がバラバラなので、
@@ -2303,6 +2355,7 @@ fun HomeScreenContent(
     val isAdLoaded = uiState.isAdLoaded
     val isPremium = uiState.isPremium
     val onWatchAd = actions.onWatchAd
+    val onShowChatLog = actions.onShowChatLog
     val onCharacterClick = actions.onCharacterClick
     val onFreeChatClick = actions.onFreeChatClick
     val onDiaryClick = actions.onDiaryClick
@@ -2587,6 +2640,13 @@ fun HomeScreenContent(
                                 .padding(horizontal = 14.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.List,
+                                contentDescription = "会話ログ",
+                                tint = Color.Gray,
+                                modifier = Modifier.size(20.dp).clickable { onShowChatLog() }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             androidx.compose.foundation.text.BasicTextField(
                                 value = homeInput,
                                 onValueChange = { homeInput = it },
