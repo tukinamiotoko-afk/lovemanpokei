@@ -489,19 +489,24 @@ class GemBillingManager(
         })
     }
 
-    fun launchPurchaseFlow(activity: Activity, storeProduct: StoreProduct) {
+    fun launchPurchaseFlow(activity: Activity, storeProduct: StoreProduct, onError: (String) -> Unit = {}) {
         val purchaseParams = PurchaseParams.Builder(activity, storeProduct).build()
         Purchases.sharedInstance.purchase(
             purchaseParams,
             object : PurchaseCallback {
                 override fun onCompleted(storeTransaction: StoreTransaction, customerInfo: CustomerInfo) {
+                    // サブスクリプション商品の場合、Google Play上のIDは
+                    // "商品ID:基本プランID"(例: premium_monthly:monthly)という形式になるため、
+                    // 完全一致ではなく前方一致でチェックする
                     val gemAmount = PRODUCT_GEM_AMOUNTS[storeProduct.id] ?: 0
                     if (gemAmount > 0) onGemsGranted(gemAmount)
-                    if (storeProduct.id == PREMIUM_PRODUCT_ID) {
+                    if (storeProduct.id == PREMIUM_PRODUCT_ID || storeProduct.id.startsWith("$PREMIUM_PRODUCT_ID:")) {
                         onPremiumStatusChanged(customerInfo.entitlements[PREMIUM_ENTITLEMENT_ID]?.isActive == true)
                     }
                 }
-                override fun onError(error: PurchasesError, userCancelled: Boolean) {}
+                override fun onError(error: PurchasesError, userCancelled: Boolean) {
+                    if (!userCancelled) onError(error.message)
+                }
             }
         )
     }
