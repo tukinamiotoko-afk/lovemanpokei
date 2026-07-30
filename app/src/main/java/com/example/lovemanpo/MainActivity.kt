@@ -713,7 +713,11 @@ class StepViewModel(val repository: StepRepository, appContext: Context) : ViewM
                 spentActionPoints.intValue = repository.spentActionPoints
                 totalEarnedPoints.intValue = repository.totalEarnedPoints
 
-                val earned = (newTodaySteps / 2000).coerceAtMost(5)
+                // プレミアム会員は歩数に対する会話ポイントの獲得効率が上がる
+                // （500歩で1pt・1日の上限10ptに対し、通常は2000歩で1pt・上限5pt）
+                val stepsPerPoint = if (isPremium) 500 else 2000
+                val dailyPointCap = if (isPremium) 10 else 5
+                val earned = (newTodaySteps / stepsPerPoint).coerceAtMost(dailyPointCap)
                 val toGrant = earned - repository.todayPointsEarned
                 if (toGrant > 0) {
                     repository.totalEarnedPoints += toGrant
@@ -5234,7 +5238,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
                                     Text(
-                                        "また、ホーム画面の会話ポイント回復も、広告を見ずに1日5回まで利用できるようになります。",
+                                        "また、ホーム画面の会話ポイント回復も、広告を見ずに1日5回まで利用できるようになるほか、歩数での会話ポイント獲得も500歩で1pt・1日10ptまでにアップします。",
                                         fontSize = 12.sp, color = Color(0xFF999999), lineHeight = 18.sp
                                     )
                                     Spacer(modifier = Modifier.height(12.dp))
@@ -7655,6 +7659,7 @@ fun PremiumShopScreen(navController: NavController, viewModel: StepViewModel) {
                         PremiumBenefitLine("ひかりの性格・話し方を自由にカスタマイズ")
                         PremiumBenefitLine("最大10個までの追加設定が可能")
                         PremiumBenefitLine("広告を見ずに会話ポイントを1日5回まで回復")
+                        PremiumBenefitLine("歩数での会話ポイント獲得が500歩で1pt・1日10ptまでにアップ")
                         Spacer(modifier = Modifier.height(20.dp))
                         if (isPremium) {
                             Surface(shape = RoundedCornerShape(12.dp), color = Color(0xFFE8F5E9)) {
