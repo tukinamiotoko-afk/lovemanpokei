@@ -481,11 +481,23 @@ class GemBillingManager(
                 override fun onError(error: PurchasesError) {}
             }
         )
-        Purchases.sharedInstance.getCustomerInfo(object : ReceiveCustomerInfoCallback {
+        // getCustomerInfo()はローカルキャッシュを参照するだけのため、アプリの再インストール等で
+        // RevenueCat側の匿名ユーザーIDが変わってしまった場合、Google Play上では購入済みでも
+        // 反映されないことがある。restorePurchases()はPlay Storeの購入履歴を元に
+        // 実際の購読状態をサーバーへ再同期するため、起動時はこちらを使う
+        restorePurchases()
+    }
+
+    fun restorePurchases(onDone: (Boolean) -> Unit = {}) {
+        Purchases.sharedInstance.restorePurchases(object : ReceiveCustomerInfoCallback {
             override fun onReceived(customerInfo: CustomerInfo) {
-                onPremiumStatusChanged(customerInfo.entitlements[PREMIUM_ENTITLEMENT_ID]?.isActive == true)
+                val active = customerInfo.entitlements[PREMIUM_ENTITLEMENT_ID]?.isActive == true
+                onPremiumStatusChanged(active)
+                onDone(active)
             }
-            override fun onError(error: PurchasesError) {}
+            override fun onError(error: PurchasesError) {
+                onDone(false)
+            }
         })
     }
 
@@ -4965,6 +4977,8 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
     var tempWeakness by remember { mutableStateOf(viewModel.weakness) }
     var tempBodyNotes by remember { mutableStateOf(viewModel.bodyNotes) }
     val isPremium by remember { derivedStateOf { viewModel.isPremium } }
+    var isRestoringPurchase by remember { mutableStateOf(false) }
+    var restoreResultMessage by remember { mutableStateOf<String?>(null) }
     val pinkAccent = Color(0xFFFF6B9D)
     val tabTitles = listOf("プロフィール", "サウンド", "背景", "プレミアム", "その他")
     var selectedTab by remember { mutableStateOf(0) }
@@ -5220,6 +5234,30 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                                             if (priceLabel != null) "プレミアムを購入する（$priceLabel/月）" else "プレミアムを購入する",
                                             color = Color.White
                                         )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "すでに購入済みなのに反映されない場合は、こちらをお試しください。",
+                                        fontSize = 11.sp, color = Color(0xFF999999)
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    OutlinedButton(
+                                        onClick = {
+                                            isRestoringPurchase = true
+                                            restoreResultMessage = null
+                                            viewModel.gemBillingManager.restorePurchases { restored ->
+                                                isRestoringPurchase = false
+                                                restoreResultMessage = if (restored) "プレミアムが復元されました" else "購入情報が見つかりませんでした"
+                                            }
+                                        },
+                                        enabled = !isRestoringPurchase,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(if (isRestoringPurchase) "確認中..." else "購入を復元する")
+                                    }
+                                    if (restoreResultMessage != null) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(restoreResultMessage!!, fontSize = 12.sp, color = pinkAccent)
                                     }
                                 }
                             }
