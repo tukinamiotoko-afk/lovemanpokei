@@ -2646,7 +2646,7 @@ fun HomeScreenContent(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.List,
+                                imageVector = Icons.Filled.List,
                                 contentDescription = "会話ログ",
                                 tint = Color.Gray,
                                 modifier = Modifier.size(20.dp).clickable { onShowChatLog() }
