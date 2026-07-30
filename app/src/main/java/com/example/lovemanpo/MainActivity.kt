@@ -5166,7 +5166,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                                 Spacer(modifier = Modifier.height(6.dp))
                                 if (isPremium) {
                                     Text(
-                                        "ひかりの設定を追加できます（最大5個・1項目30文字）\n例：「ねこが大好き」「料理が得意」「天然な一面がある」",
+                                        "ひかりの設定を追加できます（最大10個・1項目30文字）\n例：「ねこが大好き」「料理が得意」「天然な一面がある」",
                                         fontSize = 12.sp, color = Color(0xFF888888), lineHeight = 18.sp
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -5189,7 +5189,7 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                                         }
                                         Spacer(modifier = Modifier.height(4.dp))
                                     }
-                                    if (customItems.size < 5) {
+                                    if (customItems.size < 10) {
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
@@ -5217,11 +5217,11 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                                         }
                                     } else {
                                         Spacer(modifier = Modifier.height(4.dp))
-                                        Text("最大5個まで追加できます", fontSize = 11.sp, color = Color(0xFFBB8888))
+                                        Text("最大10個まで追加できます", fontSize = 11.sp, color = Color(0xFFBB8888))
                                     }
                                 } else {
                                     Text(
-                                        "プレミアムに加入すると、ひかりの性格・話し方を自由にカスタマイズできる「追加設定」を、最大5個まで登録できるようになります。",
+                                        "プレミアムに加入すると、ひかりの性格・話し方を自由にカスタマイズできる「追加設定」を、最大10個まで登録できるようになります。",
                                         fontSize = 12.sp, color = Color(0xFF999999), lineHeight = 18.sp
                                     )
                                     Spacer(modifier = Modifier.height(6.dp))
@@ -6132,7 +6132,7 @@ Walk Stage: ${walkStage}（歩数実績ベース1〜5）
 Talk Stage: ${talkStage}（親密度ベース1〜5）
 ストリーク: 連続${streakDays}日${if (isStreakMilestone) "（本日は節目！）" else ""}
 途切れ前の最大ストリーク: ${previousStreakDays}日
-${if (customNote.isNotBlank()) "\n追加設定: ${customNote.take(150)}（基本設定より優先）" else ""}
+${if (customNote.isNotBlank()) "\n追加設定: ${customNote.take(300)}（基本設定より優先）" else ""}
 ${if (profileMemo.isNotBlank()) "【プロファイルメモ】\n$profileMemo\n" else ""}
 【今回の状況タグ】
 $situationTag
@@ -7650,7 +7650,7 @@ fun PremiumShopScreen(navController: NavController, viewModel: StepViewModel) {
                         }
                         Spacer(modifier = Modifier.height(16.dp))
                         PremiumBenefitLine("ひかりの性格・話し方を自由にカスタマイズ")
-                        PremiumBenefitLine("最大5個までの追加設定が可能")
+                        PremiumBenefitLine("最大10個までの追加設定が可能")
                         PremiumBenefitLine("広告を見ずに会話ポイントを1日5回まで回復")
                         Spacer(modifier = Modifier.height(20.dp))
                         if (isPremium) {
