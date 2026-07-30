@@ -5148,75 +5148,76 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(6.dp))
-                                if (isPremium) {
-                                    Text(
-                                        "ひかりの設定を追加できます（最大5個・1項目30文字）\n例：「ねこが大好き」「料理が得意」「天然な一面がある」",
-                                        fontSize = 12.sp, color = Color(0xFF888888), lineHeight = 18.sp
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    customItems.forEachIndexed { index, item ->
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                Text(
+                                    if (isPremium) "ひかりの設定を追加できます（最大5個・1項目30文字）\n例：「ねこが大好き」「料理が得意」「天然な一面がある」"
+                                    else "プレミアムに加入すると、ひかりの性格・話し方を自由にカスタマイズできる「追加設定」を、最大5個まで保存・利用できるようになります。",
+                                    fontSize = 12.sp, color = Color(0xFF888888), lineHeight = 18.sp
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                customItems.forEachIndexed { index, item ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Surface(
+                                            modifier = Modifier.weight(1f),
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color(0xFFFFE4EF)
                                         ) {
-                                            Surface(
-                                                modifier = Modifier.weight(1f),
-                                                shape = RoundedCornerShape(8.dp),
-                                                color = Color(0xFFFFE4EF)
-                                            ) {
-                                                Text(item, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, color = Color(0xFF7B3F5E))
-                                            }
-                                            IconButton(onClick = { customItems = customItems.toMutableList().also { it.removeAt(index) } }, modifier = Modifier.size(32.dp)) {
-                                                Icon(Icons.Default.Close, contentDescription = "削除", tint = Color(0xFFBB8888), modifier = Modifier.size(16.dp))
-                                            }
+                                            Text(item, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, color = Color(0xFF7B3F5E))
                                         }
-                                        Spacer(modifier = Modifier.height(4.dp))
+                                        IconButton(
+                                            onClick = { customItems = customItems.toMutableList().also { it.removeAt(index) } },
+                                            enabled = isPremium,
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(Icons.Default.Close, contentDescription = "削除", tint = Color(0xFFBB8888), modifier = Modifier.size(16.dp))
+                                        }
                                     }
-                                    if (customItems.size < 5) {
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                }
+                                if (customItems.size < 5) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        OutlinedTextField(
+                                            value = newItemText,
+                                            onValueChange = { if (it.length <= 30) newItemText = it },
+                                            enabled = isPremium,
+                                            modifier = Modifier.weight(1f),
+                                            placeholder = {
+                                                Text(
+                                                    if (isPremium) "新しい設定を入力..." else "プレミアム購入で入力できます",
+                                                    color = Color(0xFFBBBBBB), fontSize = 13.sp
+                                                )
+                                            },
+                                            maxLines = 1,
+                                            shape = RoundedCornerShape(8.dp),
+                                            supportingText = { Text("${newItemText.length} / 30", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp, color = if (newItemText.length >= 30) Color.Red else Color(0xFF999999)) }
+                                        )
+                                        IconButton(
+                                            onClick = {
+                                                val t = newItemText.trim()
+                                                if (t.isNotBlank()) { customItems = customItems + t; newItemText = "" }
+                                            },
+                                            enabled = isPremium && newItemText.isNotBlank()
                                         ) {
-                                            OutlinedTextField(
-                                                value = newItemText,
-                                                onValueChange = { if (it.length <= 30) newItemText = it },
-                                                modifier = Modifier.weight(1f),
-                                                placeholder = { Text("新しい設定を入力...", color = Color(0xFFBBBBBB), fontSize = 13.sp) },
-                                                maxLines = 1,
-                                                shape = RoundedCornerShape(8.dp),
-                                                supportingText = { Text("${newItemText.length} / 30", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End, fontSize = 11.sp, color = if (newItemText.length >= 30) Color.Red else Color(0xFF999999)) }
-                                            )
-                                            IconButton(
-                                                onClick = {
-                                                    val t = newItemText.trim()
-                                                    if (t.isNotBlank()) { customItems = customItems + t; newItemText = "" }
-                                                },
-                                                enabled = newItemText.isNotBlank()
-                                            ) {
-                                                Icon(Icons.Default.Add, contentDescription = "追加", tint = pinkAccent)
-                                            }
+                                            Icon(Icons.Default.Add, contentDescription = "追加", tint = pinkAccent)
                                         }
-                                    } else {
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text("最大5個まで追加できます", fontSize = 11.sp, color = Color(0xFFBB8888))
                                     }
                                 } else {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text("最大5個まで追加できます", fontSize = 11.sp, color = Color(0xFFBB8888))
+                                }
+                                if (!isPremium) {
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        "プレミアムに加入すると、ひかりの性格・話し方を自由にカスタマイズできる「追加設定」を、最大5個まで登録できるようになります。",
-                                        fontSize = 12.sp, color = Color(0xFF999999), lineHeight = 18.sp
-                                    )
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Text(
-                                        "例：「ねこが大好き」「料理が得意」「天然な一面がある」\nこれらの設定は、ひかりとの会話に自然に反映されます。",
-                                        fontSize = 12.sp, color = Color(0xFF999999), lineHeight = 18.sp
-                                    )
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                    Text(
-                                        "また、ホーム画面の会話ポイント回復も、広告を見ずに1日5回まで利用できるようになります。",
-                                        fontSize = 12.sp, color = Color(0xFF999999), lineHeight = 18.sp
+                                        "※ 購入していないと設定できません。ホーム画面の会話ポイント回復も、広告を見ずに1日5回まで利用できるようになります。",
+                                        fontSize = 11.sp, color = Color(0xFFBB8888), lineHeight = 16.sp
                                     )
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Button(
