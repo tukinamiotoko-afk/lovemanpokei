@@ -2013,7 +2013,12 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         if (viewModel.currentDefaultDialogue.value == null) {
             viewModel.currentDefaultDialogue.value = if (!viewModel.repository.hasShownFirstHomeGreeting) {
                 viewModel.repository.hasShownFirstHomeGreeting = true
-                TouchDialogue("はじめまして、○○さん！これからよろしくお願いしますね♪", R.drawable.hikari_smile)
+                val greeting = TouchDialogue("はじめまして、○○さん！これからよろしくお願いしますね♪", R.drawable.hikari_smile)
+                viewModel.homeChatMessages.add(
+                    ChatMessage(role = "assistant", content = greeting.text.replace("○○", playerName))
+                )
+                viewModel.saveHomeChatHistory()
+                greeting
             } else {
                 pickDefaultDialogue()
             }
