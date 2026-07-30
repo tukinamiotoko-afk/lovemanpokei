@@ -488,20 +488,34 @@ class GemBillingManager(
         restorePurchases()
     }
 
-    fun restorePurchases(onDone: (Boolean) -> Unit = {}) {
+    // onDoneの第2引数には診断用の文字列を渡す（実際に有効になっているエンタイトルメント名や
+    // エラー内容）。ダッシュボード側の設定ミス（エンタイトルメントID不一致など）を
+    // 切り分けるためのもので、画面にそのまま表示してユーザーに報告してもらう想定
+    private fun diagnosticText(customerInfo: CustomerInfo): String {
+        val activeIds = customerInfo.entitlements.active.keys
+        return if (activeIds.isEmpty()) "有効なエンタイトルメントなし（期待値: $PREMIUM_ENTITLEMENT_ID）"
+        else "有効なエンタイトルメント: ${activeIds.joinToString(", ")}"
+    }
+
+    fun restorePurchases(onDone: (Boolean, String) -> Unit = { _, _ -> }) {
         Purchases.sharedInstance.restorePurchases(object : ReceiveCustomerInfoCallback {
             override fun onReceived(customerInfo: CustomerInfo) {
                 val active = customerInfo.entitlements[PREMIUM_ENTITLEMENT_ID]?.isActive == true
                 onPremiumStatusChanged(active)
-                onDone(active)
+                onDone(active, diagnosticText(customerInfo))
             }
             override fun onError(error: PurchasesError) {
-                onDone(false)
+                onDone(false, "エラー: ${error.message}")
             }
         })
     }
 
-    fun launchPurchaseFlow(activity: Activity, storeProduct: StoreProduct, onError: (String) -> Unit = {}) {
+    fun launchPurchaseFlow(
+        activity: Activity,
+        storeProduct: StoreProduct,
+        onError: (String) -> Unit = {},
+        onPremiumResult: (Boolean, String) -> Unit = { _, _ -> }
+    ) {
         val purchaseParams = PurchaseParams.Builder(activity, storeProduct).build()
         Purchases.sharedInstance.purchase(
             purchaseParams,
@@ -513,7 +527,9 @@ class GemBillingManager(
                     val gemAmount = PRODUCT_GEM_AMOUNTS[storeProduct.id] ?: 0
                     if (gemAmount > 0) onGemsGranted(gemAmount)
                     if (storeProduct.id == PREMIUM_PRODUCT_ID || storeProduct.id.startsWith("$PREMIUM_PRODUCT_ID:")) {
-                        onPremiumStatusChanged(customerInfo.entitlements[PREMIUM_ENTITLEMENT_ID]?.isActive == true)
+                        val active = customerInfo.entitlements[PREMIUM_ENTITLEMENT_ID]?.isActive == true
+                        onPremiumStatusChanged(active)
+                        onPremiumResult(active, diagnosticText(customerInfo))
                     }
                 }
                 override fun onError(error: PurchasesError, userCancelled: Boolean) {
@@ -5223,7 +5239,15 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                                     Button(
                                         onClick = {
                                             if (activity != null && premiumProduct != null) {
-                                                viewModel.gemBillingManager.launchPurchaseFlow(activity, premiumProduct)
+                                                restoreResultMessage = null
+                                                viewModel.gemBillingManager.launchPurchaseFlow(
+                                                    activity, premiumProduct,
+                                                    onError = { msg -> restoreResultMessage = "購入エラー: $msg" },
+                                                    onPremiumResult = { active, diagnostic ->
+                                                        restoreResultMessage = if (active) "プレミアムが有効になりました（$diagnostic）"
+                                                        else "購入は完了しましたが有効になっていません（$diagnostic）"
+                                                    }
+                                                )
                                             }
                                         },
                                         enabled = activity != null && premiumProduct != null,
@@ -5246,9 +5270,9 @@ fun SettingsScreen(navController: NavController, viewModel: StepViewModel) {
                                         onClick = {
                                             isRestoringPurchase = true
                                             restoreResultMessage = null
-                                            viewModel.gemBillingManager.restorePurchases { restored ->
+                                            viewModel.gemBillingManager.restorePurchases { restored, diagnostic ->
                                                 isRestoringPurchase = false
-                                                restoreResultMessage = if (restored) "プレミアムが復元されました" else "購入情報が見つかりませんでした"
+                                                restoreResultMessage = if (restored) "プレミアムが復元されました（$diagnostic）" else "復元できませんでした（$diagnostic）"
                                             }
                                         },
                                         enabled = !isRestoringPurchase,
