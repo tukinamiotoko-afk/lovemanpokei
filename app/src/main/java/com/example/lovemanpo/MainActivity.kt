@@ -675,6 +675,9 @@ class StepViewModel(val repository: StepRepository, appContext: Context) : ViewM
     // ホーム画面の待機中セリフ。画面を離れてまた戻ってきただけでは変わらないよう、
     // ViewModel（ナビゲーションをまたいで生き続ける）側に保持する
     var currentDefaultDialogue = mutableStateOf<TouchDialogue?>(null)
+    // ホーム画面での会話返信も同様に、画面を離れてまた戻ってきただけでは消えないよう
+    // ViewModel側に保持する（アプリを完全に閉じるまで表示され続ける）
+    var homeChatReply = mutableStateOf<Pair<String, Int>?>(null)
     val pendingLevelUpLevel = mutableIntStateOf(0)
     val pendingOdekakeInvite = mutableStateOf<String?>(null)
     val selectedPeriod = mutableStateOf(DisplayPeriod.DAY)
@@ -2005,7 +2008,7 @@ fun HomeScreen(navController: NavController, viewModel: StepViewModel) {
         }
     }
 
-    var homeChatReply by remember { mutableStateOf<Pair<String, Int>?>(null) }
+    var homeChatReply by viewModel.homeChatReply
     var isHomeChatLoading by remember { mutableStateOf(false) }
     var weatherDialogueActive by remember { mutableStateOf(false) }
     var homeToastMessage by remember { mutableStateOf<String?>(null) }
