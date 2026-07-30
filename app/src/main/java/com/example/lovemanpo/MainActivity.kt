@@ -7270,7 +7270,9 @@ fun FreeChatScreen(navController: NavController, viewModel: StepViewModel) {
 
 @Composable
 fun LevelUpDialog(newLevel: Int, onDismiss: () -> Unit, onGoNow: ((String) -> Unit)? = null) {
-    val newItems = memoryItems.filter { it.requiredLoveLevel == newLevel }
+    // 「どこかに行けるようになりました」の案内は、恋人モード（お出かけ先を使う場所）自体が
+    // 好感度9未満だとロックされていて実際には使えないため、Lv.9以降でのみ表示する
+    val newItems = if (newLevel >= 9) memoryItems.filter { it.requiredLoveLevel == newLevel } else emptyList()
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFFFFF0F5),
